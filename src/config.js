@@ -52,7 +52,7 @@ export const config = {
   ocean: {
     waveHeight: 1, // scales every wave
     choppiness: 0.55, // sharper crests as it rises
-    surf: 0.28, // height of the swash running up the sand, in metres
+    surf: 0.7, // height of the breaking waves near the beach, in metres
     foam: 1,
     resolution: { desktop: [200, 340], phone: [120, 210] }, // grid columns and rows
   },

@@ -7,7 +7,7 @@ A real-time Three.js beach at dusk with a firework show anyone can design: Gerst
 - **Preview:** https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j (private until you share it)
 - Add `#hero` to a link to open as a website header with a sample headline, or `#debug` to show frame rate and memory counts.
 - The **Lake Michigan** preset adds a pier and lighthouse (with a sweeping beam and a lamp reflected in the water), dune grass, and calmer freshwater waves.
-- Keys: `H` hero mode, `` ` `` stats overlay, `Shift+R` rebuild (the leak test).
+- Keys: `WASD` or arrows to walk the beach (drag to look, `Shift` to run, `Esc` to go back), `H` hero mode, `` ` `` stats overlay, `Shift+R` rebuild (the leak test).
 
 ## Run it locally
 

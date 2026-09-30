@@ -92,7 +92,7 @@ export function create(ctx) {
   scene.add(config.sky, 'starBrightness', 0, 2, 0.05).name('Stars');
   scene.add(config.ocean, 'waveHeight', 0, 2.5, 0.05).name('Wave height');
   scene.add(config.ocean, 'choppiness', 0, 1.2, 0.05).name('Choppiness');
-  scene.add(config.ocean, 'surf', 0, 0.6, 0.01).name('Surf run-up (m)');
+  scene.add(config.ocean, 'surf', 0, 1.6, 0.01).name('Breakers (m)');
   scene.add(config.landmarks, 'pier').name('Pier & lighthouse');
   scene.add(config.landmarks, 'grass').name('Dune grass');
   scene.add(config.beach, 'glints', 0, 2, 0.05).name('Sand glints');

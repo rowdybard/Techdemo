@@ -57,6 +57,10 @@
   .hero-button { margin-top: 6px; padding: 13px 22px; border-radius: 999px; background: var(--spark); color: #1a1006; font: 600 15px/1 var(--sans); text-decoration: none; pointer-events: auto; }
   .hero-mode .hero-exit { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); display: block; padding: 7px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--glass); color: var(--muted); font: 12px var(--sans); cursor: pointer; }
 
+  /* Walking hint, for keyboards; fades after a few seconds or once you start walking. */
+  .walk-hint { position: absolute; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); margin: 0; padding: 8px 14px; border-radius: 999px; background: var(--glass); color: var(--ink); font: 13px var(--sans); white-space: nowrap; pointer-events: none; transition: opacity 1.2s; }
+  .walk-hint.faded, .hero-mode .walk-hint { opacity: 0; }
+
   .notice { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0 16px; font-size: 16px; line-height: 1.5; text-align: center; text-wrap: balance; }
 </style>
 <script type="importmap">

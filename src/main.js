@@ -6,6 +6,7 @@ import * as burstlights from './burstlights.js';
 import * as ocean from './ocean.js';
 import * as beach from './beach.js';
 import * as landmarks from './landmarks.js';
+import * as walk from './walk.js';
 import * as fireworks from './fireworks.js';
 import * as audio from './audio.js';
 import * as post from './post.js';
@@ -14,7 +15,7 @@ import * as ui from './ui.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [sky, burstlights, ocean, beach, landmarks, fireworks, audio, post, debug, ui];
+const MODULES = [sky, burstlights, ocean, beach, landmarks, walk, fireworks, audio, post, debug, ui];
 
 const DEG = Math.PI / 180;
 
@@ -78,6 +79,7 @@ export function createApp(container, config = defaultConfig) {
 
   ctx.resize = resize;
   ctx.setCameraPreset = (name) => {
+    if (ctx.walk) ctx.walk.stop();
     config.camera.preset = name;
     setUpControls(controls, camera, config);
   };
@@ -108,7 +110,8 @@ export function createApp(container, config = defaultConfig) {
     time += dt;
     renderer.toneMappingExposure = config.renderer.exposure;
 
-    controls.update();
+    // While walking, walk.js drives the camera and the orbit controls stand aside.
+    if (controls.enabled) controls.update();
     for (let i = 0; i < modules.length; i++) modules[i].update(dt, time);
 
     renderer.info.reset();

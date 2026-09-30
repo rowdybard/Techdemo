@@ -23,6 +23,54 @@ export const noiseGLSL = /* glsl */ `
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
   }
 
+  vec2 hash22(vec2 p) {
+    return vec2(hash13(vec3(p, 1.7)), hash13(vec3(p, 9.2)));
+  }
+
+  // Cell noise. x: distance to the nearest scattered point; y: how far from the wall
+  // between the two nearest cells (0 on the wall).
+  vec2 cells(vec2 p) {
+    vec2 cell = floor(p);
+    vec2 f = fract(p);
+    float nearest = 8.0;
+    float second = 8.0;
+    for (int y = -1; y <= 1; y++) {
+      for (int x = -1; x <= 1; x++) {
+        vec2 g = vec2(float(x), float(y));
+        vec2 r = g + hash22(cell + g) * 0.9 - f;
+        float d = dot(r, r);
+        if (d < nearest) { second = nearest; nearest = d; }
+        else if (d < second) second = d;
+      }
+    }
+    nearest = sqrt(nearest);
+    return vec2(nearest, sqrt(second) - nearest);
+  }
+
+  // Foam coverage from an amount (0 to 1), in world metres. Thick foam is white froth
+  // full of small bubble holes; as it thins it pulls back into a wobbly lace, and the
+  // lace tears into scraps. The holes blend to an even texture where they'd be sub-pixel.
+  float foamPattern(vec2 p, float amount) {
+    if (amount <= 0.01) return 0.0;
+    vec2 warp = vec2(valueNoise(p * 0.9), valueNoise(p * 0.9 + 5.3)) * 0.9;
+    float wall = cells(p * vec2(1.7, 2.8) + warp).y;               // 0 on the lace lines
+    float lace = 1.0 - smoothstep(0.02, 0.1 + 0.3 * amount, wall);
+    float body = smoothstep(0.6, 0.95, amount + 0.25 * valueNoise(p * 2.3));
+    float scraps = smoothstep(0.62 - amount * 0.5, 0.82 - amount * 0.5, valueNoise(p * 1.7 + 11.0));
+    float cover = max(body, lace * scraps * smoothstep(0.05, 0.4, amount));
+    // Bubble holes of two sizes, about 5 and 12 cm, opening up as the foam thins.
+    vec2 q = p * 8.0;
+    float radius = 0.06 + 0.22 * (1.0 - amount);
+    float holes = smoothstep(radius, radius + 0.12, cells(q).x) * smoothstep(radius * 0.8, radius * 0.8 + 0.1, cells(q * 2.3 + 3.1).x);
+    float blur = smoothstep(0.25, 0.8, length(fwidth(q)));
+    holes = mix(holes, 0.75, blur);
+    return cover * holes;
+  }
+
+  // Light on foam: it's white, so it takes the colour of the bright sky near the horizon
+  // and of the afterglow, not just the dim sky overhead. Needs skyGLSL.
+  #define FOAM_LIGHT(glow) (skyGradient(vec3(0.0, 0.18, -1.0)) * 0.9 + (glow) * 0.8 + skyZenith() * 1.5)
+
   float fbm(vec2 p) {
     float sum = 0.0;
     float amplitude = 0.5;

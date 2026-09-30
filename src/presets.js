@@ -32,7 +32,7 @@ export const PRESETS = {
   },
   'Lake Michigan': {
     // Freshwater: smaller, calmer waves and a short run-up, a pier and lighthouse, dune grass.
-    ocean: { waveHeight: 0.45, choppiness: 0.35, surf: 0.14 },
+    ocean: { waveHeight: 0.45, choppiness: 0.35, surf: 0.4 },
     landmarks: { pier: true, grass: true },
     look: { mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1.5, ring: 1, crossette: 1, crackle: 1, multibreak: 1, text: 0.5 }) },
     show: { shellsPerMinute: 30 },
@@ -46,7 +46,7 @@ export const PRESETS = {
     look: { palette: 'pastel', mix: mixOf({ peony: 2, willow: 2, chrysanthemum: 1, heart: 0.5 }) },
     show: { shellsPerMinute: 12, maxShells: 3 },
     physics: { windSpeed: 1 },
-    ocean: { waveHeight: 0.6, surf: 0.18 },
+    ocean: { waveHeight: 0.6, surf: 0.45 },
     sky: { timeOfDay: 0.12 },
   },
   Finale: {

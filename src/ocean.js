@@ -33,11 +33,11 @@ export function create(ctx) {
     uTime: { value: 0 },
     uWaveHeight: { value: settings.waveHeight },
     uChoppiness: { value: settings.choppiness },
-    uSwash: { value: settings.surf },
+    uSurf: { value: settings.surf },
     uFoam: { value: settings.foam },
     uWaves: { value: waves },
   };
-  // The beach reads the same time and surf, so its wet band follows the swash.
+  // The beach reads the same time and surf, so its wet band and foam follow the waves.
   ctx.ocean = { uniforms };
 
   const [columns, rows] = phone ? settings.resolution.phone : settings.resolution.desktop;
@@ -59,7 +59,7 @@ export function create(ctx) {
       uniforms.uTime.value = time;
       uniforms.uWaveHeight.value = settings.waveHeight;
       uniforms.uChoppiness.value = settings.choppiness;
-      uniforms.uSwash.value = settings.surf;
+      uniforms.uSurf.value = settings.surf;
       uniforms.uFoam.value = settings.foam;
     },
 

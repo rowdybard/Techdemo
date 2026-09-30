@@ -1,8 +1,10 @@
 // Ocean shaders. The vertex shader sums Gerstner waves with analytic normals, shrinks
-// them over shallow sand and adds the swash near the shore. The fragment shader reflects
-// the twilight sky, adds foam, and fades the water out at the waterline.
+// them over shallow sand, and adds the breaking surf and swash from surf.glsl.js near
+// the shore. The fragment shader reflects the twilight sky, draws bubbly foam, and fades
+// the water out at the waterline.
 import { noiseGLSL, skyGLSL } from './glsl.js';
 import { terrainGLSL } from './terrain.glsl.js';
+import { surfGLSL } from './surf.glsl.js';
 import { burstLightGLSL } from './burstlights.js';
 
 export const WAVE_COUNT = 6;
@@ -11,14 +13,16 @@ export const oceanVertex = /* glsl */ `
   uniform float uTime;
   uniform float uWaveHeight;
   uniform float uChoppiness;
-  uniform float uSwash;
+  uniform float uSurf;
   uniform vec4 uWaves[${WAVE_COUNT}]; // direction xy, wavelength, amplitude
 
   varying vec3 vWorld;
   varying vec3 vNormal;
   varying float vCrest;
+  varying float vFoam;
 
   ${terrainGLSL}
+  ${surfGLSL}
 
   void main() {
     vec2 rest = position.xz; // the grid is built in world space
@@ -45,12 +49,20 @@ export const oceanVertex = /* glsl */ `
       normal.y -= steep * k * amplitude * s;
     }
 
-    float nearShore = 1.0 - smoothstep(0.5, 4.0, floorDepth);
-    offset.y += swashLevel(rest, uTime, uSwash) * nearShore;
+    // Breaking surf near the beach, and the thin sheet of swash it pushes up the sand.
+    // Its slope tilts the normal, found by sampling the surf a little to each side.
+    Surf surf = surfAt(rest, uTime, uSurf);
+    if (surf.lift > 0.0) {
+      float e = 0.35;
+      normal.x -= (surfAt(rest + vec2(e, 0.0), uTime, uSurf).lift - surf.lift) / e;
+      normal.z -= (surfAt(rest + vec2(0.0, e), uTime, uSurf).lift - surf.lift) / e;
+    }
+    float surface = max(offset.y + surf.lift, swashSurface(rest, surf.edge));
 
-    vWorld = vec3(rest.x + offset.x, offset.y, rest.y + offset.z);
+    vWorld = vec3(rest.x + offset.x, surface, rest.y + offset.z);
     vNormal = normal;
     vCrest = offset.y / max(0.45 * uWaveHeight, 0.01);
+    vFoam = surf.foam;
     gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
   }
 `;
@@ -62,6 +74,7 @@ export const oceanFragment = /* glsl */ `
   varying vec3 vWorld;
   varying vec3 vNormal;
   varying float vCrest;
+  varying float vFoam;
 
   ${noiseGLSL}
   ${skyGLSL}
@@ -108,18 +121,18 @@ export const oceanFragment = /* glsl */ `
     color += burstReflection(vWorld, r, 420.0) * mix(0.25, 1.0, fresnel) * (0.35 + 0.65 * detail);
     color += burstDiffuse(vWorld, n) * 0.004;
 
-    // Foam: a lacy band where the water thins out over the sand, and streaks on crests.
+    // Foam: whitewater from the breaking surf and the swash (worked out per vertex), a lip
+    // wherever the water thins to nothing, and a little on offshore crests. It's drawn as
+    // bubbles, and only where there is any, which keeps the cost down on phones.
     vec2 p = vWorld.xz;
-    // The noise is only worked out where foam can be, which is most of the saving on phones.
-    float edge = 1.0 - smoothstep(0.0, 0.1 + 0.12 * valueNoise(p * 0.2 + uTime * 0.1), water);
-    float crest = smoothstep(0.55, 1.1, vCrest);
-    float foam = (1.0 - smoothstep(0.0, 0.035, water)) * 0.8; // the thin bright lip of each run-up
-    if (edge > 0.001) foam += edge * smoothstep(0.5, 0.75, fbm(p * vec2(0.6, 1.6) + vec2(0.0, -uTime * 0.35)) + edge * 0.25);
-    if (crest > 0.001) foam += crest * smoothstep(0.42, 0.68, fbm(p * 0.35 + uTime * 0.08)) * 0.8;
-    foam = clamp(foam * uFoam, 0.0, 1.0) * detail;
-    vec3 foamLight = skyZenith() * 2.2 + skyGradient(normalize(vec3(uSunDirection.x, 0.08, uSunDirection.z))) * 0.22;
-    foamLight += burstDiffuse(vWorld, n) * 0.07;
-    color = mix(color, foamLight, clamp(foam, 0.0, 1.0) * 0.85);
+    float thin = 1.0 - smoothstep(0.0, 0.012, water); // only the very edge of the water
+    float crest = smoothstep(0.7, 1.2, vCrest) * 0.45;
+    float amount = clamp(max(max(vFoam, thin * 0.6), crest) * uFoam, 0.0, 1.0) * detail;
+    float foam = 0.0;
+    if (amount > 0.01) foam = foamPattern(p + vec2(0.0, -uTime * 0.3), amount);
+    vec3 foamLight = FOAM_LIGHT(skyGradient(normalize(vec3(uSunDirection.x, 0.06, uSunDirection.z))) * 0.5);
+    foamLight += burstDiffuse(vWorld, n) * 0.08;
+    color = mix(color, foamLight, foam * 0.9);
 
     // Soft waterline: the sheet of water fades out as it thins, so there is no hard edge.
     float alpha = smoothstep(0.0, 0.06, water) * mix(0.5, 0.97, smoothstep(0.05, 1.5, water));

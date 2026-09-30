@@ -22,15 +22,6 @@ export const terrainGLSL = /* glsl */ `
     float dunes = smoothstep(32.0, 75.0, s) * (1.1 + 0.7 * sin(x * 0.05 + s * 0.02) * sin(x * 0.021 - 0.7) + 0.35 * sin(x * 0.13 + s * 0.09));
     return s * ${SLOPE} + dunes;
   }
-
-  // Height of the swash, the thin sheet of water each wave pushes up the sand. It rises
-  // quickly and drains slowly, and different stretches of beach run out of step.
-  float swashLevel(vec2 xz, float time, float amplitude) {
-    float phase = time * 0.42 + xz.x * 0.011 + 0.9 * sin(xz.x * 0.006 + 1.0);
-    float cycle = fract(phase);
-    float surge = smoothstep(0.0, 0.22, cycle) * (1.0 - smoothstep(0.22, 1.0, cycle));
-    return amplitude * (surge * 1.6 - 0.45);
-  }
 `;
 
 export function shoreDistance(x, z) {
