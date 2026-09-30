@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { config as defaultConfig } from './config.js';
+import * as sky from './sky.js';
 import * as placeholder from './placeholder.js';
 import * as debug from './debug.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [placeholder, debug];
+const MODULES = [sky, placeholder, debug];
 
 const DEG = Math.PI / 180;
 
@@ -51,6 +52,8 @@ export function createApp(container, config = defaultConfig) {
   });
   // Render counts are reset once per frame, so a frame drawn in several passes reports its totals.
   renderer.info.autoReset = false;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = config.renderer.exposure;
   const canvas = renderer.domElement;
   container.append(canvas);
 
@@ -93,6 +96,7 @@ export function createApp(container, config = defaultConfig) {
     const dt = last < 0 ? 0 : Math.min((now - last) / 1000, config.loop.maxDt) * config.loop.timeScale;
     last = now;
     time += dt;
+    renderer.toneMappingExposure = config.renderer.exposure;
 
     controls.update();
     for (let i = 0; i < modules.length; i++) modules[i].update(dt, time);

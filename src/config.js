@@ -8,6 +8,7 @@ export const config = {
   renderer: {
     antialias: true,
     maxPixelRatio: { desktop: 2, phone: 1.5 },
+    exposure: 1, // ACES filmic tone mapping; the panel changes this live
   },
 
   loop: {
@@ -33,6 +34,15 @@ export const config = {
     maxPolarAngle: 97.8, // this end holds the camera at eye level, about 1.6 m
     minAzimuthAngle: -15, // 0 looks straight out to sea
     maxAzimuthAngle: 15,
+  },
+
+  sky: {
+    timeOfDay: 0.3, // 0 is late dusk, 1 is full night
+    duskSunElevation: -3, // sun elevation at timeOfDay 0, just set
+    nightSunElevation: -18,
+    sunAzimuth: 18, // right of straight out to sea, so the afterglow sits behind the show
+    cloudCoverage: 0.35, // 0 is a clear sky
+    starBrightness: 1,
   },
 
   show: {

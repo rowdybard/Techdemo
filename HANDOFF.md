@@ -4,12 +4,13 @@ Handoff from a Claude chat session to Claude Code · Wednesday, September 30, 20
 
 ## Status
 
-- **Step 1 of the build order is done** (September 30, 2026): `index.html`, `src/main.js`, `src/config.js`, `src/debug.js`, and a stand-in scene in `src/placeholder.js` that steps 2 to 4 replace. three.js is pinned to 0.186.1 and lil-gui to 0.21.0.
+- **Steps 1 and 2 of the build order are done** (September 30, 2026): `index.html`, `src/main.js`, `src/config.js`, `src/debug.js`, `src/sky.js`, and a stand-in sand, sea and barge in `src/placeholder.js` that steps 3 and 4 replace. three.js is pinned to 0.186.1 and lil-gui to 0.21.0.
+- **Sky** (step 2) is a custom twilight shader instead of three's `Sky.js`, whose physical model goes almost black once the sun is below the horizon. It draws an afterglow toward the sunset (over the water, 18° right of straight ahead), a blue-hour gradient, cloud wisps and twinkling stars. `config.sky.timeOfDay` (0 late dusk, 1 night) only moves uniforms. Tone mapping is ACES filmic, with exposure in `config.renderer.exposure`.
 - **World layout** (in `src/config.js`): +Y is up, the sea lies toward −Z, and the waterline runs along z = 0. The camera stands at eye height 16 m up the beach, and the barge sits 280 m offshore.
 - **Drag** orbits a point over the water, limited to ±15° sideways and 1.6 to 3.7 m of camera height. Wider ranges lost the beach from the frame. Zoom and pan are off.
-- **Checking a step:** `npm install`, then `npm run check`. It reports console problems and the debug overlay's counts, saves desktop and phone screenshots to `.check/`, and runs 20 Shift+R rebuilds against the memory counters. Step 1 result: clean console; 5 draw calls, 5 geometries, 0 textures, 3 programs. After 20 rebuilds, canvases, listeners and every overlay count matched startup. A heap snapshot diff over 50 more rebuilds showed no app objects growing, only V8 compiled code.
+- **Checking a step:** `npm install`, then `npm run check`. It reports console problems and the debug overlay's counts, saves desktop and phone screenshots to `.check/`, and runs 20 Shift+R rebuilds against the memory counters. Step 2 result: clean console; 6 draw calls, 6 geometries, 0 textures, 3 programs. After 20 rebuilds, canvases, listeners and every overlay count matched startup. A heap snapshot diff over 50 more rebuilds showed no app objects growing, only V8 compiled code.
 - **Preview:** a private claude.ai artifact at https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j, republished after each step. The artifact host adds its own `<html>`, `<head>` and `<body>`, so publish a copy of `index.html` without them, plus the `src/` files.
-- Next action: "Do step 2."
+- Next action: "Do step 3."
 
 ## Why this exists
 
