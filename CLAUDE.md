@@ -4,7 +4,7 @@ Real-time Three.js beach scene with a fully customizable firework show, built as
 
 ## Working rules
 
-- Do one step of the HANDOFF build order per turn, then stop and say how to view it.
+- Build in the HANDOFF order, one step at a time: finish, check, commit and push each step before starting the next. The user asked for the steps to flow without stopping for approval between them.
 - Keep files small (under about 400 lines). Split a file before it gets big. Never try to write the whole scene in one go.
 - No build step: ES modules and an importmap. Pin three.js and lil-gui to exact versions from cdn.jsdelivr.net/npm.
 - Everything procedural. No textures, models or fonts fetched at runtime.

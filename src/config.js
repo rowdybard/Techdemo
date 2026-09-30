@@ -22,8 +22,8 @@ export const config = {
     maxFov: 75,
     near: 0.1,
     far: 6000,
-    position: [0, 1.7, 16], // eye height, on dry sand 16 m up from the waterline
-    target: [0, 12, -60], // over the water; the camera orbits this point when dragged
+    position: [0, 2.4, 16], // eye height above the sand, 16 m up from the waterline
+    target: [0, 12.7, -60], // over the water; the camera orbits this point when dragged
   },
 
   // Limits keep every view on the sand, facing the water, with the beach still in frame.
@@ -43,6 +43,14 @@ export const config = {
     sunAzimuth: 18, // right of straight out to sea, so the afterglow sits behind the show
     cloudCoverage: 0.35, // 0 is a clear sky
     starBrightness: 1,
+  },
+
+  ocean: {
+    waveHeight: 1, // scales every wave
+    choppiness: 0.55, // sharper crests as it rises
+    surf: 0.28, // height of the swash running up the sand, in metres
+    foam: 1,
+    resolution: { desktop: [200, 340], phone: [120, 210] }, // grid columns and rows
   },
 
   show: {

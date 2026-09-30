@@ -1,7 +1,8 @@
-// Stand-in scene: flat sand and sea, a 10 m grid on the sand, and a barge with a
-// pulsing beacon where the shells will launch. The ocean and beach modules replace it;
-// delete this file once they exist.
+// Stand-in scene: plain sand shaped by the terrain, and a barge with a pulsing beacon
+// where the shells will launch. The beach and fireworks modules replace it; delete this
+// file once they exist.
 import * as THREE from 'three';
+import { terrainHeight } from './terrain.glsl.js';
 
 export function create({ scene, config }) {
   const group = new THREE.Group();
@@ -14,10 +15,10 @@ export function create({ scene, config }) {
     return object;
   }
 
-  const flat = (width, depth) => new THREE.PlaneGeometry(width, depth).rotateX(-Math.PI / 2);
-  add(new THREE.Mesh(flat(600, 300), new THREE.MeshBasicMaterial({ color: 0x3a3029 })), 0, 0, 150);
-  add(new THREE.Mesh(flat(6000, 3000), new THREE.MeshBasicMaterial({ color: 0x0a111c })), 0, 0, -1500);
-  add(new THREE.GridHelper(200, 20, 0x9a8770, 0x857461), 0, 0.02, 100);
+  const sand = new THREE.PlaneGeometry(600, 300, 300, 150).rotateX(-Math.PI / 2).translate(0, 0, 110);
+  const points = sand.attributes.position;
+  for (let i = 0; i < points.count; i++) points.setY(i, terrainHeight(points.getX(i), points.getZ(i)));
+  add(new THREE.Mesh(sand, new THREE.MeshBasicMaterial({ color: 0x2c241f })), 0, 0, 0);
 
   const [bx, by, bz] = config.show.bargePosition;
   add(new THREE.Mesh(new THREE.BoxGeometry(36, 3, 12), new THREE.MeshBasicMaterial({ color: 0x0b0e16 })), bx, by + 1.5, bz);
