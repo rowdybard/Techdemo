@@ -72,9 +72,10 @@ try {
   await mkdir(OUT, { recursive: true });
   console.log(`Scene check · ${url}\n`);
 
-  const desktop = await open('desktop', { viewport: { width: 1280, height: 720 } });
+  // One page at a time: software rendering can't keep two scenes running at once.
   const phone = await open('phone', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   await phone.context.close();
+  const desktop = await open('desktop', { viewport: { width: 1280, height: 720 } });
 
   const leaks = await rebuild(desktop);
   await desktop.context.close();
@@ -94,7 +95,7 @@ async function open(name, contextOptions) {
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const problems = watch(page);
-  await page.goto(url);
+  await page.goto(url, { timeout: 90000 });
   try {
     await page.waitForSelector('canvas', { timeout: 20000 });
   } catch {

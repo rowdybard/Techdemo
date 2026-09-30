@@ -59,7 +59,45 @@ export const config = {
   },
 
   show: {
-    bargePosition: [0, 0, -280], // where shells launch from, offshore
+    bargePosition: [0, 0, -380], // where shells launch from, offshore
+    autoLaunch: true,
+    shellsPerMinute: 34,
+    maxShells: 7, // most shells bursting or burning at once
+    openingShells: 3, // already climbing when the page opens, so the show starts at once
+  },
+
+  look: {
+    palette: 'classic',
+    mix: { peony: 1 }, // weight per burst type
+    particles: 420, // sparks per shell (about half on phones)
+    burstSize: 62, // metres a spark coasts before drag holds it
+    lifetime: 2.6, // seconds
+    sparkSize: 1,
+    trailLength: 1,
+    glitter: 1,
+    brightness: 2,
+  },
+
+  physics: {
+    gravity: 1, // times Earth's
+    drag: 1,
+    windSpeed: 2, // m/s
+    windDirection: 90, // degrees; 0 blows out to sea, 90 blows left to right
+    windX: 0, // worked out each frame from speed and direction
+    windZ: 0,
+    heightMin: 85, // burst height range, metres
+    heightMax: 135,
+    launchSpread: 45, // metres either side of the barge's middle
+    angleVariance: 6, // degrees a rocket may lean
+  },
+
+  // Burst colours, linear RGB. Brightness scales them all.
+  palettes: {
+    classic: [[1, 0.12, 0.08], [0.15, 1, 0.25], [0.2, 0.35, 1], [1, 0.62, 0.18], [1, 0.93, 0.85], [0.75, 0.25, 1]],
+  },
+
+  fireworks: {
+    poolSize: { desktop: 60000, phone: 20000 },
   },
 
   debug: {

@@ -55,8 +55,10 @@ const fragmentShader = /* glsl */ `
     float peak = uSwash * 1.15;
     float current = swashLevel(p, uTime, uSwash);
     float damp = 1.0 - smoothstep(peak - 0.02, peak + 0.22 + 0.05 * valueNoise(p * 0.7), h);
-    float fresh = step(current, h) * (1.0 - smoothstep(peak - 0.03, peak + 0.02, h))
-                * (1.0 - smoothstep(0.22, 0.95, cycle));
+    // Shine left behind by the surge: it appears as the water arrives and fades as it
+    // drains, so there is no seam where one stretch of beach runs out of step.
+    float fresh = smoothstep(current - 0.01, current + 0.02, h) * (1.0 - smoothstep(peak - 0.03, peak + 0.02, h))
+                * smoothstep(0.05, 0.22, cycle) * (1.0 - smoothstep(0.22, 0.95, cycle));
     float wet = max(damp * 0.75, fresh);
     albedo *= 1.0 - 0.55 * wet;
 
@@ -72,7 +74,7 @@ const fragmentShader = /* glsl */ `
     vec3 r = reflect(-view, n);
     r.y = abs(r.y);
     float fresnel = 0.02 + 0.98 * pow(1.0 - clamp(dot(view, n), 0.0, 1.0), 5.0);
-    color += skyGradient(r) * fresnel * (0.35 * damp + 0.9 * fresh);
+    color += skyGradient(r) * fresnel * (0.3 * damp + 0.55 * fresh);
 
     // Glints: rare grains that catch the light from a narrow range of angles.
     vec2 cell = floor(p * 26.0);
