@@ -37,6 +37,7 @@ export function create(ctx) {
     finale: () => ctx.fireworks && ctx.fireworks.finale(),
     launch: () => ctx.fireworks && ctx.fireworks.launch(),
     launchText: () => ctx.fireworks && ctx.fireworks.launch('text'),
+    fountains: () => ctx.fountains && ctx.fountains.start(),
   };
 
   // Presets and the big buttons.
@@ -56,6 +57,15 @@ export function create(ctx) {
   show.add(config.show, 'maxShells', 1, 20, 1).name('Most in the air');
   show.add(config.show, 'launchSite', { 'Offshore barge': 'barge', 'Along the shore': 'shore', 'Tap the sky to aim': 'tap' }).name('Launch site');
   show.add(config.loop, 'timeScale', 0.1, 1, 0.05).name('Slow motion');
+
+  const ground = gui.addFolder('Ground show').close();
+  ground.add(state, 'fountains').name('Fountains now');
+  ground.add(config.fountains, 'enabled').name('Fountains on');
+  ground.add(config.fountains, 'every', 8, 90, 1).name('Every (s)');
+  ground.add(config.fountains, 'duration', 3, 20, 0.5).name('Run time (s)');
+  ground.add(config.fountains, 'height', 8, 50, 1).name('Height (m)');
+  ground.add(config.fountains, 'nozzles', 2, 14, 1).name('Fountains');
+  ground.add(config.fountains, 'color', { Gold: 'gold', Silver: 'silver' }).name('Colour');
 
   const mix = gui.addFolder('Shell mix').close();
   for (const type in TYPE_LABELS) {

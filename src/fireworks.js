@@ -155,6 +155,7 @@ export function create(ctx) {
       ctx.fireworks = null;
     },
   };
+  ctx.fireworks.pool = pool; // the ground-show fountains write into the same pool
   ctx.fireworks.launch = api.launch;
   ctx.fireworks.finale = api.finale;
   return api;
@@ -168,30 +169,34 @@ function syncWind(config) {
   physics.windZ = -Math.cos(a) * physics.windSpeed;
 }
 
-// A dark barge silhouette on the water, with a couple of dim work lights.
+// A long, dark barge silhouette on the water: mortar racks along the deck, a cabin at
+// one end, and a few dim work lights. Shells launch from along its length.
+export const BARGE_LENGTH = 130;
+
 function createBarge([x, y, z]) {
   const group = new THREE.Group();
   const dark = new THREE.MeshBasicMaterial({ color: 0x05060a });
   const lamp = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.9, 0.45) });
-  const hull = new THREE.BoxGeometry(46, 2.4, 14);
-  const cabin = new THREE.BoxGeometry(8, 3.5, 6);
+  const hull = new THREE.BoxGeometry(BARGE_LENGTH, 2.4, 16);
+  const cabin = new THREE.BoxGeometry(9, 3.5, 7);
+  const rack = new THREE.BoxGeometry(5, 1.2, 3);
   const light = new THREE.SphereGeometry(0.35, 8, 6);
-  const parts = [
-    [hull, dark, 0, 0.6, 0],
-    [cabin, dark, -14, 3.4, 0],
-    [light, lamp, -14, 5.6, 0],
-    [light, lamp, 18, 2.2, 0],
-  ];
-  for (const [geometry, material, px, py, pz] of parts) {
+  const half = BARGE_LENGTH / 2;
+  const add = (geometry, material, px, py, pz) => {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(x + px, y + py, z + pz);
     group.add(mesh);
-  }
+  };
+  add(hull, dark, 0, 0.6, 0);
+  add(cabin, dark, -half + 8, 3.4, 0);
+  for (let px = -half + 18; px < half - 4; px += 9) add(rack, dark, px, 2.4, (px / 9) % 2 === 0 ? -3 : 3);
+  for (const px of [-half + 8, -half + 30, 0, half - 25, half - 3]) add(light, lamp, px, px === -half + 8 ? 5.6 : 2.4, 6);
   return {
     group,
     dispose() {
       hull.dispose();
       cabin.dispose();
+      rack.dispose();
       light.dispose();
       dark.dispose();
       lamp.dispose();

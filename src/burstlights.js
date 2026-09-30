@@ -52,13 +52,19 @@ export function create(ctx) {
   };
   ctx.burstLights = { uniforms };
 
-  // The brightest bursts so far this frame: their strength and record index.
+  // The brightest lights so far this frame: their strength and record.
   const topStrength = new Float64Array(BURST_LIGHTS);
-  const topIndex = new Int32Array(BURST_LIGHTS);
+  const topRecord = new Array(BURST_LIGHTS).fill(null);
 
-  // A bright flash as the shell breaks, then a glow that fades with the sparks.
+  // A burst: a bright flash as the shell breaks, then a glow that fades with the sparks.
+  // A fountain (a record with a hold time): a steady, flickering light while it runs.
   function strength(record, time) {
     const age = time - record.time;
+    if (record.hold > 0) {
+      if (age < 0 || age > record.hold) return 0;
+      const ramp = Math.min(1, age / 0.8, (record.hold - age) / 1.0);
+      return 0.22 * ramp * (0.85 + 0.15 * Math.sin(time * 37 + record.x)) * (record.size / 60);
+    }
     const life = config.look.lifetime * 1.3;
     if (age < 0 || age > life) return 0;
     const flash = 1.8 * Math.exp(-age * 2.5);
@@ -66,29 +72,31 @@ export function create(ctx) {
     return (flash + glow) * (record.size / 60);
   }
 
+  // Inserts a light into the sorted top list if it's bright enough.
+  function consider(record, time) {
+    const s = strength(record, time);
+    if (s <= topStrength[BURST_LIGHTS - 1]) return;
+    let slot = BURST_LIGHTS - 1;
+    while (slot > 0 && topStrength[slot - 1] < s) {
+      topStrength[slot] = topStrength[slot - 1];
+      topRecord[slot] = topRecord[slot - 1];
+      slot--;
+    }
+    topStrength[slot] = s;
+    topRecord[slot] = record;
+  }
+
   return {
     update(dt, time) {
       topStrength.fill(0);
-      topIndex.fill(-1);
+      topRecord.fill(null);
       const bursts = ctx.fireworks ? ctx.fireworks.bursts : null;
-      if (bursts) {
-        for (let b = 0; b < bursts.length; b++) {
-          const s = strength(bursts[b], time);
-          if (s <= topStrength[BURST_LIGHTS - 1]) continue;
-          // Insert into the sorted top list.
-          let slot = BURST_LIGHTS - 1;
-          while (slot > 0 && topStrength[slot - 1] < s) {
-            topStrength[slot] = topStrength[slot - 1];
-            topIndex[slot] = topIndex[slot - 1];
-            slot--;
-          }
-          topStrength[slot] = s;
-          topIndex[slot] = b;
-        }
-      }
+      if (bursts) for (let b = 0; b < bursts.length; b++) consider(bursts[b], time);
+      const fountains = ctx.fountains ? ctx.fountains.lights : null;
+      if (fountains) for (let f = 0; f < fountains.length; f++) consider(fountains[f], time);
       const scale = config.look.sceneLight;
       for (let i = 0; i < BURST_LIGHTS; i++) {
-        const record = topIndex[i] >= 0 ? bursts[topIndex[i]] : null;
+        const record = topRecord[i];
         if (!record) {
           positions[i].w = 0;
           continue;

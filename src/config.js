@@ -76,6 +76,17 @@ export const config = {
     openingShells: 3, // already climbing when the page opens, so the show starts at once
   },
 
+  // Ground show: a row of fountains along the barge, playing every so often.
+  fountains: {
+    enabled: true,
+    firstAt: 3.5, // seconds after opening
+    every: 28, // seconds between ground shows
+    duration: 9, // seconds each fountain runs
+    height: 42, // metres
+    nozzles: 9, // along the barge (fewer on phones)
+    color: 'gold', // 'gold' or 'silver'
+  },
+
   look: {
     palette: 'classic',
     // Weight per burst type: how often each one is picked.
@@ -101,7 +112,7 @@ export const config = {
     windZ: 0,
     heightMin: 85, // burst height range, metres
     heightMax: 135,
-    launchSpread: 45, // metres either side of the barge's middle
+    launchSpread: 58, // metres either side of the barge's middle (it's 130 m long)
     angleVariance: 6, // degrees a rocket may lean
   },
 
