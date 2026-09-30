@@ -29,6 +29,7 @@ export const fireworksVertex = /* glsl */ `
   varying float vAcross;      // position across the streak, in radii
   varying float vHalf;        // half the streak's length, in radii
   varying float vAge;         // 0 at birth, 1 at death
+  varying float vSeconds;     // age in seconds
   varying float vKind;
   varying float vSeed;
 
@@ -70,6 +71,7 @@ export const fireworksVertex = /* glsl */ `
     vAcross = position.y * 2.0;
     vHalf = halfLength / radius;
     vAge = age / life;
+    vSeconds = age;
     vKind = aShape.w;
     vSeed = fract(aStart.x * 0.1731 + aStart.z * 0.0937 + aStart.w * 7.13 + aMotion.x * 0.37);
 
@@ -88,6 +90,7 @@ export const fireworksFragment = /* glsl */ `
   varying float vAcross;
   varying float vHalf;
   varying float vAge;
+  varying float vSeconds;
   varying float vKind;
   varying float vSeed;
 
@@ -106,10 +109,11 @@ export const fireworksFragment = /* glsl */ `
     float u = vHalf > 0.01 ? clamp((vAlong + vHalf) / (2.0 * vHalf), 0.0, 1.0) : 1.0;
     float intensity = core * mix(0.04, 1.0, pow(u, 1.6));
 
-    // A flash at birth, then a fade that cools toward orange at the end.
-    float fade = 1.0 - smoothstep(0.6, 1.0, vAge);
+    // Sparks brighten as they spread (hundreds start on one point, and at full strength
+    // they would add up to a white blot), then fade and cool toward orange at the end.
+    float fade = (1.0 - smoothstep(0.6, 1.0, vAge)) * mix(0.1, 1.0, smoothstep(0.0, 0.25, vSeconds));
     vec3 color = mix(vColor, vec3(1.0, 0.45, 0.12) * dot(vColor, vec3(0.33)), smoothstep(0.55, 1.0, vAge) * 0.6);
-    float brightness = fade * (1.0 + 0.6 * exp(-vAge * 25.0));
+    float brightness = fade;
 
     if (vKind > 0.5 && vKind < 1.5) {        // glitter: random flickers
       float flick = step(0.45, hash(vSeed * 97.0 + floor(uTime * 24.0)));

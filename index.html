@@ -16,6 +16,7 @@
     --muted: #98a2b7;
     --glass: rgb(9 13 26 / 0.68);
     --rule: rgb(233 237 245 / 0.14);
+    --spark: #ffb45c;
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color-scheme: dark;
@@ -32,6 +33,26 @@
   .debug p { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--rule); color: var(--muted); }
   .debug.compact { padding: 6px 10px; }
   .debug.compact :is(dt, dd):not(:first-of-type), .debug.compact p { display: none; }
+
+  /* Show designer panel (lil-gui draws the controls; this places and themes it). */
+  #app .panel.lil-gui { position: absolute; z-index: 1; --title-background-color: rgb(233 237 245 / 0.08); top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); max-height: calc(100% - 24px - env(safe-area-inset-top, 0px)); overflow-y: auto; --background-color: var(--glass); --widget-color: rgb(233 237 245 / 0.12); --hover-color: rgb(233 237 245 / 0.2); --focus-color: rgb(233 237 245 / 0.26); --number-color: var(--spark); --string-color: var(--spark); --font-family: var(--sans); border-radius: 8px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .panel-json { display: grid; gap: 6px; padding: 6px var(--padding, 4px) 8px; }
+  .panel-json textarea { width: 100%; box-sizing: border-box; min-height: 7em; padding: 6px; border: 1px solid var(--rule); border-radius: 4px; background: rgb(0 0 0 / 0.35); color: var(--ink); font: 11px/1.4 var(--mono); resize: vertical; }
+  .panel-json-row { display: flex; gap: 6px; }
+  .panel-json button { flex: 1; padding: 6px 8px; border: 0; border-radius: 4px; background: rgb(233 237 245 / 0.14); color: var(--ink); font: 12px var(--sans); cursor: pointer; }
+  .panel-json button:hover { background: rgb(233 237 245 / 0.24); }
+  .panel-json button:focus-visible, .hero-exit:focus-visible, .hero-button:focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+  .panel-json-status { min-height: 1.2em; margin: 0; color: var(--muted); font-size: 11px; }
+
+  /* Hero mode: the scene as a website header, with a sample headline. */
+  .hero, .hero-exit { display: none; }
+  .hero-mode .debug, .hero-mode .panel { display: none; }
+  .hero-mode .hero { position: absolute; inset: auto 0 0 0; display: grid; gap: 12px; justify-items: start; padding: 96px max(16px, 6vw) calc(max(28px, 7vh) + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, rgb(5 7 14 / 0.72), rgb(5 7 14 / 0)); pointer-events: none; }
+  .hero-kicker { margin: 0; color: var(--spark); font: 600 13px/1.2 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; }
+  .hero-title { max-width: 16ch; margin: 0; color: var(--ink); font: 700 clamp(34px, 6.4vw, 76px)/1.02 var(--sans); letter-spacing: -0.02em; text-wrap: balance; text-shadow: 0 2px 24px rgb(0 0 0 / 0.45); }
+  .hero-copy { max-width: 42ch; margin: 0; color: var(--ink); opacity: 0.86; font: 400 clamp(15px, 1.6vw, 19px)/1.5 var(--sans); }
+  .hero-button { margin-top: 6px; padding: 13px 22px; border-radius: 999px; background: var(--spark); color: #1a1006; font: 600 15px/1 var(--sans); text-decoration: none; pointer-events: auto; }
+  .hero-mode .hero-exit { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); display: block; padding: 7px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--glass); color: var(--muted); font: 12px var(--sans); cursor: pointer; }
 
   .notice { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0 16px; font-size: 16px; line-height: 1.5; text-align: center; text-wrap: balance; }
 </style>

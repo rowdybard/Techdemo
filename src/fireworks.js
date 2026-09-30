@@ -1,14 +1,19 @@
 // Fireworks module: the particle pool, the barge the shells launch from, and the
 // scheduler that decides when to fire. The scheduler keeps a fixed ring of shell
 // records; launching a shell writes all of its particles at once (see shells.js).
+// With the 'tap' launch site, a quick tap on the sky sends a shell to that spot.
 import * as THREE from 'three';
 import { createPool } from './particles.js';
 import { fireShell, planShell } from './shells.js';
 
 const SHELLS = 64; // shell records kept for counting shells in the air and lighting
+const FINALE_SECONDS = 7;
+const FINALE_MAX_SHELLS = 24;
+const TAP_PIXELS = 8; // a press that moves further than this is a drag, not a tap
+const TAP_MS = 350;
 
 export function create(ctx) {
-  const { scene, config, renderer, phone, stats } = ctx;
+  const { scene, config, renderer, camera, phone, stats, signal } = ctx;
 
   const uniforms = {
     uTime: { value: 0 },
@@ -36,9 +41,11 @@ export function create(ctx) {
   let next = 0;
   let nextLaunch = 0;
 
-  function launch(time) {
+  let finaleUntil = -1;
+
+  function launch(time, aimX = NaN, aimY = NaN) {
     plan.launch = time;
-    planShell(plan, config, phone);
+    planShell(plan, config, phone, aimX, aimY);
     const record = bursts[next];
     next = (next + 1) % SHELLS;
     fireShell(pool, plan, config, config.palettes[config.look.palette], record);
@@ -76,11 +83,45 @@ export function create(ctx) {
   }
   nextLaunch = 1.2;
 
-  return {
+  // Tap to aim: a quick press that barely moves is a tap. The aim point is where the ray
+  // through it crosses the upright plane of the barge.
+  const ray = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  const aimPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -config.show.bargePosition[2]);
+  const aimPoint = new THREE.Vector3();
+  let downX = 0;
+  let downY = 0;
+  let downAt = 0;
+  const canvas = renderer.domElement;
+  canvas.addEventListener('pointerdown', (event) => {
+    downX = event.clientX;
+    downY = event.clientY;
+    downAt = performance.now();
+  }, { signal });
+  canvas.addEventListener('pointerup', (event) => {
+    if (config.show.launchSite !== 'tap') return;
+    if (Math.hypot(event.clientX - downX, event.clientY - downY) > TAP_PIXELS || performance.now() - downAt > TAP_MS) return;
+    const box = canvas.getBoundingClientRect();
+    pointer.set(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1);
+    ray.setFromCamera(pointer, camera);
+    aimPlane.constant = -config.show.bargePosition[2];
+    if (!ray.ray.intersectPlane(aimPlane, aimPoint) || aimPoint.y < 20) return;
+    syncWind(config);
+    launch(uniforms.uTime.value, aimPoint.x, Math.min(aimPoint.y, 260));
+  }, { signal });
+
+  const api = {
     update(dt, time) {
       syncWind(config);
       const { show } = config;
-      if (show.autoLaunch) {
+      if (time < finaleUntil) {
+        // Finale: shells as fast as the pool can take them.
+        if (nextLaunch < time - 1) nextLaunch = time;
+        while (time >= nextLaunch) {
+          if (inTheAir(time) < FINALE_MAX_SHELLS) launch(nextLaunch);
+          nextLaunch += 0.12 + Math.random() * 0.18;
+        }
+      } else if (show.autoLaunch) {
         // A long pause skips the shells it missed instead of firing them all at once.
         if (nextLaunch < time - 1) nextLaunch = time;
         while (time >= nextLaunch) {
@@ -99,6 +140,12 @@ export function create(ctx) {
       launch(uniforms.uTime.value);
     },
 
+    /** A few seconds of shells as fast as the pool allows. */
+    finale() {
+      finaleUntil = uniforms.uTime.value + FINALE_SECONDS;
+      nextLaunch = uniforms.uTime.value;
+    },
+
     dispose() {
       scene.remove(pool.mesh, barge.group);
       pool.dispose();
@@ -108,6 +155,9 @@ export function create(ctx) {
       ctx.fireworks = null;
     },
   };
+  ctx.fireworks.launch = api.launch;
+  ctx.fireworks.finale = api.finale;
+  return api;
 }
 
 // Wind speed and direction (degrees, 0 blows away from the beach) as x and z.

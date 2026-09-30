@@ -7,10 +7,11 @@ import * as beach from './beach.js';
 import * as fireworks from './fireworks.js';
 import * as post from './post.js';
 import * as debug from './debug.js';
+import * as ui from './ui.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [sky, ocean, beach, fireworks, post, debug];
+const MODULES = [sky, ocean, beach, fireworks, post, debug, ui];
 
 const DEG = Math.PI / 180;
 
@@ -65,16 +66,18 @@ export function createApp(container, config = defaultConfig) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(config.camera.fov, 1, config.camera.near, config.camera.far);
-  camera.position.fromArray(config.camera.position);
-
   const controls = new OrbitControls(camera, canvas);
-  setUpControls(controls, config);
+  setUpControls(controls, camera, config);
 
   // Numbers modules publish for the debug overlay. Plain fields, updated in place.
   const stats = { poolUsed: 0, poolSize: 0 };
   const ctx = { renderer, scene, camera, controls, config, container, signal, phone, stats };
 
   ctx.resize = resize;
+  ctx.setCameraPreset = (name) => {
+    config.camera.preset = name;
+    setUpControls(controls, camera, config);
+  };
   const modules = [];
   const resizeObserver = new ResizeObserver(resize);
   let destroyed = false;
@@ -156,6 +159,7 @@ export function createApp(container, config = defaultConfig) {
     renderer.setAnimationLoop(null);
     abort.abort();
     resizeObserver.disconnect();
+    if (ctx.gui) ctx.gui.destroy();
     controls.dispose();
     for (let i = modules.length - 1; i >= 0; i--) modules[i].dispose();
     modules.length = 0;
@@ -167,19 +171,21 @@ export function createApp(container, config = defaultConfig) {
   return { destroy };
 }
 
-function setUpControls(controls, config) {
-  const limits = config.controls;
-  controls.target.fromArray(config.camera.target);
+// Puts the camera at the current preset's position and applies that view's drag limits.
+function setUpControls(controls, camera, config) {
+  const view = config.camera.presets[config.camera.preset] || config.camera.presets.sand;
+  camera.position.fromArray(view.position);
+  controls.target.fromArray(view.target);
   controls.enableDamping = true;
-  controls.dampingFactor = limits.damping;
-  controls.rotateSpeed = limits.rotateSpeed;
+  controls.dampingFactor = config.controls.damping;
+  controls.rotateSpeed = config.controls.rotateSpeed;
   // Panning or zooming would carry the camera off the beach. Camera presets cover other views.
   controls.enablePan = false;
   controls.enableZoom = false;
-  controls.minPolarAngle = limits.minPolarAngle * DEG;
-  controls.maxPolarAngle = limits.maxPolarAngle * DEG;
-  controls.minAzimuthAngle = limits.minAzimuthAngle * DEG;
-  controls.maxAzimuthAngle = limits.maxAzimuthAngle * DEG;
+  controls.minPolarAngle = view.polar[0] * DEG;
+  controls.maxPolarAngle = view.polar[1] * DEG;
+  controls.minAzimuthAngle = view.azimuth[0] * DEG;
+  controls.maxAzimuthAngle = view.azimuth[1] * DEG;
   controls.update();
 }
 

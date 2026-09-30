@@ -21,18 +21,23 @@ export const config = {
     maxFov: 75,
     near: 0.1,
     far: 6000,
-    position: [0, 2.4, 16], // eye height above the sand, 16 m up from the waterline
-    target: [0, 11.2, -60], // over the water; the camera orbits this point when dragged
+    preset: 'sand',
+    // Each view orbits its target when dragged. Polar angles are from straight up, and
+    // azimuth 0 looks straight out to sea; the limits keep each view framed.
+    presets: {
+      // Eye height on dry sand, 16 m up from the waterline. The polar range keeps the eye
+      // about 1.5 to 3.7 m above the sand.
+      sand: { position: [0, 2.4, 16], target: [0, 11.2, -60], polar: [95.1, 96.8], azimuth: [-15, 15] },
+      // High over the beach, looking out over the whole bay.
+      drone: { position: [0, 32, 48], target: [0, 60, -380], polar: [88, 96], azimuth: [-20, 20] },
+      // Knee-deep in the surf, looking up at the show.
+      water: { position: [0, 0.9, -12], target: [0, 30, -380], polar: [93, 95], azimuth: [-15, 15] },
+    },
   },
 
-  // Limits keep every view on the sand, facing the water, with the beach still in frame.
   controls: {
     damping: 0.08,
     rotateSpeed: 0.2, // one swipe across a phone screen covers the whole range
-    minPolarAngle: 95.1, // from straight up; this end lifts the eye to about 3.7 m above the sand
-    maxPolarAngle: 96.8, // this end holds the eye about 1.5 m above the sand
-    minAzimuthAngle: -15, // 0 looks straight out to sea
-    maxAzimuthAngle: 15,
   },
 
   sky: {
@@ -59,6 +64,7 @@ export const config = {
 
   show: {
     bargePosition: [0, 0, -380], // where shells launch from, offshore
+    launchSite: 'barge', // 'barge', 'shore' (a line of tubes nearer the beach) or 'tap' (tap the sky to aim)
     autoLaunch: true,
     shellsPerMinute: 34,
     maxShells: 7, // most shells bursting or burning at once
@@ -94,6 +100,11 @@ export const config = {
   // Burst colours, linear RGB. Brightness scales them all.
   palettes: {
     classic: [[1, 0.12, 0.08], [0.15, 1, 0.25], [0.2, 0.35, 1], [1, 0.62, 0.18], [1, 0.93, 0.85], [0.75, 0.25, 1]],
+    usa: [[1, 0.08, 0.06], [1, 0.95, 0.9], [0.15, 0.3, 1]],
+    gold: [[1, 0.55, 0.16], [1, 0.75, 0.35], [1, 0.9, 0.6]],
+    neon: [[1, 0.1, 0.8], [0.1, 0.95, 1], [0.6, 1, 0.1], [0.55, 0.2, 1]],
+    pastel: [[1, 0.6, 0.75], [0.6, 0.85, 1], [0.8, 1, 0.7], [1, 0.9, 0.6]],
+    custom: [[1, 0.3, 0.1], [0.2, 0.6, 1], [1, 0.85, 0.4]], // the panel's colour pickers edit these
   },
 
   fireworks: {
