@@ -5,11 +5,12 @@ import * as sky from './sky.js';
 import * as ocean from './ocean.js';
 import * as beach from './beach.js';
 import * as fireworks from './fireworks.js';
+import * as post from './post.js';
 import * as debug from './debug.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [sky, ocean, beach, fireworks, debug];
+const MODULES = [sky, ocean, beach, fireworks, post, debug];
 
 const DEG = Math.PI / 180;
 
@@ -73,6 +74,7 @@ export function createApp(container, config = defaultConfig) {
   const stats = { poolUsed: 0, poolSize: 0 };
   const ctx = { renderer, scene, camera, controls, config, container, signal, phone, stats };
 
+  ctx.resize = resize;
   const modules = [];
   const resizeObserver = new ResizeObserver(resize);
   let destroyed = false;
@@ -104,7 +106,8 @@ export function createApp(container, config = defaultConfig) {
     for (let i = 0; i < modules.length; i++) modules[i].update(dt, time);
 
     renderer.info.reset();
-    renderer.render(scene, camera);
+    if (ctx.render) ctx.render();
+    else renderer.render(scene, camera);
   }
 
   function resize() {
@@ -112,9 +115,11 @@ export function createApp(container, config = defaultConfig) {
     const height = container.clientHeight;
     if (width === 0 || height === 0) return;
 
-    const { maxPixelRatio } = config.renderer;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, phone ? maxPixelRatio.phone : maxPixelRatio.desktop));
+    // The quality tier caps the pixel ratio (post.js sets it).
+    const cap = ctx.quality ? ctx.quality.pixelRatio : 1;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, cap));
     renderer.setSize(width, height, false);
+    if (ctx.onResize) ctx.onResize(width, height);
     camera.aspect = width / height;
     camera.fov = fitFov(camera.aspect, config.camera);
     camera.updateProjectionMatrix();

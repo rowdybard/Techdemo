@@ -14,6 +14,7 @@ const ROWS = [
   ['pool', 'Particles'],
   ['heap', 'JS heap'],
   ['canvas', 'Canvas'],
+  ['quality', 'Quality'],
 ];
 
 export function create({ renderer, container, config, stats, signal, phone }) {
@@ -79,6 +80,7 @@ export function create({ renderer, container, config, stats, signal, phone }) {
     set('pool', stats.poolSize > 0 ? `${stats.poolUsed.toLocaleString('en-US')} / ${stats.poolSize.toLocaleString('en-US')}` : '–');
     set('heap', memory ? `${(memory.usedJSHeapSize / 1048576).toFixed(1)} MB` : 'n/a');
     set('canvas', `${canvas.width}×${canvas.height} @${renderer.getPixelRatio()}x`);
+    set('quality', stats.quality || '–');
   }
 
   return {

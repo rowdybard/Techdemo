@@ -109,7 +109,7 @@ export const fireworksFragment = /* glsl */ `
     // A flash at birth, then a fade that cools toward orange at the end.
     float fade = 1.0 - smoothstep(0.6, 1.0, vAge);
     vec3 color = mix(vColor, vec3(1.0, 0.45, 0.12) * dot(vColor, vec3(0.33)), smoothstep(0.55, 1.0, vAge) * 0.6);
-    float brightness = fade * (1.0 + 1.5 * exp(-vAge * 30.0));
+    float brightness = fade * (1.0 + 0.6 * exp(-vAge * 25.0));
 
     if (vKind > 0.5 && vKind < 1.5) {        // glitter: random flickers
       float flick = step(0.45, hash(vSeed * 97.0 + floor(uTime * 24.0)));

@@ -6,8 +6,7 @@
 
 export const config = {
   renderer: {
-    antialias: true,
-    maxPixelRatio: { desktop: 2, phone: 1.5 },
+    antialias: false, // the quality tier multisamples the post-processing target instead
     exposure: 1, // ACES filmic tone mapping; the panel changes this live
   },
 
@@ -76,7 +75,7 @@ export const config = {
     sparkSize: 1,
     trailLength: 1,
     glitter: 1,
-    brightness: 2,
+    brightness: 1.6,
   },
 
   physics: {
@@ -99,6 +98,21 @@ export const config = {
 
   fireworks: {
     poolSize: { desktop: 60000, phone: 20000 },
+  },
+
+  bloom: {
+    strength: 0.6,
+    radius: 0.35,
+    threshold: 1, // only what is brighter than this glows, so fireworks glow and sand doesn't
+  },
+
+  quality: {
+    tier: 'auto', // 'auto', 'low', 'medium' or 'high'
+    tiers: {
+      high: { pixelRatio: { desktop: 2, phone: 1.5 }, samples: 4, bloomScale: 1 },
+      medium: { pixelRatio: { desktop: 1.5, phone: 1.25 }, samples: 0, bloomScale: 1 },
+      low: { pixelRatio: { desktop: 1, phone: 1 }, samples: 0, bloomScale: 0.5 },
+    },
   },
 
   debug: {
