@@ -3,12 +3,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { config as defaultConfig } from './config.js';
 import * as sky from './sky.js';
 import * as ocean from './ocean.js';
+import * as beach from './beach.js';
 import * as placeholder from './placeholder.js';
 import * as debug from './debug.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [sky, ocean, placeholder, debug];
+const MODULES = [sky, ocean, beach, placeholder, debug];
 
 const DEG = Math.PI / 180;
 

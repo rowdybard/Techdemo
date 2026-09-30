@@ -23,15 +23,15 @@ export const config = {
     near: 0.1,
     far: 6000,
     position: [0, 2.4, 16], // eye height above the sand, 16 m up from the waterline
-    target: [0, 12.7, -60], // over the water; the camera orbits this point when dragged
+    target: [0, 11.2, -60], // over the water; the camera orbits this point when dragged
   },
 
   // Limits keep every view on the sand, facing the water, with the beach still in frame.
   controls: {
     damping: 0.08,
     rotateSpeed: 0.2, // one swipe across a phone screen covers the whole range
-    minPolarAngle: 96.2, // from straight up; this end lifts the camera to about 3.7 m
-    maxPolarAngle: 97.8, // this end holds the camera at eye level, about 1.6 m
+    minPolarAngle: 95.1, // from straight up; this end lifts the eye to about 3.7 m above the sand
+    maxPolarAngle: 96.8, // this end holds the eye about 1.5 m above the sand
     minAzimuthAngle: -15, // 0 looks straight out to sea
     maxAzimuthAngle: 15,
   },
@@ -51,6 +51,11 @@ export const config = {
     surf: 0.28, // height of the swash running up the sand, in metres
     foam: 1,
     resolution: { desktop: [200, 340], phone: [120, 210] }, // grid columns and rows
+  },
+
+  beach: {
+    glints: 1, // sparkle of wet and dry grains
+    resolution: { desktop: [360, 190], phone: [200, 110] }, // grid columns and rows
   },
 
   show: {
