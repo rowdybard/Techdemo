@@ -68,7 +68,8 @@ export const config = {
 
   look: {
     palette: 'classic',
-    mix: { peony: 1 }, // weight per burst type
+    // Weight per burst type: how often each one is picked.
+    mix: { peony: 2, chrysanthemum: 2, willow: 1.5, palm: 1, ring: 1, crossette: 1, strobe: 0.7, crackle: 1, multibreak: 1 },
     particles: 420, // sparks per shell (about half on phones)
     burstSize: 62, // metres a spark coasts before drag holds it
     lifetime: 2.6, // seconds
