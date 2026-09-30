@@ -62,6 +62,11 @@ export const config = {
     resolution: { desktop: [360, 190], phone: [200, 110] }, // grid columns and rows
   },
 
+  landmarks: {
+    pier: false, // a pier and lighthouse, as on Lake Michigan
+    grass: false, // dune grass in the foreground
+  },
+
   show: {
     bargePosition: [0, 0, -380], // where shells launch from, offshore
     launchSite: 'barge', // 'barge', 'shore' (a line of tubes nearer the beach) or 'tap' (tap the sky to aim)

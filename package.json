@@ -4,7 +4,9 @@
   "description": "Real-time Three.js beach at dusk with a customizable firework show. No build step; this file only holds dev tooling.",
   "type": "module",
   "scripts": {
-    "check": "node tools/check.mjs"
+    "check": "node tools/check.mjs",
+    "deploy:copy": "rm -rf .deploy && mkdir .deploy && cp -r index.html src .deploy/",
+    "deploy": "npm run deploy:copy && npx --yes wrangler@4 deploy"
   },
   "devDependencies": {
     "playwright": "1.56.1"

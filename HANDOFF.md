@@ -19,7 +19,9 @@ Handoff from a Claude chat session to Claude Code · Wednesday, September 30, 20
 - **Not yet measured:** frame rates on a real laptop and phone. The checks here use software WebGL. Expensive shader work is already skipped where it can't show (foam noise only where foam can form, ripples only up close), and auto quality steps down on slow devices.
 - **Not built:** drifting smoke lit by later bursts, and logo bursts from an image (text bursts work).
 - **Preview:** a private claude.ai artifact at https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j. The artifact host adds its own `<html>`, `<head>` and `<body>`, so publish a copy of `index.html` without them, plus every file in `src/`.
-- **To go public (Daniel):** share the artifact publicly from its Share menu, or enable GitHub Pages (steps in `README.md`). The outreach emails already carry the artifact link with `#hero`.
+- **Lake Michigan preset** (`src/landmarks.js`): a pier out to a red lighthouse with a blinking lamp and a sweeping beam, dune grass framing the foreground, and calmer waves. The lamp takes the dimmest firework-light slot, so it throws its own streak across the water. Pier and grass are panel toggles, shown by flipping visibility.
+- **Cloudflare:** `wrangler.jsonc` and `npm run deploy` are ready (a static-assets Worker, `beach-fireworks`). The account connector here is read-only, so deploying needs `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` in the environment; a dry run passes.
+- **To go public (Daniel):** add the Cloudflare token and run `npm run deploy`, or share the artifact publicly from its Share menu, or enable GitHub Pages (steps in `README.md`). The outreach emails carry the artifact link with `#hero`; swap in the Cloudflare URL once it's live.
 
 ## Why this exists
 
@@ -178,7 +180,7 @@ One step per Claude Code turn. Small steps are deliberate: the one-shot attempt 
 
 Defaults were chosen so the build could go ahead; each is one setting to change.
 
-- **Ocean or Great Lakes?** Built as a sunset-facing beach with gentle surf, which suits both. A Lake Michigan preset (smaller waves, beach grass, a pier with a lighthouse) is still open.
+- **Ocean or Great Lakes?** Both: the default is a sunset-facing ocean beach, and the Lake Michigan preset adds the pier, lighthouse, dune grass and calmer water.
 - **Launch site default:** the offshore barge. Along the shore and tap-to-aim are in the panel.
 - **Sound:** on after the first tap (`config.sound.enabled`).
 - **Hosting:** the artifact now; GitHub Pages is the stable home once this branch is merged.

@@ -96,6 +96,13 @@ export function create(ctx) {
         positions[i].set(record.x, record.y, record.z, topStrength[i] * scale);
         colors[i].set(record.r, record.g, record.b);
       }
+      // The lighthouse lamp takes the dimmest slot when it outshines what's there.
+      const lamp = ctx.landmarks ? ctx.landmarks.lamp : null;
+      const last = BURST_LIGHTS - 1;
+      if (lamp && lamp.intensity > positions[last].w) {
+        positions[last].set(lamp.x, lamp.y, lamp.z, lamp.intensity);
+        colors[last].set(lamp.r, lamp.g, lamp.b);
+      }
     },
 
     dispose() {

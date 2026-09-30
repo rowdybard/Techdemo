@@ -6,7 +6,7 @@ import { config as defaults } from './config.js';
 
 // The parts of the config a person designs. Everything else (resolutions, pool size,
 // camera geometry) belongs to the app.
-const SAVED = ['sky', 'ocean', 'beach', 'show', 'look', 'physics', 'bloom', 'sound'];
+const SAVED = ['sky', 'ocean', 'beach', 'landmarks', 'show', 'look', 'physics', 'bloom', 'sound'];
 const STORAGE_KEY = 'beach-fireworks-settings';
 const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text'];
 
@@ -29,6 +29,13 @@ export const PRESETS = {
     look: { palette: 'gold', lifetime: 3.2, trailLength: 1.4, mix: mixOf({ willow: 5, palm: 2, crackle: 1.5 }) },
     show: { shellsPerMinute: 24, maxShells: 6 },
     sky: { timeOfDay: 0.55 },
+  },
+  'Lake Michigan': {
+    // Freshwater: smaller, calmer waves and a short run-up, a pier and lighthouse, dune grass.
+    ocean: { waveHeight: 0.45, choppiness: 0.35, surf: 0.14 },
+    landmarks: { pier: true, grass: true },
+    look: { mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1.5, ring: 1, crossette: 1, crackle: 1, multibreak: 1, text: 0.5 }) },
+    show: { shellsPerMinute: 30 },
   },
   Neon: {
     look: { palette: 'neon', brightness: 1.9, glitter: 0.6, mix: mixOf({ ring: 2, peony: 2, chrysanthemum: 2, strobe: 1.2, multibreak: 1 }) },

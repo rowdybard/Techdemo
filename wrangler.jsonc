@@ -1,0 +1,8 @@
+// Cloudflare deployment: a Worker that only serves the static site (no server code).
+// `npm run deploy` copies index.html and src/ into .deploy/ and uploads that folder, so
+// dev tooling (node_modules, tools/, screenshots) never goes live.
+{
+  "name": "beach-fireworks",
+  "compatibility_date": "2026-09-30",
+  "assets": { "directory": "./.deploy" }
+}
