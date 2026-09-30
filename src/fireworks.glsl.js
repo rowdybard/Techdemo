@@ -50,6 +50,13 @@ export const fireworksVertex = /* glsl */ `
     float trail = aShape.z * uTrailScale;
     vec4 head = projectionMatrix * viewMatrix * vec4(positionAt(age), 1.0);
     vec4 tail = projectionMatrix * viewMatrix * vec4(positionAt(max(age - trail, 0.0)), 1.0);
+    // Skip sparks level with the camera or behind it. Their size divides by a depth near
+    // zero, and a trail crossing behind the camera flips across the screen, so either
+    // would draw one huge additive streak over everything. They're off-screen anyway.
+    if (head.w < 1.0 || tail.w < 1.0) {
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+      return;
+    }
 
     // Work in pixels so the quad keeps its width whatever the aspect ratio.
     vec2 headPx = head.xy / head.w * 0.5 * uViewport;
@@ -59,7 +66,7 @@ export const fireworksVertex = /* glsl */ `
     vec2 along = span > 0.001 ? axis / span : vec2(1.0, 0.0);
     vec2 across = vec2(-along.y, along.x);
 
-    float radius = max(aShape.y * uSizeScale * projectionMatrix[1][1] * 0.5 * uViewport.y / head.w, uMinPixels);
+    float radius = clamp(aShape.y * uSizeScale * projectionMatrix[1][1] * 0.5 * uViewport.y / head.w, uMinPixels, 0.08 * uViewport.y);
     float halfLength = 0.5 * span;
     vec2 center = 0.5 * (headPx + tailPx);
     vec2 corner = center + along * position.x * (halfLength + radius * 2.0) + across * position.y * radius * 2.0;
