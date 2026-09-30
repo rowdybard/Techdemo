@@ -86,7 +86,7 @@ try {
   const desktop = await open('desktop', { viewport: { width: 1280, height: 720 } });
 
   const leaks = await rebuild(desktop);
-  if (soakSeconds > 0) leaks.push(...(await soak(desktop)));
+  if (soakSeconds > 0) leaks.push(...(await soak(desktop.page)));
   await desktop.context.close();
 
   const problems = [...desktop.problems, ...phone.problems];
