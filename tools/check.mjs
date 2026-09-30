@@ -32,6 +32,7 @@ const TYPES = {
 };
 // Counts that must come back to their startup values after every rebuild.
 const STABLE = ['calls', 'geometries', 'textures', 'programs'];
+const WARM_UP = 5; // rebuilds before the memory baseline
 
 const { values: options } = parseArgs({
   options: { cycles: { type: 'string', default: '20' }, wait: { type: 'string', default: '3' } },
@@ -110,9 +111,15 @@ async function open(name, contextOptions) {
 }
 
 // Shift+R destroys the app and builds a new one. After many rebuilds, every counter
-// should be back where the first start left it.
+// should be back where it started. A few warm-up rebuilds come first (WARM_UP), so V8
+// compiling the rebuild code isn't mistaken for a leak.
 async function rebuild({ page, overlay }) {
   const cdp = await page.context().newCDPSession(page);
+  for (let i = 0; i < WARM_UP; i++) {
+    await page.keyboard.press('Shift+R');
+    await page.waitForTimeout(400);
+  }
+  await page.waitForTimeout(waitMs);
   const before = await counters(page, cdp);
   for (let i = 0; i < cycles; i++) {
     await page.keyboard.press('Shift+R');
@@ -132,7 +139,7 @@ async function rebuild({ page, overlay }) {
     if (overlayAfter[key] !== overlay[key]) leaks.push(`${key} ${overlay[key]} at start, ${overlayAfter[key]} after rebuilding`);
   }
 
-  console.log(`\nRebuilt ${cycles} times with Shift+R (memory read after forced GC):`);
+  console.log(`\nRebuilt ${cycles} times with Shift+R after ${WARM_UP} warm-up rebuilds (memory read after forced GC):`);
   console.log(`  canvases         ${before.canvases} → ${after.canvases}`);
   console.log(`  event listeners  ${before.listeners} → ${after.listeners}`);
   console.log(`  DOM nodes        ${before.nodes} → ${after.nodes}`);

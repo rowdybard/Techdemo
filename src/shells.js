@@ -22,10 +22,16 @@ const SHORE_HALF_WIDTH = 220;
  * `shell.launch` must already be set. Pass an aim point (x, height) to send the shell
  * there from the barge, or NaN for a random shell from the configured launch site.
  */
-export function planShell(shell, config, phone, aimX = NaN, aimY = NaN) {
+export function planShell(shell, config, phone, aimX = NaN, aimY = NaN, type = null) {
   const { physics, look, show } = config;
   const g = 9.81 * physics.gravity;
   const [bx, by, bz] = show.bargePosition;
+  shell.type = type || pickType(look.mix);
+  // Text reads best straight ahead, from the middle of the barge, at a middle height.
+  if (shell.type === 'text' && Number.isNaN(aimX)) {
+    aimX = bx;
+    aimY = (physics.heightMin + physics.heightMax) / 2;
+  }
   const aimed = !Number.isNaN(aimX);
   const shore = !aimed && show.launchSite === 'shore';
 
@@ -54,7 +60,6 @@ export function planShell(shell, config, phone, aimX = NaN, aimY = NaN) {
     shell.vy = Math.cos(lean) * climb;
     shell.vz = Math.sin(lean) * Math.sin(heading) * climb * 0.4;
   }
-  shell.type = pickType(look.mix);
   shell.count = Math.round(look.particles * (phone ? 0.55 : 1));
   shell.size = look.burstSize * (0.8 + Math.random() * 0.4);
   return shell;
@@ -85,6 +90,7 @@ export function fireShell(pool, shell, config, palette, out) {
   positionAt(at, shell.x, shell.y, shell.z, shell.vx, shell.vy, shell.vz, ROCKET_DRAG, fuse, g, wx, wz);
   velocityAt(velocity, shell.vx, shell.vy, shell.vz, ROCKET_DRAG, fuse, g, wx, wz);
   burst(pool, shell, config, palette, launch + fuse, at, velocity, out);
+  out.type = shell.type;
   return out;
 }
 

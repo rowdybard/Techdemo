@@ -74,7 +74,9 @@ export const config = {
   look: {
     palette: 'classic',
     // Weight per burst type: how often each one is picked.
-    mix: { peony: 2, chrysanthemum: 2, willow: 1.5, palm: 1, ring: 1, crossette: 1, strobe: 0.7, crackle: 1, multibreak: 1 },
+    mix: { peony: 2, chrysanthemum: 2, willow: 1.5, palm: 1, ring: 1, crossette: 1, strobe: 0.7, crackle: 1, multibreak: 1, heart: 0.35, star: 0.35, text: 0.5 },
+    text: 'SUNSET COVE', // what text shells spell; a client's name is the point
+    textWidth: 230, // metres across
     particles: 420, // sparks per shell (about half on phones)
     burstSize: 62, // metres a spark coasts before drag holds it
     lifetime: 2.6, // seconds
@@ -110,6 +112,11 @@ export const config = {
 
   fireworks: {
     poolSize: { desktop: 60000, phone: 20000 },
+  },
+
+  sound: {
+    enabled: true, // starts after the first tap or key press, as browsers require
+    volume: 0.6,
   },
 
   bloom: {

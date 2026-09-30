@@ -16,6 +16,9 @@ const TYPE_LABELS = {
   strobe: 'Strobe',
   crackle: 'Crackle',
   multibreak: 'Multi-break',
+  heart: 'Heart',
+  star: 'Star',
+  text: 'Your text',
 };
 
 export function create(ctx) {
@@ -33,6 +36,7 @@ export function create(ctx) {
     quality: config.quality.tier,
     finale: () => ctx.fireworks && ctx.fireworks.finale(),
     launch: () => ctx.fireworks && ctx.fireworks.launch(),
+    launchText: () => ctx.fireworks && ctx.fireworks.launch('text'),
   };
 
   // Presets and the big buttons.
@@ -42,6 +46,8 @@ export function create(ctx) {
   });
   gui.add(state, 'finale').name('Finale!');
   gui.add(state, 'launch').name('Launch one shell');
+  gui.add(config.look, 'text').name('Text in the sky').onFinishChange(() => remember(config));
+  gui.add(state, 'launchText').name('Spell it now');
   gui.add(state, 'hero').name('Hero mode').onChange((on) => hero.set(on));
 
   const show = gui.addFolder('Show');
@@ -52,12 +58,16 @@ export function create(ctx) {
   show.add(config.loop, 'timeScale', 0.1, 1, 0.05).name('Slow motion');
 
   const mix = gui.addFolder('Shell mix').close();
-  for (const type in TYPE_LABELS) mix.add(config.look.mix, type, 0, 5, 0.1).name(TYPE_LABELS[type]);
+  for (const type in TYPE_LABELS) {
+    if (typeof config.look.mix[type] !== 'number') config.look.mix[type] = 0; // a partial mix leaves the rest off
+    mix.add(config.look.mix, type, 0, 5, 0.1).name(TYPE_LABELS[type]);
+  }
 
   const look = gui.addFolder('Look').close();
   look.add(config.look, 'palette', { Classic: 'classic', 'Red, white & blue': 'usa', Gold: 'gold', Neon: 'neon', Pastel: 'pastel', Custom: 'custom' }).name('Palette');
   const custom = config.palettes.custom;
   for (let i = 0; i < custom.length; i++) look.addColor(custom, i).name(`Custom colour ${i + 1}`);
+  look.add(config.look, 'textWidth', 60, 260, 1).name('Text width (m)');
   look.add(config.look, 'burstSize', 20, 110, 1).name('Burst size (m)');
   look.add(config.look, 'particles', 80, 900, 10).name('Sparks per shell');
   look.add(config.look, 'lifetime', 1, 5, 0.1).name('Lifetime (s)');
@@ -96,6 +106,10 @@ export function create(ctx) {
       config.quality.tier = tier;
       if (tier !== 'auto' && ctx.post) ctx.post.setTier(tier);
     });
+
+  const sound = gui.addFolder('Sound').close();
+  sound.add(config.sound, 'enabled').name('Sound on');
+  sound.add(config.sound, 'volume', 0, 1, 0.01).name('Volume');
 
   // Save and load: JSON in a text box, since downloads don't work everywhere this runs.
   const saving = gui.addFolder('Save & load').close();

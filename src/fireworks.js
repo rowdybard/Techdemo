@@ -36,16 +36,16 @@ export function create(ctx) {
   // One reusable plan and a ring of burst records (time, place, colour) for the lights.
   const plan = { launch: 0 };
   const bursts = [];
-  for (let i = 0; i < SHELLS; i++) bursts.push({ time: -1e9, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, end: -1e9 });
+  for (let i = 0; i < SHELLS; i++) bursts.push({ time: -1e9, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, end: -1e9, type: '' });
   ctx.fireworks = { bursts };
   let next = 0;
   let nextLaunch = 0;
 
   let finaleUntil = -1;
 
-  function launch(time, aimX = NaN, aimY = NaN) {
+  function launch(time, aimX = NaN, aimY = NaN, type = null) {
     plan.launch = time;
-    planShell(plan, config, phone, aimX, aimY);
+    planShell(plan, config, phone, aimX, aimY, type);
     const record = bursts[next];
     next = (next + 1) % SHELLS;
     fireShell(pool, plan, config, config.palettes[config.look.palette], record);
@@ -135,9 +135,9 @@ export function create(ctx) {
       stats.poolUsed = pool.liveCount(time);
     },
 
-    /** Fires one shell now, whatever the schedule. */
-    launch() {
-      launch(uniforms.uTime.value);
+    /** Fires one shell now, whatever the schedule; optionally of one type. */
+    launch(type = null) {
+      launch(uniforms.uTime.value, NaN, NaN, type);
     },
 
     /** A few seconds of shells as fast as the pool allows. */

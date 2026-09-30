@@ -6,13 +6,14 @@ import * as burstlights from './burstlights.js';
 import * as ocean from './ocean.js';
 import * as beach from './beach.js';
 import * as fireworks from './fireworks.js';
+import * as audio from './audio.js';
 import * as post from './post.js';
 import * as debug from './debug.js';
 import * as ui from './ui.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [sky, burstlights, ocean, beach, fireworks, post, debug, ui];
+const MODULES = [sky, burstlights, ocean, beach, fireworks, audio, post, debug, ui];
 
 const DEG = Math.PI / 180;
 

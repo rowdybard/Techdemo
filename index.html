@@ -35,7 +35,10 @@
   .debug.compact :is(dt, dd):not(:first-of-type), .debug.compact p { display: none; }
 
   /* Show designer panel (lil-gui draws the controls; this places and themes it). */
-  #app .panel.lil-gui { position: absolute; z-index: 1; --title-background-color: rgb(233 237 245 / 0.08); top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); max-height: calc(100% - 24px - env(safe-area-inset-top, 0px)); overflow-y: auto; --background-color: var(--glass); --widget-color: rgb(233 237 245 / 0.12); --hover-color: rgb(233 237 245 / 0.2); --focus-color: rgb(233 237 245 / 0.26); --number-color: var(--spark); --string-color: var(--spark); --font-family: var(--sans); border-radius: 8px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #app .panel.lil-gui { position: absolute; z-index: 1; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); max-height: calc(100% - 24px - env(safe-area-inset-top, 0px)); overflow-y: auto; border-radius: 8px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  /* lil-gui sets its colours on every folder, so the theme has to as well. */
+  #app .panel.lil-gui, #app .panel .lil-gui { --background-color: var(--glass); --title-background-color: rgb(233 237 245 / 0.08); --widget-color: rgb(233 237 245 / 0.12); --hover-color: rgb(233 237 245 / 0.2); --focus-color: rgb(233 237 245 / 0.26); --number-color: var(--spark); --string-color: var(--spark); --font-family: var(--sans); }
+  #app .panel .lil-gui { --background-color: transparent; }
   .panel-json { display: grid; gap: 6px; padding: 6px var(--padding, 4px) 8px; }
   .panel-json textarea { width: 100%; box-sizing: border-box; min-height: 7em; padding: 6px; border: 1px solid var(--rule); border-radius: 4px; background: rgb(0 0 0 / 0.35); color: var(--ink); font: 11px/1.4 var(--mono); resize: vertical; }
   .panel-json-row { display: flex; gap: 6px; }

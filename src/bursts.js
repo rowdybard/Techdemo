@@ -4,6 +4,7 @@
 // now too, with later birth times, at positions from the same motion formula.
 import { KIND } from './fireworks.glsl.js';
 import { positionAt, velocityAt } from './particles.js';
+import { SHAPE_TYPES } from './shapes.js';
 
 const GOLDEN_ANGLE = 2.399963;
 const GOLD = [1, 0.55, 0.16];
@@ -242,7 +243,7 @@ function multibreak(pool, shell, config, palette, born, at, velocity, out) {
   fillLight(out, born, at, a, shell.size);
 }
 
-export const BURST_TYPES = { peony, chrysanthemum, willow, palm, ring, crossette, strobe, crackle, multibreak };
+export const BURST_TYPES = { peony, chrysanthemum, willow, palm, ring, crossette, strobe, crackle, multibreak, ...SHAPE_TYPES };
 
 export function burst(pool, shell, config, palette, born, at, velocity, out) {
   (BURST_TYPES[shell.type] || peony)(pool, shell, config, palette, born, at, velocity, out);
