@@ -10,6 +10,31 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+
+// Runs before bloom. A single NaN or infinite pixel (a GPU's answer to some edge-case maths)
+// would otherwise be blurred by bloom across the whole screen as a white or black flood.
+// It becomes black here, and very bright values are capped so they can't overflow.
+const SafeShader = {
+  name: 'SafeColors',
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      if (any(isnan(c)) || any(isinf(c))) c = vec4(0.0, 0.0, 0.0, 1.0);
+      gl_FragColor = min(c, vec4(200.0));
+    }
+  `,
+};
 
 const ORDER = ['low', 'medium', 'high'];
 const WARM_UP = 700; // ms of shader compiling and first uploads, not counted
@@ -26,9 +51,11 @@ export function create(ctx) {
 
   const composer = new EffectComposer(renderer, makeTarget(tier.samples));
   const renderPass = new RenderPass(scene, camera);
+  const safe = new ShaderPass(SafeShader);
   const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), config.bloom.strength, config.bloom.radius, config.bloom.threshold);
   const output = new OutputPass();
   composer.addPass(renderPass);
+  composer.addPass(safe);
   composer.addPass(bloom);
   composer.addPass(output);
 
@@ -99,6 +126,7 @@ export function create(ctx) {
     dispose() {
       // Passes first, then the composer's own targets.
       renderPass.dispose();
+      safe.dispose();
       bloom.dispose();
       output.dispose();
       composer.dispose();

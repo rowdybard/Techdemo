@@ -54,7 +54,8 @@ export const surfGLSL = /* glsl */ `
       float d = s - c;                                  // positive on the shore side of the crest
       // A steep face toward the beach and a long back; once broken it slumps into a bore.
       float face = d > 0.0 ? exp(-d * d / mix(1.6, 5.0, broken)) : exp(-d * d / 45.0);
-      float wave = height * grow * face * mix(1.0, 0.3, broken);
+      // Fades in as it first appears far out, so it doesn't pop into existence.
+      float wave = height * grow * face * mix(1.0, 0.3, broken) * smoothstep(0.0, 0.25, tau / SURF_TRAVEL);
       if (s < 1.0) o.lift += wave;
       // Whitewater: a thick band on the collapsing crest and a trail behind the bore.
       float crest = broken * exp(-d * d / 3.0);
@@ -99,7 +100,7 @@ export const surfGLSL = /* glsl */ `
     Surf o = Surf(0.0, 0.0, -2.0, 0.0, 1e4);
     if (scale <= 0.0) return o;
     float s = shoreDistance(xz);
-    if (s < SURF_START - 5.0 || s > 10.0) return o;
+    if (s < SURF_START - 30.0 || s > 10.0) return o; // wide enough that a wave's back tails off to nothing
     for (int i = 0; i < 3; i++) {
       float train = float(i);
       float period = 8.7 + train * 2.6;               // 8.7 s, 11.3 s, 13.9 s

@@ -90,7 +90,9 @@ export const skyGLSL = /* glsl */ `
 
   // 1 looking toward where the sun set, 0 looking away from it.
   float sunwardness(vec3 dir) {
-    return 0.5 + 0.5 * dot(normalize(dir.xz + 1e-5), normalize(uSunDirection.xz + 1e-5));
+    // Clamped: rounding can push the dot product a hair past 1, and pow() of the tiny
+    // negative number that leaves is NaN on real GPUs, which bloom smears over the screen.
+    return clamp(0.5 + 0.5 * dot(normalize(dir.xz + 1e-5), normalize(uSunDirection.xz + 1e-5)), 0.0, 1.0);
   }
 
   vec3 skyZenith() {
@@ -103,7 +105,7 @@ export const skyGLSL = /* glsl */ `
     float sunward = sunwardness(dir);
     float dusk = uDusk;
     vec3 horizon = mix(vec3(0.008, 0.011, 0.022), vec3(0.075, 0.07, 0.14), dusk);
-    vec3 color = mix(horizon, skyZenith(), pow(up, 0.5));
+    vec3 color = mix(horizon, skyZenith(), sqrt(up));
     // Afterglow: a warm band low on the horizon, strongest toward where the sun set.
     color += vec3(1.2, 0.38, 0.08) * pow(sunward, 6.0) * exp(-up * 9.0) * dusk * dusk * 1.1;
     color += vec3(0.55, 0.16, 0.22) * pow(sunward, 2.0) * exp(-up * 4.0) * dusk * dusk * 0.09;

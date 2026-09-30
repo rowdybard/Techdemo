@@ -25,7 +25,7 @@ const beamFragment = /* glsl */ `
   varying float vAlong;
   void main() {
     // Bright at the lamp (the cone's apex, where uv.y is 1), fading into the dusk.
-    float fade = pow(vAlong, 2.2);
+    float fade = pow(clamp(vAlong, 0.0, 1.0), 2.2);
     gl_FragColor = vec4(vec3(1.0, 0.86, 0.6) * fade * 0.16 * uStrength, 1.0);
   }
 `;
