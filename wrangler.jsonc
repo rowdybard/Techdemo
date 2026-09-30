@@ -1,8 +1,10 @@
 // Cloudflare deployment: a Worker that only serves the static site (no server code).
-// `npm run deploy` copies index.html and src/ into .deploy/ and uploads that folder, so
-// dev tooling (node_modules, tools/, screenshots) never goes live.
+// Every `wrangler deploy` (locally or in Cloudflare's Git builds) first runs the build
+// command, which copies index.html and src/ into .deploy/, and uploads only that folder,
+// so dev tooling (node_modules, tools/, screenshots, .git) never goes live.
 {
   "name": "beach-fireworks",
   "compatibility_date": "2026-09-30",
+  "build": { "command": "rm -rf .deploy && mkdir .deploy && cp -r index.html src .deploy/" },
   "assets": { "directory": "./.deploy" }
 }

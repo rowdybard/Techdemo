@@ -34,7 +34,7 @@ The check uses software WebGL, so its frame rate means nothing. Judge speed on r
 
 The page is static files and loads three.js and lil-gui from jsDelivr, so any static host works.
 
-- **Cloudflare (set up):** `wrangler.jsonc` deploys the site as a static-assets Worker named `beach-fireworks`. Give the environment a `CLOUDFLARE_API_TOKEN` (a token with the *Workers Scripts: Edit* permission) and `CLOUDFLARE_ACCOUNT_ID`, then run `npm run deploy`. It uploads only `index.html` and `src/`, and the site appears at `https://beach-fireworks.<your-subdomain>.workers.dev`.
+- **Cloudflare (set up):** `wrangler.jsonc` deploys the site as a static-assets Worker named `beach-fireworks`. Connected to this repo in Cloudflare (Workers → Import a repository), every push deploys; the default `npx wrangler deploy` command is all it needs. `wrangler.jsonc` has Wrangler copy `index.html` and `src/` into `.deploy/` first and upload only that. To deploy from a terminal instead, run `npm run deploy` with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` set. The site is at `https://beach-fireworks.<your-subdomain>.workers.dev`.
 
 - **GitHub Pages:** merge this branch into the default branch, then in the repo's Settings → Pages choose "Deploy from a branch", the default branch, and `/ (root)`. The demo is then at `https://rowdybard.github.io/Techdemo/`.
 - **claude.ai artifact:** already published at the preview link. Use its Share menu to make it public before sending it to anyone.

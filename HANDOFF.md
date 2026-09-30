@@ -20,7 +20,7 @@ Handoff from a Claude chat session to Claude Code · Wednesday, September 30, 20
 - **Not built:** drifting smoke lit by later bursts, and logo bursts from an image (text bursts work).
 - **Preview:** a private claude.ai artifact at https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j. The artifact host adds its own `<html>`, `<head>` and `<body>`, so publish a copy of `index.html` without them, plus every file in `src/`.
 - **Lake Michigan preset** (`src/landmarks.js`): a pier out to a red lighthouse with a blinking lamp and a sweeping beam, dune grass framing the foreground, and calmer waves. The lamp takes the dimmest firework-light slot, so it throws its own streak across the water. Pier and grass are panel toggles, shown by flipping visibility.
-- **Cloudflare:** `wrangler.jsonc` and `npm run deploy` are ready (a static-assets Worker, `beach-fireworks`). The account connector here is read-only, so deploying needs `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` in the environment; a dry run passes.
+- **Cloudflare:** Daniel connected the repo to a Cloudflare Worker build, which runs `npx wrangler deploy` on every push. `wrangler.jsonc` runs a build command that copies `index.html` and `src/` into `.deploy/` (gitignored) and uploads only that folder. The first build failed because `.deploy/` didn't exist in a fresh clone; the build command fixes that.
 - **To go public (Daniel):** add the Cloudflare token and run `npm run deploy`, or share the artifact publicly from its Share menu, or enable GitHub Pages (steps in `README.md`). The outreach emails carry the artifact link with `#hero`; swap in the Cloudflare URL once it's live.
 
 ## Why this exists

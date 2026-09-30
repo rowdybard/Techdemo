@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "check": "node tools/check.mjs",
-    "deploy:copy": "rm -rf .deploy && mkdir .deploy && cp -r index.html src .deploy/",
-    "deploy": "npm run deploy:copy && npx --yes wrangler@4 deploy"
+    "deploy": "npx --yes wrangler@4 deploy"
   },
   "devDependencies": {
     "playwright": "1.56.1"
