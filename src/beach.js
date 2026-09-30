@@ -75,7 +75,7 @@ const fragmentShader = /* glsl */ `
     vec3 glowDirection = normalize(vec3(uSunDirection.x, 0.12, uSunDirection.z));
     vec3 glowColor = skyGradient(normalize(vec3(uSunDirection.x, 0.02, uSunDirection.z))) * 0.42;
     vec3 fireworkLight = burstDiffuse(vWorld, n);
-    vec3 color = albedo * (fill * (0.6 + 0.4 * n.y) + glowColor * max(dot(n, glowDirection), 0.0) + fireworkLight * 0.05);
+    vec3 color = albedo * (fill * (0.6 + 0.4 * n.y) + glowColor * max(dot(n, glowDirection), 0.0) + fireworkLight * 0.03);
 
     // Wet sand mirrors the sky; fresh water left by the surge mirrors it most.
     vec3 r = reflect(-view, n);

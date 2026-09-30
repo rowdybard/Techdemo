@@ -1,11 +1,16 @@
-// Ground show: a row of big fountains (gerbs) along the barge, spraying sparks 25-30 m
-// up that arc over and rain back into the water. Every so often a ground show plays in
-// one of a few patterns: all together, a sweep from one end to the other, or alternating
-// heights. Like the shells, each fountain writes its whole spray into the particle pool
-// at once, with birth times spread over its run, so nothing is simulated on the CPU.
-// Each fountain is also a steady light the water and sand reflect while it runs.
+// Ground show, fired from a row of tubes along the barge every so often. The 'mixed'
+// style rotates through fountains (gerbs spraying sparks that arc over and rain back into
+// the water, all together, sweeping either way, or at alternating heights), sweeping
+// shooters, roman candles, mines and V fans (those four are in ground.js); a single
+// style can be chosen instead. Like the shells, each effect writes all of its particles
+// at once with birth times spread over its run, so nothing is simulated on the CPU, and
+// each tube is a steady light the water and sand reflect while it runs.
 import { KIND } from './fireworks.glsl.js';
 import { BARGE_LENGTH } from './fireworks.js';
+import { candles, fans, mines, shooters } from './ground.js';
+
+const STYLES = ['fountains', 'shooters', 'candles', 'mines', 'fans'];
+const EFFECTS = { shooters, candles, mines, fans };
 
 const MAX_NOZZLES = 14;
 const PATTERNS = ['together', 'sweep', 'alternate', 'sweep-back'];
@@ -26,18 +31,27 @@ export function create(ctx) {
   }
   let nextShow = settings.firstAt;
   let pattern = 0;
+  let turn = 0;
   let now = 0;
+  const tubes = []; // x of each tube along the barge, reused show to show
 
   function runShow(start) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return;
     const nozzles = Math.min(MAX_NOZZLES, Math.round(settings.nozzles * (phone ? 0.6 : 1)));
-    const kind = PATTERNS[pattern];
-    pattern = (pattern + 1) % PATTERNS.length;
     const [bx, by, bz] = config.show.bargePosition;
     const span = BARGE_LENGTH * 0.85;
+    tubes.length = 0;
+    for (let i = 0; i < nozzles; i++) tubes.push(bx - span / 2 + (span * (i + 0.5)) / nozzles);
+    const style = settings.style === 'mixed' ? STYLES[turn++ % STYLES.length] : settings.style;
+    if (EFFECTS[style]) {
+      EFFECTS[style](pool, config, phone, start, tubes, by + 2.5, bz, config.palettes[config.look.palette], lights);
+      return;
+    }
+    const kind = PATTERNS[pattern];
+    pattern = (pattern + 1) % PATTERNS.length;
     for (let i = 0; i < nozzles; i++) {
-      const x = bx - span / 2 + (span * (i + 0.5)) / nozzles;
+      const x = tubes[i];
       let delay = 0;
       if (kind === 'sweep') delay = i * 0.3;
       if (kind === 'sweep-back') delay = (nozzles - 1 - i) * 0.3;

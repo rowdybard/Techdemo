@@ -25,14 +25,17 @@ export const burstLightGLSL = /* glsl */ `
     return sum;
   }
 
-  // Soft light falling on a surface with normal n.
+  // Soft light falling on a surface with normal n. It falls off with distance, so a burst
+  // over the barge tints the beach instead of repainting it in the burst's colour.
   vec3 burstDiffuse(vec3 p, vec3 n) {
     vec3 sum = vec3(0.0);
     for (int i = 0; i < ${BURST_LIGHTS}; i++) {
       float intensity = uBurstPosition[i].w;
       if (intensity <= 0.0) continue;
-      vec3 toLight = normalize(uBurstPosition[i].xyz - p);
-      sum += uBurstColor[i] * intensity * (0.35 + 0.65 * max(dot(n, toLight), 0.0));
+      vec3 offset = uBurstPosition[i].xyz - p;
+      float distance = length(offset);
+      float falloff = 1.0 / (1.0 + distance * distance / 40000.0); // half strength at 200 m
+      sum += uBurstColor[i] * intensity * falloff * (0.35 + 0.65 * max(dot(n, offset / distance), 0.0));
     }
     return sum;
   }

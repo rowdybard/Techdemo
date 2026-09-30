@@ -84,7 +84,8 @@ export const config = {
     duration: 9, // seconds each fountain runs
     height: 42, // metres
     nozzles: 9, // along the barge (fewer on phones)
-    color: 'gold', // 'gold' or 'silver'
+    color: 'gold', // fountains: 'gold' or 'silver'; the other effects use the palette
+    style: 'mixed', // 'mixed' rotates through all; or 'fountains', 'shooters', 'candles', 'mines', 'fans'
   },
 
   look: {

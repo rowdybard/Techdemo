@@ -131,7 +131,7 @@ export const oceanFragment = /* glsl */ `
     float foam = 0.0;
     if (amount > 0.01) foam = foamPattern(p + vec2(0.0, -uTime * 0.3), amount);
     vec3 foamLight = FOAM_LIGHT(skyGradient(normalize(vec3(uSunDirection.x, 0.06, uSunDirection.z))) * 0.5);
-    foamLight += burstDiffuse(vWorld, n) * 0.08;
+    foamLight += burstDiffuse(vWorld, n) * 0.035;
     color = mix(color, foamLight, foam * 0.9);
 
     // Soft waterline: the sheet of water fades out as it thins, so there is no hard edge.

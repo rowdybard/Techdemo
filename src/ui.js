@@ -59,13 +59,14 @@ export function create(ctx) {
   show.add(config.loop, 'timeScale', 0.1, 1, 0.05).name('Slow motion');
 
   const ground = gui.addFolder('Ground show').close();
-  ground.add(state, 'fountains').name('Fountains now');
-  ground.add(config.fountains, 'enabled').name('Fountains on');
+  ground.add(state, 'fountains').name('Ground show now');
+  ground.add(config.fountains, 'enabled').name('Ground show on');
+  ground.add(config.fountains, 'style', { 'Mix of everything': 'mixed', Fountains: 'fountains', 'Sweeping shooters': 'shooters', 'Roman candles': 'candles', Mines: 'mines', 'V fans': 'fans' }).name('Style');
   ground.add(config.fountains, 'every', 8, 90, 1).name('Every (s)');
   ground.add(config.fountains, 'duration', 3, 20, 0.5).name('Run time (s)');
   ground.add(config.fountains, 'height', 8, 50, 1).name('Height (m)');
-  ground.add(config.fountains, 'nozzles', 2, 14, 1).name('Fountains');
-  ground.add(config.fountains, 'color', { Gold: 'gold', Silver: 'silver' }).name('Colour');
+  ground.add(config.fountains, 'nozzles', 2, 14, 1).name('Tubes');
+  ground.add(config.fountains, 'color', { Gold: 'gold', Silver: 'silver' }).name('Fountain colour');
 
   const mix = gui.addFolder('Shell mix').close();
   for (const type in TYPE_LABELS) {
