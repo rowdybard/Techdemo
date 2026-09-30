@@ -84,6 +84,7 @@ export function create(ctx) {
   scene.add(config.ocean, 'choppiness', 0, 1.2, 0.05).name('Choppiness');
   scene.add(config.ocean, 'surf', 0, 0.6, 0.01).name('Surf run-up (m)');
   scene.add(config.beach, 'glints', 0, 2, 0.05).name('Sand glints');
+  scene.add(config.look, 'sceneLight', 0, 3, 0.05).name('Firework light');
   scene.add(config.camera, 'preset', { 'On the sand': 'sand', Drone: 'drone', 'Water level': 'water' }).name('Camera')
     .onChange((name) => ctx.setCameraPreset(name));
   scene.add(config.renderer, 'exposure', 0.3, 2, 0.01).name('Exposure');

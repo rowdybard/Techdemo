@@ -3,6 +3,7 @@
 // the twilight sky, adds foam, and fades the water out at the waterline.
 import { noiseGLSL, skyGLSL } from './glsl.js';
 import { terrainGLSL } from './terrain.glsl.js';
+import { burstLightGLSL } from './burstlights.js';
 
 export const WAVE_COUNT = 6;
 
@@ -65,6 +66,7 @@ export const oceanFragment = /* glsl */ `
   ${noiseGLSL}
   ${skyGLSL}
   ${terrainGLSL}
+  ${burstLightGLSL}
 
   // Small ripples on top of the waves, as a normal perturbation.
   vec3 ripples(vec2 p, float strength) {
@@ -100,6 +102,10 @@ export const oceanFragment = /* glsl */ `
     float light = 0.25 + 0.75 * uDusk;
     vec3 body = mix(vec3(0.02, 0.06, 0.055), vec3(0.003, 0.009, 0.016), smoothstep(0.5, 6.0, water)) * light;
     vec3 color = mix(body, reflection, fresnel);
+    // Fireworks mirrored in the waves: every facet tilted the right way glints, which
+    // draws each burst out into a long, broken streak across the water.
+    color += burstReflection(vWorld, r, 420.0) * mix(0.25, 1.0, fresnel) * (0.35 + 0.65 * detail);
+    color += burstDiffuse(vWorld, n) * 0.004;
 
     // Foam: a lacy band where the water thins out over the sand, and streaks on crests.
     vec2 p = vWorld.xz;
@@ -110,6 +116,7 @@ export const oceanFragment = /* glsl */ `
     foam += smoothstep(0.55, 1.1, vCrest) * smoothstep(0.42, 0.68, fbm(p * 0.35 + uTime * 0.08)) * 0.8;
     foam = clamp(foam * uFoam, 0.0, 1.0) * detail;
     vec3 foamLight = skyZenith() * 2.2 + skyGradient(normalize(vec3(uSunDirection.x, 0.08, uSunDirection.z))) * 0.22;
+    foamLight += burstDiffuse(vWorld, n) * 0.07;
     color = mix(color, foamLight, clamp(foam, 0.0, 1.0) * 0.85);
 
     // Soft waterline: the sheet of water fades out as it thins, so there is no hard edge.

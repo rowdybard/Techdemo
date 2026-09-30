@@ -82,6 +82,7 @@ export const config = {
     trailLength: 1,
     glitter: 1,
     brightness: 1.6,
+    sceneLight: 1, // how strongly bursts light the water and sand
   },
 
   physics: {

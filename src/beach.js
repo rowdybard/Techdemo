@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { noiseGLSL, skyGLSL } from './glsl.js';
 import { terrainGLSL } from './terrain.glsl.js';
+import { burstLightGLSL } from './burstlights.js';
 
 const vertexShader = /* glsl */ `
   varying vec3 vWorld;
@@ -33,6 +34,7 @@ const fragmentShader = /* glsl */ `
   ${noiseGLSL}
   ${skyGLSL}
   ${terrainGLSL}
+  ${burstLightGLSL}
 
   void main() {
     vec2 p = vWorld.xz;
@@ -68,20 +70,23 @@ const fragmentShader = /* glsl */ `
     vec3 fill = skyZenith() * 1.8 + skyGradient(vec3(0.0, 0.3, 0.0)) * 0.5;
     vec3 glowDirection = normalize(vec3(uSunDirection.x, 0.12, uSunDirection.z));
     vec3 glowColor = skyGradient(normalize(vec3(uSunDirection.x, 0.02, uSunDirection.z))) * 0.42;
-    vec3 color = albedo * (fill * (0.6 + 0.4 * n.y) + glowColor * max(dot(n, glowDirection), 0.0));
+    vec3 fireworkLight = burstDiffuse(vWorld, n);
+    vec3 color = albedo * (fill * (0.6 + 0.4 * n.y) + glowColor * max(dot(n, glowDirection), 0.0) + fireworkLight * 0.05);
 
     // Wet sand mirrors the sky; fresh water left by the surge mirrors it most.
     vec3 r = reflect(-view, n);
     r.y = abs(r.y);
     float fresnel = 0.02 + 0.98 * pow(1.0 - clamp(dot(view, n), 0.0, 1.0), 5.0);
     color += skyGradient(r) * fresnel * (0.3 * damp + 0.55 * fresh);
+    // The wet band shines when a shell bursts.
+    color += burstReflection(vWorld, r, 600.0) * mix(0.15, 1.0, fresnel) * (0.2 * damp + 0.7 * fresh);
 
     // Glints: rare grains that catch the light from a narrow range of angles.
     vec2 cell = floor(p * 26.0);
     float lucky = step(0.996, hash12(cell));
     float facing = hash13(vec3(cell, floor(dot(view, vec3(31.0, 17.0, 23.0)))));
     float glint = lucky * smoothstep(0.75, 1.0, facing) * (1.0 - smoothstep(3.0, 16.0, distance)) * uGlints;
-    color += (fill * 2.5 + glowColor * 1.5) * glint * (0.35 + 0.65 * wet);
+    color += (fill * 2.5 + glowColor * 1.5 + fireworkLight * 1.2) * glint * (0.35 + 0.65 * wet);
 
     // Distant sand fades into the haze on the horizon.
     vec3 haze = skyGradient(normalize(vec3(-view.x, 0.02, -view.z)));
@@ -100,6 +105,7 @@ export function create(ctx) {
 
   const uniforms = {
     ...ctx.sky.uniforms,
+    ...ctx.burstLights.uniforms,
     uTime: ctx.ocean.uniforms.uTime,
     uSwash: ctx.ocean.uniforms.uSwash,
     uGlints: { value: settings.glints },

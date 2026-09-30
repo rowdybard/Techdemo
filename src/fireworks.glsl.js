@@ -111,7 +111,7 @@ export const fireworksFragment = /* glsl */ `
 
     // Sparks brighten as they spread (hundreds start on one point, and at full strength
     // they would add up to a white blot), then fade and cool toward orange at the end.
-    float fade = (1.0 - smoothstep(0.6, 1.0, vAge)) * mix(0.1, 1.0, smoothstep(0.0, 0.25, vSeconds));
+    float fade = (1.0 - smoothstep(0.6, 1.0, vAge)) * mix(0.1, 1.0, smoothstep(0.0, 0.4, vSeconds));
     vec3 color = mix(vColor, vec3(1.0, 0.45, 0.12) * dot(vColor, vec3(0.33)), smoothstep(0.55, 1.0, vAge) * 0.6);
     float brightness = fade;
 

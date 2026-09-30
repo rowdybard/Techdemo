@@ -29,6 +29,7 @@ export function create(ctx) {
 
   const uniforms = {
     ...ctx.sky.uniforms,
+    ...ctx.burstLights.uniforms,
     uTime: { value: 0 },
     uWaveHeight: { value: settings.waveHeight },
     uChoppiness: { value: settings.choppiness },
