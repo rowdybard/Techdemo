@@ -4,14 +4,22 @@ Handoff from a Claude chat session to Claude Code · Wednesday, September 30, 20
 
 ## Status
 
-- **Steps 1 to 4 of the build order are done** (September 30, 2026): skeleton, sky, ocean (`src/ocean.js`, `src/ocean.glsl.js`) and beach (`src/beach.js`) on the shared height in `src/terrain.glsl.js`. `src/glsl.js` holds noise and the sky gradient that the water and wet sand reflect. `src/placeholder.js` is now only the barge, until the fireworks step replaces it. three.js is pinned to 0.186.1 and lil-gui to 0.21.0.
-- **Sky** (step 2) is a custom twilight shader instead of three's `Sky.js`, whose physical model goes almost black once the sun is below the horizon. It draws an afterglow toward the sunset (over the water, 18° right of straight ahead), a blue-hour gradient, cloud wisps and twinkling stars. `config.sky.timeOfDay` (0 late dusk, 1 night) only moves uniforms. Tone mapping is ACES filmic, with exposure in `config.renderer.exposure`.
-- **World layout** (in `src/config.js`): +Y is up, the sea lies toward −Z, and the resting waterline wanders a few metres either side of z = 0. The camera stands about 1.7 m above the sand, 16 m up the beach, and the barge sits 280 m offshore.
-- **Shore:** the swash (`swashLevel` in `terrain.glsl.js`) runs up the sand and drains on a cycle that drifts along the beach. The ocean fades to zero alpha as the water thins, the beach darkens where the surge has been, and freshly soaked sand mirrors the sky.
-- **Drag** orbits a point over the water, limited to ±15° sideways and about 1.5 to 3.7 m of eye height. Wider ranges lost the beach from the frame. Zoom and pan are off.
-- **Checking a step:** `npm install`, then `npm run check`. It reports console problems and the debug overlay's counts, saves desktop and phone screenshots to `.check/`, and runs 20 Shift+R rebuilds against the memory counters. Step 4 result: clean console; 5 draw calls, 5 geometries, 0 textures, 4 programs. The full check takes about 4 minutes in software rendering. After 20 rebuilds, canvases, listeners and every overlay count matched startup. A heap snapshot diff over 50 more rebuilds showed no app objects growing, only V8 compiled code.
-- **Preview:** a private claude.ai artifact at https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j, republished after each step. The artifact host adds its own `<html>`, `<head>` and `<body>`, so publish a copy of `index.html` without them, plus the `src/` files.
-- Next action: step 5, the fireworks engine.
+- **Steps 1 to 11 of the build order are built** (September 30, 2026), with the parts of step 11 that can be done without real devices. Step 12 is ready except for the public link, which Daniel has to switch on (see below). three.js is pinned to 0.186.1 and lil-gui to 0.21.0.
+- **Files beyond the original layout:** `src/glsl.js` (noise and the sky gradient that water and sand reflect), `src/ocean.glsl.js`, `src/particles.js` (the pool), `src/shells.js` (a whole shell written at launch), `src/bursts.js` and `src/shapes.js` (burst types), `src/burstlights.js` (firework light), `src/presets.js`, `src/hero.js`. Every file is under 300 lines.
+- **Sky** is a custom twilight shader instead of three's `Sky.js`, whose physical model goes almost black once the sun is below the horizon. It draws an afterglow toward the sunset (over the water, 18° right of straight ahead, as on a west-facing Lake Michigan beach), a blue-hour gradient, cloud wisps and twinkling stars.
+- **World layout** (in `src/config.js`): +Y is up, the sea lies toward −Z, and the resting waterline wanders a few metres either side of z = 0. The camera stands about 1.7 m above the sand, 16 m up the beach; the barge sits 380 m offshore so bursts land in the upper half of the frame.
+- **Shore:** the swash (`swashLevel` in `terrain.glsl.js`) runs up the sand and drains on a cycle that drifts along the beach. The ocean fades to zero alpha as the water thins, the beach darkens where the surge has been, and freshly soaked sand mirrors the sky and the bursts.
+- **Fireworks:** one pool of 60,000 particles (20,000 on phones), one draw call. Launching writes the whole shell at once (the rocket, the sparks it sheds, the burst, and later events such as crossette splits, crackle pops and second breaks) with later birth times, placed with the same closed-form motion the shader uses. Three shells are already climbing at load, so the first burst lands within about a second. Types: peony, chrysanthemum, willow, palm, ring, crossette, strobe, crackle, multi-break, heart, star and text.
+- **Firework light:** the eight brightest live bursts go to the ocean and beach as uniform arrays. On the water they make long glittering streaks; on the sand, a soft flash, lit glints, and reflections in the wet band.
+- **Post and quality:** RenderPass → UnrealBloomPass (threshold 1) → OutputPass with ACES tone mapping. Tiers set the pixel-ratio cap, MSAA and bloom resolution; auto quality steps down after two seconds of frames slower than 20 ms. Sparks brighten over their first 0.4 s, so a fresh burst doesn't bloom into a white blot.
+- **Panel and hero mode:** every control in the spec, six presets, JSON copy and paste (only known keys with matching types are accepted), and the last setup remembered in localStorage. Hero mode shows a sample header for an invented marina; `#hero` on the link opens in it, `#debug` shows the stats overlay, which is hidden by default.
+- **Sound:** synthesised booms delayed by distance over the speed of sound, and crackle. It starts after the first tap. One AudioContext serves the page across rebuilds and closes on pagehide. This departs from no-leak rule 7 on purpose: the heap diff showed Chromium keeps closed AudioContexts alive, so closing and recreating one per rebuild leaked.
+- **Drag** orbits a point over the water within each camera preset's limits (sand, drone, water level). Zoom and pan are off.
+- **Checks:** `npm run check` reports console problems and overlay counts, saves desktop and phone screenshots to `.check/`, and runs 20 Shift+R rebuilds after 5 warm-ups. `--soak 600` adds 10 minutes of the Finale preset. Latest result: clean console; 22 draw calls, 8 geometries, 13 textures, 14 programs with bloom; canvases, listeners, DOM nodes and every overlay count back at their startup values after the rebuilds. Heap snapshot diffs over 50 rebuilds show no app objects growing, only V8 compiled code and Chromium's capped performance buffers.
+- **Not yet measured:** frame rates on a real laptop and phone. The checks here use software WebGL. Expensive shader work is already skipped where it can't show (foam noise only where foam can form, ripples only up close), and auto quality steps down on slow devices.
+- **Not built:** drifting smoke lit by later bursts, and logo bursts from an image (text bursts work).
+- **Preview:** a private claude.ai artifact at https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j. The artifact host adds its own `<html>`, `<head>` and `<body>`, so publish a copy of `index.html` without them, plus every file in `src/`.
+- **To go public (Daniel):** share the artifact publicly from its Share menu, or enable GitHub Pages (steps in `README.md`). The outreach emails already carry the artifact link with `#hero`.
 
 ## Why this exists
 
@@ -168,10 +176,12 @@ One step per Claude Code turn. Small steps are deliberate: the one-shot attempt 
 
 ## Open decisions for Daniel
 
-- **Ocean or Great Lakes?** Local prospects sit on Lake Michigan beaches: smaller waves, dunes with beach grass, a pier with a lighthouse. That could be a scene preset.
-- **Launch site default:** offshore barge or along the waterline.
-- **Sound:** on after the first tap, or off until switched on.
-- **Hosting:** GitHub Pages, Cloudflare Pages, or a claude.ai artifact.
+Defaults were chosen so the build could go ahead; each is one setting to change.
+
+- **Ocean or Great Lakes?** Built as a sunset-facing beach with gentle surf, which suits both. A Lake Michigan preset (smaller waves, beach grass, a pier with a lighthouse) is still open.
+- **Launch site default:** the offshore barge. Along the shore and tap-to-aim are in the panel.
+- **Sound:** on after the first tap (`config.sound.enabled`).
+- **Hosting:** the artifact now; GitHub Pages is the stable home once this branch is merged.
 
 ## Kickoff prompt for Claude Code
 

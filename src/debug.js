@@ -21,7 +21,7 @@ export function create({ renderer, container, config, stats, signal, phone }) {
   const root = document.createElement('div');
   root.className = 'debug';
   root.classList.toggle('compact', phone);
-  root.hidden = !config.debug.visible;
+  root.hidden = !(config.debug.visible || location.hash === '#debug');
 
   const list = document.createElement('dl');
   const cells = {};

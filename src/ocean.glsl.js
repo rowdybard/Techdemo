@@ -88,7 +88,8 @@ export const oceanFragment = /* glsl */ `
     vec3 view = toEye / distance;
 
     float detail = 1.0 - smoothstep(25.0, 260.0, distance);
-    vec3 n = normalize(normalize(vNormal) + ripples(vWorld.xz, 0.09 * detail));
+    vec3 n = normalize(vNormal);
+    if (detail > 0.0) n = normalize(n + ripples(vWorld.xz, 0.09 * detail)); // no ripples where they'd be sub-pixel
     // Far off, the waves are smaller than a pixel: settle toward a calm, glossy surface.
     n = normalize(mix(n, vec3(0.0, 1.0, 0.0), 0.7 * smoothstep(150.0, 1500.0, distance)));
 
@@ -109,11 +110,12 @@ export const oceanFragment = /* glsl */ `
 
     // Foam: a lacy band where the water thins out over the sand, and streaks on crests.
     vec2 p = vWorld.xz;
+    // The noise is only worked out where foam can be, which is most of the saving on phones.
     float edge = 1.0 - smoothstep(0.0, 0.1 + 0.12 * valueNoise(p * 0.2 + uTime * 0.1), water);
-    float lace = fbm(p * vec2(0.6, 1.6) + vec2(0.0, -uTime * 0.35));
-    float foam = edge * smoothstep(0.5, 0.75, lace + edge * 0.25);
-    foam += (1.0 - smoothstep(0.0, 0.035, water)) * 0.8; // the thin bright lip of each run-up
-    foam += smoothstep(0.55, 1.1, vCrest) * smoothstep(0.42, 0.68, fbm(p * 0.35 + uTime * 0.08)) * 0.8;
+    float crest = smoothstep(0.55, 1.1, vCrest);
+    float foam = (1.0 - smoothstep(0.0, 0.035, water)) * 0.8; // the thin bright lip of each run-up
+    if (edge > 0.001) foam += edge * smoothstep(0.5, 0.75, fbm(p * vec2(0.6, 1.6) + vec2(0.0, -uTime * 0.35)) + edge * 0.25);
+    if (crest > 0.001) foam += crest * smoothstep(0.42, 0.68, fbm(p * 0.35 + uTime * 0.08)) * 0.8;
     foam = clamp(foam * uFoam, 0.0, 1.0) * detail;
     vec3 foamLight = skyZenith() * 2.2 + skyGradient(normalize(vec3(uSunDirection.x, 0.08, uSunDirection.z))) * 0.22;
     foamLight += burstDiffuse(vWorld, n) * 0.07;

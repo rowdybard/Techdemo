@@ -7,6 +7,8 @@
 //   npm install                   once; then `npx playwright install chromium` if Chromium is missing
 //   npm run check                 20 rebuilds, screenshots in .check/
 //   npm run check -- --cycles 5 --wait 2
+//   npm run check -- --soak 600   also runs the Finale preset for 10 minutes and samples
+//                                 the counts and heap every 30 s; they should stay flat
 //
 // Chromium draws with SwiftShader (software WebGL) so this runs on machines with no GPU.
 // That makes the FPS it reports meaningless; judge speed on real hardware. SwiftShader
@@ -35,8 +37,13 @@ const STABLE = ['calls', 'geometries', 'textures', 'programs'];
 const WARM_UP = 5; // rebuilds before the memory baseline
 
 const { values: options } = parseArgs({
-  options: { cycles: { type: 'string', default: '20' }, wait: { type: 'string', default: '3' } },
+  options: {
+    cycles: { type: 'string', default: '20' },
+    wait: { type: 'string', default: '3' },
+    soak: { type: 'string', default: '0' },
+  },
 });
+const soakSeconds = Number(options.soak);
 const cycles = Number(options.cycles);
 const waitMs = Number(options.wait) * 1000;
 
@@ -79,6 +86,7 @@ try {
   const desktop = await open('desktop', { viewport: { width: 1280, height: 720 } });
 
   const leaks = await rebuild(desktop);
+  if (soakSeconds > 0) leaks.push(...(await soak(desktop)));
   await desktop.context.close();
 
   const problems = [...desktop.problems, ...phone.problems];
@@ -96,7 +104,7 @@ async function open(name, contextOptions) {
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   const problems = watch(page);
-  await page.goto(url, { timeout: 90000 });
+  await page.goto(`${url}#debug`, { timeout: 90000 }); // #debug shows the overlay this reads
   try {
     await page.waitForSelector('canvas', { timeout: 20000 });
   } catch {
@@ -147,6 +155,35 @@ async function rebuild({ page, overlay }) {
   console.log(`  overlay          ${formatOverlay(overlayAfter)}`);
   console.log(leaks.length ? `  Leaks: ${leaks.join('; ')}` : '  No leaks: every count is back to its startup value');
   return leaks;
+}
+
+// Runs the Finale preset (chosen in the panel, as a person would) and samples the counts
+// and heap. The particle pool wraps many times; nothing should grow.
+async function soak(page) {
+  const cdp = await page.context().newCDPSession(page);
+  await page.selectOption('.panel select >> nth=0', 'Finale');
+  const samples = [];
+  const started = Date.now();
+  console.log(`\nSoak: Finale preset for ${soakSeconds} s`);
+  while (Date.now() - started < soakSeconds * 1000) {
+    await page.waitForTimeout(Math.min(30000, soakSeconds * 1000));
+    const memory = await counters(page, cdp);
+    const overlay = await readOverlay(page);
+    samples.push({ ...memory, ...overlay });
+    const t = Math.round((Date.now() - started) / 1000);
+    console.log(`  ${String(t).padStart(4)} s  heap ${memory.heapMB.toFixed(2)} MB · geometries ${overlay.geometries} · textures ${overlay.textures} · programs ${overlay.programs} · particles ${overlay.pool} · listeners ${memory.listeners}`);
+  }
+  const problems = [];
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  for (const key of ['geometries', 'textures', 'programs']) {
+    if (samples.some((sample) => sample[key] !== first[key])) problems.push(`${key} changed during the soak`);
+  }
+  if (last.listeners !== first.listeners) problems.push('event listeners changed during the soak');
+  // Allow the heap to saw; flag a steady climb.
+  if (samples.length >= 4 && last.heapMB > first.heapMB + 2) problems.push(`heap climbed ${(last.heapMB - first.heapMB).toFixed(2)} MB during the soak`);
+  console.log(problems.length ? `  Soak problems: ${problems.join('; ')}` : '  Soak: counts flat, heap steady');
+  return problems;
 }
 
 async function counters(page, cdp) {

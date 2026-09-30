@@ -135,7 +135,7 @@ export const config = {
   },
 
   debug: {
-    visible: true,
+    visible: false, // or add #debug to the link, or press the backquote key
     refreshHz: 4,
   },
 };

@@ -45,7 +45,7 @@ const fragmentShader = /* glsl */ `
 
     // Dry sand: pale, with fine grain and faint wind ripples that fade with distance.
     float grain = valueNoise(p * 38.0) * 0.5 + valueNoise(p * 9.0) * 0.5;
-    float ripple = sin(p.y * 5.5 + p.x * 0.8 + fbm(p * 0.5) * 6.0) * 0.5 + 0.5;
+    float ripple = near > 0.0 ? sin(p.y * 5.5 + p.x * 0.8 + fbm(p * 0.5) * 6.0) * 0.5 + 0.5 : 0.5;
     vec3 albedo = vec3(0.74, 0.59, 0.42) * (0.86 + 0.18 * grain * near + 0.08 * ripple * near);
     albedo *= 0.9 + 0.2 * fbm(p * 0.05);
 
