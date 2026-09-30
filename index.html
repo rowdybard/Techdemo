@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Beach Fireworks</title>
+<meta name="description" content="A real-time beach at dusk with a firework show anyone can design.">
+<link rel="icon" href="data:,">
+<style>
+  /* One full-bleed dusk scene. The page keeps this dark look whatever the viewer's theme. */
+  :root {
+    --night: #0b1020;
+    --dusk-top: #161e38;
+    --dusk-horizon: #4b3f5d;
+    --ink: #e9edf5;
+    --muted: #98a2b7;
+    --glass: rgb(9 13 26 / 0.68);
+    --rule: rgb(233 237 245 / 0.14);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night); color: var(--ink); font-family: var(--sans); }
+  /* The gradient shows while three.js loads, so the first paint already reads as dusk. */
+  #app { position: fixed; inset: 0; overflow: hidden; background: linear-gradient(to bottom, var(--dusk-top), var(--dusk-horizon) 62%, var(--night)); }
+  #app canvas { display: block; width: 100%; height: 100%; outline: none; }
+
+  .debug { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: calc(16px + env(safe-area-inset-left, 0px)); padding: 10px 12px; border-radius: 6px; background: var(--glass); color: var(--ink); font: 12px/1.45 var(--mono); font-variant-numeric: tabular-nums; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .debug dl { display: grid; grid-template-columns: auto auto; column-gap: 16px; margin: 0; }
+  .debug dt { color: var(--muted); }
+  .debug dd { margin: 0; text-align: right; }
+  .debug p { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--rule); color: var(--muted); }
+  .debug.compact { padding: 6px 10px; }
+  .debug.compact :is(dt, dd):not(:first-of-type), .debug.compact p { display: none; }
+
+  .notice { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0 16px; font-size: 16px; line-height: 1.5; text-align: center; text-wrap: balance; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+    "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.21.0/dist/lil-gui.esm.min.js"
+  }
+}
+</script>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js">
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+  import { start } from './src/main.js';
+  start(document.getElementById('app'));
+</script>
+</body>
+</html>

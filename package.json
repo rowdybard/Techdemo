@@ -1,0 +1,12 @@
+{
+  "name": "beach-fireworks",
+  "private": true,
+  "description": "Real-time Three.js beach at dusk with a customizable firework show. No build step; this file only holds dev tooling.",
+  "type": "module",
+  "scripts": {
+    "check": "node tools/check.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
