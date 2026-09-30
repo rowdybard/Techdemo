@@ -19,7 +19,6 @@ export const oceanVertex = /* glsl */ `
   varying vec3 vWorld;
   varying vec3 vNormal;
   varying float vCrest;
-  varying float vFoam;
 
   ${terrainGLSL}
   ${surfGLSL}
@@ -62,7 +61,6 @@ export const oceanVertex = /* glsl */ `
     vWorld = vec3(rest.x + offset.x, surface, rest.y + offset.z);
     vNormal = normal;
     vCrest = offset.y / max(0.45 * uWaveHeight, 0.01);
-    vFoam = surf.foam;
     gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
   }
 `;
@@ -70,15 +68,16 @@ export const oceanVertex = /* glsl */ `
 export const oceanFragment = /* glsl */ `
   uniform float uTime;
   uniform float uFoam;
+  uniform float uSurf;
 
   varying vec3 vWorld;
   varying vec3 vNormal;
   varying float vCrest;
-  varying float vFoam;
 
   ${noiseGLSL}
   ${skyGLSL}
   ${terrainGLSL}
+  ${surfGLSL}
   ${burstLightGLSL}
 
   // Small ripples on top of the waves, as a normal perturbation.
@@ -127,7 +126,9 @@ export const oceanFragment = /* glsl */ `
     vec2 p = vWorld.xz;
     float thin = 1.0 - smoothstep(0.0, 0.012, water); // only the very edge of the water
     float crest = smoothstep(0.7, 1.2, vCrest) * 0.45;
-    float amount = clamp(max(max(vFoam, thin * 0.6), crest) * uFoam, 0.0, 1.0) * detail;
+    // Surf foam is worked out per pixel: from the vertices it came out blocky.
+    float surfFoam = surfAt(vWorld.xz, uTime, uSurf).foam;
+    float amount = clamp(max(max(surfFoam, thin * 0.6), crest) * uFoam, 0.0, 1.0) * detail;
     float foam = 0.0;
     if (amount > 0.01) foam = foamPattern(p + vec2(0.0, -uTime * 0.3), amount);
     vec3 foamLight = FOAM_LIGHT(skyGradient(normalize(vec3(uSunDirection.x, 0.06, uSunDirection.z))) * 0.5);

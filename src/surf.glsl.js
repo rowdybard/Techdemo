@@ -56,11 +56,15 @@ export const surfGLSL = /* glsl */ `
       float face = d > 0.0 ? exp(-d * d / mix(1.6, 5.0, broken)) : exp(-d * d / 45.0);
       // Fades in as it first appears far out, so it doesn't pop into existence.
       float wave = height * grow * face * mix(1.0, 0.3, broken) * smoothstep(0.0, 0.25, tau / SURF_TRAVEL);
-      if (s < 1.0) o.lift += wave;
+      if (s < 1.0) o.lift += wave * (1.0 - smoothstep(0.85, 1.0, tau / SURF_TRAVEL));
       // Whitewater: a thick band on the collapsing crest and a trail behind the bore.
+      // Everything eases out over the last stretch, where the swash takes over, so nothing
+      // switches off at once (each stretch of beach is at a different moment, so a sudden
+      // change would draw a hard line along the shore).
+      float handOver = 1.0 - smoothstep(0.82, 1.0, tau / SURF_TRAVEL);
       float crest = broken * exp(-d * d / 3.0);
       float trail = broken * (d < 0.0 ? exp(d / (2.0 + 7.0 * broken)) : 0.0);
-      o.foam = max(o.foam, clamp(crest * 1.3 + trail * 0.75, 0.0, 1.0));
+      o.foam = max(o.foam, clamp(crest * 1.3 + trail * 0.75, 0.0, 1.0) * handOver);
       return;
     }
 
@@ -76,10 +80,12 @@ export const surfGLSL = /* glsl */ `
     }
     o.edge = max(o.edge, e);
     if (s < e) {
-      // Foam piles up at the leading edge while it runs up, and thins as it drains.
+      // Foam piles up at the leading edge while it runs up, and thins as it drains. The
+      // whitewater the wave brought in fades behind it over a second or two.
       float lip = smoothstep(e - 2.5, e, s);
-      float running = p < RUNUP_TIME ? 1.0 : 0.5;
-      o.foam = max(o.foam, clamp(running * (0.12 + 0.88 * lip), 0.0, 1.0));
+      float running = mix(1.0, 0.5, smoothstep(RUNUP_TIME - 0.6, RUNUP_TIME + 0.9, p));
+      float bore = 0.8 * exp(-p / 1.6) * exp(-max(e - s, 0.0) / 6.0);
+      o.foam = max(o.foam, clamp(max(running * (0.12 + 0.88 * lip), bore), 0.0, 1.0));
     }
     // Sand this wave covered: when did the water leave it?
     if (s < reach && s > -1.0) {

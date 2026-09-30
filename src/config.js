@@ -54,7 +54,7 @@ export const config = {
     choppiness: 0.55, // sharper crests as it rises
     surf: 0.7, // height of the breaking waves near the beach, in metres
     foam: 1,
-    resolution: { desktop: [200, 340], phone: [120, 210] }, // grid columns and rows
+    resolution: { desktop: [280, 360], phone: [150, 220] }, // grid columns and rows
   },
 
   beach: {

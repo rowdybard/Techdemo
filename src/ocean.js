@@ -82,7 +82,7 @@ function oceanGeometry(columns, rows) {
     const z = NEAR - spread(row / (rows - 1), 6) * (NEAR + FAR);
     for (let column = 0; column < columns; column++) {
       const v = (column / (columns - 1)) * 2 - 1;
-      positions[i++] = Math.sign(v) * spread(Math.abs(v), 5) * HALF_WIDTH;
+      positions[i++] = Math.sign(v) * spread(Math.abs(v), 6.5) * HALF_WIDTH;
       positions[i++] = 0;
       positions[i++] = z;
     }

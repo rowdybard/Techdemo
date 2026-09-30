@@ -28,42 +28,54 @@ export const noiseGLSL = /* glsl */ `
   }
 
   // Cell noise. x: distance to the nearest scattered point; y: how far from the wall
-  // between the two nearest cells (0 on the wall).
-  vec2 cells(vec2 p) {
+  // between the two nearest cells (0 on the wall); z: a random number for the nearest cell.
+  vec3 cells(vec2 p) {
     vec2 cell = floor(p);
     vec2 f = fract(p);
     float nearest = 8.0;
     float second = 8.0;
+    float id = 0.0;
     for (int y = -1; y <= 1; y++) {
       for (int x = -1; x <= 1; x++) {
         vec2 g = vec2(float(x), float(y));
-        vec2 r = g + hash22(cell + g) * 0.9 - f;
+        vec2 h = hash22(cell + g);
+        vec2 r = g + h * 0.9 - f;
         float d = dot(r, r);
-        if (d < nearest) { second = nearest; nearest = d; }
+        if (d < nearest) { second = nearest; nearest = d; id = h.x; }
         else if (d < second) second = d;
       }
     }
     nearest = sqrt(nearest);
-    return vec2(nearest, sqrt(second) - nearest);
+    return vec3(nearest, sqrt(second) - nearest, id);
   }
 
   // Foam coverage from an amount (0 to 1), in world metres. Thick foam is white froth
-  // full of small bubble holes; as it thins it pulls back into a wobbly lace, and the
-  // lace tears into scraps. The holes blend to an even texture where they'd be sub-pixel.
+  // full of bubble holes of mixed sizes; as it thins it pulls back into a wobbly lace,
+  // and the lace tears into scraps. Detail too small to see at a distance is skipped,
+  // which matters when a breaking wave fills the lower half of the screen with foam.
   float foamPattern(vec2 p, float amount) {
     if (amount <= 0.01) return 0.0;
-    vec2 warp = vec2(valueNoise(p * 0.9), valueNoise(p * 0.9 + 5.3)) * 0.9;
-    float wall = cells(p * vec2(1.7, 2.8) + warp).y;               // 0 on the lace lines
-    float lace = 1.0 - smoothstep(0.02, 0.1 + 0.3 * amount, wall);
+    vec2 lacePoint = p * vec2(1.7, 2.8);
+    float laceBlur = smoothstep(0.4, 1.2, length(fwidth(lacePoint)));
+    float lace = 0.5;
+    if (laceBlur < 1.0) {
+      vec2 warp = vec2(valueNoise(p * 0.9), valueNoise(p * 0.9 + 5.3)) * 0.9;
+      float wall = cells(lacePoint + warp).y;                      // 0 on the lace lines
+      lace = mix(1.0 - smoothstep(0.02, 0.1 + 0.3 * amount, wall), 0.5, laceBlur);
+    }
     float body = smoothstep(0.6, 0.95, amount + 0.25 * valueNoise(p * 2.3));
     float scraps = smoothstep(0.62 - amount * 0.5, 0.82 - amount * 0.5, valueNoise(p * 1.7 + 11.0));
     float cover = max(body, lace * scraps * smoothstep(0.05, 0.4, amount));
-    // Bubble holes of two sizes, about 5 and 12 cm, opening up as the foam thins.
+    if (cover <= 0.001) return 0.0;
+    // Bubble holes, 5 to 15 cm, opening up as the foam thins.
     vec2 q = p * 8.0;
-    float radius = 0.06 + 0.22 * (1.0 - amount);
-    float holes = smoothstep(radius, radius + 0.12, cells(q).x) * smoothstep(radius * 0.8, radius * 0.8 + 0.1, cells(q * 2.3 + 3.1).x);
     float blur = smoothstep(0.25, 0.8, length(fwidth(q)));
-    holes = mix(holes, 0.75, blur);
+    float holes = 0.75;
+    if (blur < 1.0) {
+      vec3 c = cells(q);
+      float radius = (0.06 + 0.22 * (1.0 - amount)) * (0.6 + 0.8 * c.z);
+      holes = mix(smoothstep(radius, radius + 0.12, c.x), 0.75, blur);
+    }
     return cover * holes;
   }
 
