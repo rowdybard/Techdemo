@@ -96,6 +96,13 @@ export const config = {
     style: 'mixed', // 'mixed' rotates through all; or 'fountains', 'shooters', 'candles', 'mines', 'fans'
   },
 
+  // Smoke left by the bursts and the ground show, lit by later bursts.
+  smoke: {
+    enabled: true,
+    amount: 1, // how thick
+    linger: 30, // seconds a puff takes to drift away and fade
+  },
+
   look: {
     palette: 'classic',
     // Weight per burst type: how often each one is picked.

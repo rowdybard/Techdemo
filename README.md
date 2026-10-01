@@ -1,6 +1,6 @@
 # Beach Fireworks
 
-A real-time Three.js beach at dusk with a firework show anyone can design: Gerstner waves that shoal and run up the sand, a wet band that mirrors each burst, twelve shell types (including hearts, stars and text), bloom, sound, and a panel for every setting. It's a sales demo for animated website headers for waterfront businesses. `HANDOFF.md` has the full spec and status.
+A real-time Three.js beach at dusk with a firework show anyone can design: Gerstner waves that shoal and run up the sand, a wet band that mirrors each burst, twelve shell types (including hearts, stars and text), drifting smoke lit by later bursts, bloom, sound, and a panel for every setting. It's a sales demo for animated website headers for waterfront businesses. `HANDOFF.md` has the full spec and status.
 
 ## See it
 

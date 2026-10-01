@@ -109,6 +109,9 @@ export function create(ctx) {
   scene.add(config.landmarks, 'grass').name('Dune grass');
   scene.add(config.beach, 'glints', 0, 2, 0.05).name('Sand glints');
   scene.add(config.look, 'sceneLight', 0, 3, 0.05).name('Firework light');
+  scene.add(config.smoke, 'enabled').name('Smoke');
+  scene.add(config.smoke, 'amount', 0, 2, 0.05).name('Smoke amount');
+  scene.add(config.smoke, 'linger', 8, 60, 1).name('Smoke lingers (s)');
   scene.add(config.camera, 'preset', { 'On the sand': 'sand', Drone: 'drone', 'Water level': 'water' }).name('Camera')
     .onChange((name) => ctx.setCameraPreset(name));
   scene.add(config.renderer, 'exposure', 0.3, 2, 0.01).name('Exposure');

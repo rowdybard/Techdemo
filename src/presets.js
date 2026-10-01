@@ -6,7 +6,7 @@ import { config as defaults } from './config.js';
 
 // The parts of the config a person designs. Everything else (resolutions, pool size,
 // camera geometry) belongs to the app.
-const SAVED = ['sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'look', 'physics', 'bloom', 'sound', 'hero'];
+const SAVED = ['sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'smoke', 'look', 'physics', 'bloom', 'sound', 'hero'];
 const STORAGE_KEY = 'beach-fireworks-settings';
 const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text'];
 
@@ -47,6 +47,7 @@ export const PRESETS = {
     show: { shellsPerMinute: 12, maxShells: 3 },
     fountains: { every: 40, color: 'silver', height: 20 },
     physics: { windSpeed: 1 },
+    smoke: { amount: 0.5 },
     ocean: { waveHeight: 0.6, surf: 0.45 },
     sky: { timeOfDay: 0.12 },
   },
@@ -54,6 +55,7 @@ export const PRESETS = {
     look: { particles: 520, mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1, palm: 1, ring: 1, crossette: 1.5, strobe: 1, crackle: 1.5, multibreak: 2, text: 0.6 }) },
     show: { shellsPerMinute: 95, maxShells: 16 },
     fountains: { every: 14, nozzles: 12 },
+    smoke: { amount: 1.3 },
     bloom: { strength: 0.75 },
   },
 };

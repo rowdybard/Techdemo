@@ -10,6 +10,7 @@ import * as landmarks from './landmarks.js';
 import * as walk from './walk.js';
 import * as fireworks from './fireworks.js';
 import * as fountains from './fountains.js';
+import * as smoke from './smoke.js';
 import * as audio from './audio.js';
 import * as post from './post.js';
 import * as debug from './debug.js';
@@ -17,7 +18,7 @@ import * as ui from './ui.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [sky, burstlights, ocean, beach, landmarks, walk, fireworks, fountains, audio, post, debug, ui];
+const MODULES = [sky, burstlights, ocean, beach, landmarks, walk, fireworks, fountains, smoke, audio, post, debug, ui];
 
 const DEG = Math.PI / 180;
 
