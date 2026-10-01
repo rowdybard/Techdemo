@@ -76,6 +76,14 @@ export const config = {
     openingShells: 3, // already climbing when the page opens, so the show starts at once
   },
 
+  // The header text in hero mode. Client links and the Client mockup folder set it.
+  hero: {
+    business: 'Sunset Cove Marina',
+    headline: 'Nights on the water start here.',
+    copy: 'Slips, rentals and the best seat on the beach for Friday fireworks.',
+    button: 'Reserve a slip',
+  },
+
   // Ground show: a row of fountains along the barge, playing every so often.
   fountains: {
     enabled: true,

@@ -6,7 +6,7 @@ import { config as defaults } from './config.js';
 
 // The parts of the config a person designs. Everything else (resolutions, pool size,
 // camera geometry) belongs to the app.
-const SAVED = ['sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'look', 'physics', 'bloom', 'sound'];
+const SAVED = ['sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'look', 'physics', 'bloom', 'sound', 'hero'];
 const STORAGE_KEY = 'beach-fireworks-settings';
 const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text'];
 
@@ -59,8 +59,10 @@ export const PRESETS = {
 };
 
 export function applyPreset(config, name) {
+  const header = { ...config.hero }; // a client's header text survives a change of preset
   merge(config, DEFAULTS);
   merge(config, PRESETS[name] || {});
+  Object.assign(config.hero, header);
 }
 
 /** The designable settings as pretty JSON, including the custom palette. */

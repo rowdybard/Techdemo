@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { config as defaultConfig } from './config.js';
+import { readLink } from './link.js';
 import * as sky from './sky.js';
 import * as burstlights from './burstlights.js';
 import * as ocean from './ocean.js';
@@ -54,6 +55,8 @@ export function start(container) {
  */
 export function createApp(container, config = defaultConfig) {
   const phone = matchMedia('(pointer: coarse)').matches;
+  // Remembered settings, then whatever a client link carries, before anything reads them.
+  const link = readLink(config);
 
   const renderer = new THREE.WebGLRenderer({
     antialias: config.renderer.antialias,
@@ -73,10 +76,15 @@ export function createApp(container, config = defaultConfig) {
   const camera = new THREE.PerspectiveCamera(config.camera.fov, 1, config.camera.near, config.camera.far);
   const controls = new OrbitControls(camera, canvas);
   setUpControls(controls, camera, config);
+  if (link.embed) {
+    // An embedded header holds its view, so swiping over it scrolls the client's page.
+    controls.enabled = false;
+    canvas.style.touchAction = 'pan-y';
+  }
 
   // Numbers modules publish for the debug overlay. Plain fields, updated in place.
   const stats = { poolUsed: 0, poolSize: 0 };
-  const ctx = { renderer, scene, camera, controls, config, container, signal, phone, stats };
+  const ctx = { renderer, scene, camera, controls, config, container, signal, phone, stats, link };
 
   ctx.resize = resize;
   ctx.setCameraPreset = (name) => {
@@ -88,6 +96,9 @@ export function createApp(container, config = defaultConfig) {
   const resizeObserver = new ResizeObserver(resize);
   let destroyed = false;
   let last = -1;
+  let running = false;
+  let onScreen = true;
+  let viewObserver = null;
   let time = 0;
 
   try {
@@ -101,7 +112,14 @@ export function createApp(container, config = defaultConfig) {
   resizeObserver.observe(container);
   watchPixelRatio();
   document.addEventListener('visibilitychange', onVisibilityChange, { signal });
-  if (!document.hidden) renderer.setAnimationLoop(frame);
+  // Render only while the tab is visible and the scene is on screen (an embedded header
+  // scrolled out of view stops costing battery).
+  viewObserver = new IntersectionObserver((entries) => {
+    onScreen = entries[entries.length - 1].isIntersecting;
+    onVisibilityChange();
+  });
+  viewObserver.observe(container);
+  onVisibilityChange();
 
   function frame(now) {
     // The first frame after a start or a resume steps by zero. After that the step is
@@ -150,12 +168,11 @@ export function createApp(container, config = defaultConfig) {
   }
 
   function onVisibilityChange() {
-    if (document.hidden) {
-      renderer.setAnimationLoop(null);
-    } else {
-      last = -1;
-      renderer.setAnimationLoop(frame);
-    }
+    const run = !document.hidden && onScreen;
+    if (run === running) return;
+    running = run;
+    if (run) last = -1; // the first frame back steps by zero
+    renderer.setAnimationLoop(run ? frame : null);
   }
 
   function destroy() {
@@ -166,6 +183,7 @@ export function createApp(container, config = defaultConfig) {
     renderer.setAnimationLoop(null);
     abort.abort();
     resizeObserver.disconnect();
+    if (viewObserver) viewObserver.disconnect();
     if (ctx.gui) ctx.gui.destroy();
     controls.dispose();
     for (let i = modules.length - 1; i >= 0; i--) modules[i].dispose();

@@ -2,7 +2,8 @@
 // read each frame, so changes apply live; quality and camera go through their own
 // functions. Presets, JSON copy and paste, a remembered setup and hero mode live here.
 import GUI from 'lil-gui';
-import { PRESETS, applyPreset, loadSettings, recall, remember, settingsJSON } from './presets.js';
+import { PRESETS, applyPreset, loadSettings, remember, settingsJSON } from './presets.js';
+import { clientLink, embedCode } from './link.js';
 import { createHero } from './hero.js';
 import { isTyping } from './debug.js';
 
@@ -23,7 +24,7 @@ const TYPE_LABELS = {
 
 export function create(ctx) {
   const { config, container, phone, signal } = ctx;
-  recall(config);
+  // Remembered settings and anything in the link were applied in main.js (link.js).
 
   const gui = new GUI({ container, title: 'Show designer', width: phone ? 280 : 300 });
   gui.domElement.classList.add('panel');
@@ -124,6 +125,38 @@ export function create(ctx) {
   sound.add(config.sound, 'enabled').name('Sound on');
   sound.add(config.sound, 'volume', 0, 1, 0.01).name('Volume');
 
+  // Client mockup: the header text for a prospect, and links to send them or embed.
+  const client = gui.addFolder('Client mockup').close();
+  const showText = () => hero.refresh();
+  client.add(config.hero, 'business').name('Business name').onChange(showText);
+  client.add(config.hero, 'headline').name('Headline').onChange(showText);
+  client.add(config.hero, 'copy').name('Tagline').onChange(showText);
+  client.add(config.hero, 'button').name('Button').onChange(showText);
+  const clientActions = {
+    nameInSky: () => {
+      config.look.text = String(config.hero.business).toUpperCase().slice(0, 24);
+      refresh();
+      if (ctx.fireworks) ctx.fireworks.launch('text');
+    },
+    copyLink: () => share(clientLink(config), 'Client link copied. It opens as their homepage header.'),
+    copyEmbed: () => share(embedCode(config), 'Embed code copied. It goes where their header should be.'),
+  };
+  client.add(clientActions, 'nameInSky').name('Spell the business name');
+  client.add(clientActions, 'copyLink').name('Copy client link');
+  client.add(clientActions, 'copyEmbed').name('Copy embed code');
+  const shareBox = document.createElement('div');
+  shareBox.className = 'panel-json';
+  shareBox.innerHTML = '<textarea id="client-link" rows="3" spellcheck="false" readonly aria-label="Client link"></textarea><p class="panel-json-status" role="status"></p>';
+  client.$children.append(shareBox);
+  const shareText = shareBox.querySelector('textarea');
+  const shareStatus = shareBox.querySelector('.panel-json-status');
+  function share(text, done) {
+    shareText.value = text;
+    shareText.select();
+    shareStatus.textContent = 'Selected in the box. Copy it from there.';
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => { shareStatus.textContent = done; }, () => {});
+  }
+
   // Save and load: JSON in a text box, since downloads don't work everywhere this runs.
   const saving = gui.addFolder('Save & load').close();
   const box = document.createElement('div');
@@ -158,6 +191,7 @@ export function create(ctx) {
 
   function refresh() {
     for (const controller of gui.controllersRecursive()) controller.updateDisplay();
+    hero.refresh();
     remember(config);
   }
   gui.onFinishChange(() => remember(config));
@@ -175,16 +209,19 @@ export function create(ctx) {
     hero.set(state.hero);
     for (const controller of gui.controllersRecursive()) controller.updateDisplay();
   }, { signal });
-  if (location.hash === '#hero') {
+  // How the link asked to open: hero mode, or a bare embed with no panel, text or hints.
+  if (ctx.link.hero) {
     state.hero = true;
     hero.set(true);
     for (const controller of gui.controllersRecursive()) controller.updateDisplay();
   }
+  if (ctx.link.embed) container.classList.add('embed-mode');
 
   return {
     update() {},
     dispose() {
       hero.dispose();
+      container.classList.remove('embed-mode');
       ctx.gui = null; // main.js has already destroyed it
     },
   };

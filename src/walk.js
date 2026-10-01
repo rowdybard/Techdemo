@@ -38,7 +38,7 @@ export function create(ctx) {
   const hint = document.createElement('p');
   hint.className = 'walk-hint';
   hint.textContent = 'WASD to walk · drag to look · Shift to run · Esc to go back';
-  hint.hidden = phone;
+  hint.hidden = phone || ctx.link.embed;
   container.append(hint);
   const hideHint = setTimeout(() => hint.classList.add('faded'), 9000);
 
@@ -62,7 +62,7 @@ export function create(ctx) {
   ctx.walk = { stop, get active() { return walking; } };
 
   addEventListener('keydown', (event) => {
-    if (isTyping(event) || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isTyping(event) || event.ctrlKey || event.metaKey || event.altKey || ctx.link.embed) return;
     if (event.code === 'Escape') {
       if (walking) ctx.setCameraPreset(ctx.config.camera.preset);
       return;

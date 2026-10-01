@@ -4,8 +4,19 @@ A real-time Three.js beach at dusk with a firework show anyone can design: Gerst
 
 ## See it
 
-- **Preview:** https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j (private until you share it)
+- **Live:** https://techdemo.maxpug17.workers.dev/ (Cloudflare). Private preview: https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j
 - Add `#hero` to a link to open as a website header with a sample headline, or `#debug` to show frame rate and memory counts.
+
+## Client mockups and embeds
+
+In the panel's **Client mockup** folder, type a prospect's business name, headline, tagline and button text. **Copy client link** gives a link that opens straight into their header with the whole current look; **Copy embed code** gives the snippet for their site:
+
+```html
+<iframe src="https://techdemo.maxpug17.workers.dev/?s=…&embed=1" title="Their Business"
+  style="display:block;width:100%;height:80vh;border:0" loading="lazy"></iframe>
+```
+
+Link parameters: `s` (the settings JSON, base64url), `business`, `headline`, `copy`, `button` (plain text, length-capped), `hero=1` (open as a header), `embed=1` (scene only: no panel, text, hints or keys, drag scrolls the host page, sound off unless `sound=1`, and remembered settings are ignored). The scene stops rendering while it's scrolled off screen or the tab is hidden.
 - The **Lake Michigan** preset adds a pier and lighthouse (with a sweeping beam and a lamp reflected in the water), dune grass, and calmer freshwater waves.
 - Keys: `WASD` or arrows to walk the beach (drag to look, `Shift` to run, `Esc` to go back), `H` hero mode, `` ` `` stats overlay, `Shift+R` rebuild (the leak test).
 
