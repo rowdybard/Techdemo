@@ -46,7 +46,7 @@ export const config = {
     nightSunElevation: -18,
     sunAzimuth: 18, // right of straight out to sea, so the afterglow sits behind the show
     cloudCoverage: 0.35, // 0 is a clear sky
-    starBrightness: 1,
+    starBrightness: 0, // off by default: some tablet GPUs drew them as streaks
   },
 
   ocean: {
@@ -148,7 +148,7 @@ export const config = {
 
   sound: {
     enabled: true, // starts after the first tap or key press, as browsers require
-    volume: 0.6,
+    volume: 0, // muted by default; the panel's Sound folder turns it up
   },
 
   bloom: {

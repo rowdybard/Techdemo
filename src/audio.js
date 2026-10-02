@@ -84,8 +84,13 @@ export function create(ctx) {
     update(dt, time) {
       if (!audio) return;
       master.gain.value = settings.enabled ? settings.volume : 0;
-      if (!settings.enabled || !ctx.fireworks) return;
+      if (!ctx.fireworks) return;
       const bursts = ctx.fireworks.bursts;
+      // Muted: skip the sounds, but keep up, so turning it up doesn't play a backlog.
+      if (!settings.enabled || settings.volume <= 0) {
+        heard = latestBurst(bursts, time);
+        return;
+      }
       for (let i = 0; i < bursts.length; i++) {
         const b = bursts[i];
         if (b.time <= heard || b.time > time) continue;

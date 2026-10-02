@@ -58,9 +58,12 @@ const fragmentShader = /* glsl */ `
     }
 
     // Stars come out as the dusk fades, hide behind clouds and thin out into the horizon haze.
+    // Skipped entirely when they're off, so a GPU that draws them badly never draws them.
     float clear = uStars * (1.0 - cover);
-    color += starLayer(dir, 110.0, 0.22) * clear * smoothstep(0.02, 0.3, up) * (1.0 - 0.85 * uDusk);
-    color += starLayer(dir, 260.0, 0.12) * clear * 0.7 * smoothstep(0.05, 0.4, up) * (1.0 - uDusk);
+    if (clear > 0.0) {
+      color += starLayer(dir, 110.0, 0.22) * clear * smoothstep(0.02, 0.3, up) * (1.0 - 0.85 * uDusk);
+      color += starLayer(dir, 260.0, 0.12) * clear * 0.7 * smoothstep(0.05, 0.4, up) * (1.0 - uDusk);
+    }
 
     gl_FragColor = vec4(color, 1.0);
 
