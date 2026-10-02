@@ -9,6 +9,7 @@ import { loadSettings, recall, settingsJSON } from './presets.js';
 // or the claude.ai preview).
 const SITE = 'https://techdemo.maxpug17.workers.dev/';
 const TEXT_LIMITS = { business: 48, headline: 90, copy: 160, button: 32 };
+export const MESSAGE_LIMIT = 24; // characters a fireworks message can hold
 
 /**
  * Applies remembered settings, then anything in the link. Returns how the page should open.
@@ -35,21 +36,50 @@ export function readLink(config) {
   }
   // Embedded headers stay quiet unless the link asks for sound.
   if (embed && params.get('sound') !== '1') config.sound.enabled = false;
+  // A fireworks message someone sent (see gift.js): their words go up in the sky.
+  const message = cleanText(params.get('msg'), MESSAGE_LIMIT);
+  const gift = !embed && message ? { message, from: cleanText(params.get('from'), MESSAGE_LIMIT) } : null;
+  // Set before the first shells are planned, so every text shell spells the message.
+  // A calmer show around it, so other bursts don't cover the words.
+  if (gift) {
+    config.look.text = message.toUpperCase();
+    config.show.shellsPerMinute = Math.min(config.show.shellsPerMinute, 16);
+  }
   return {
     embed,
-    hero: embed || params.get('hero') === '1' || location.hash === '#hero',
+    gift,
+    hero: !gift && (embed || params.get('hero') === '1' || location.hash === '#hero'),
   };
+}
+
+/** A link that spells `message` in fireworks for whoever opens it. */
+export function giftLink(message, from) {
+  const params = new URLSearchParams();
+  params.set('msg', cleanText(message, MESSAGE_LIMIT));
+  const sender = cleanText(from, MESSAGE_LIMIT);
+  if (sender) params.set('from', sender);
+  return `${siteBase()}?${params}`;
+}
+
+/** Plain text for the sky: no control characters, trimmed and capped. */
+export function cleanText(value, limit) {
+  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, limit);
 }
 
 /** A link that opens this exact look and header text, in hero mode or as an embed. */
 export function clientLink(config, embed = false) {
-  const base = /^https?:$/.test(location.protocol) && !/claude|usercontent/.test(location.hostname)
-    ? location.origin + location.pathname
-    : SITE;
+  const base = siteBase();
   const params = new URLSearchParams();
   params.set('s', pack(settingsJSON(config)));
   params.set(embed ? 'embed' : 'hero', '1');
   return `${base}?${params}`;
+}
+
+// This page's address, or the public site when the page isn't on one.
+function siteBase() {
+  return /^https?:$/.test(location.protocol) && !/claude|usercontent/.test(location.hostname)
+    ? location.origin + location.pathname
+    : SITE;
 }
 
 /** The HTML a client pastes into their site to use the scene as a header. */

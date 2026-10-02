@@ -37,8 +37,10 @@ export function create(ctx) {
 
   const hint = document.createElement('p');
   hint.className = 'walk-hint';
-  hint.textContent = 'WASD to walk · drag to look · Shift to run · Esc to go back';
-  hint.hidden = phone || ctx.link.embed;
+  hint.textContent = phone
+    ? 'Tap the sky to launch a firework'
+    : 'Click the sky to launch · WASD to walk · drag to look · Shift to run';
+  hint.hidden = ctx.link.embed;
   container.append(hint);
   const hideHint = setTimeout(() => hint.classList.add('faded'), 9000);
 

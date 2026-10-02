@@ -69,7 +69,7 @@ export const config = {
 
   show: {
     bargePosition: [0, 0, -380], // where shells launch from, offshore
-    launchSite: 'barge', // 'barge', 'shore' (a line of tubes nearer the beach) or 'tap' (tap the sky to aim)
+    launchSite: 'barge', // 'barge' or 'shore' (a line of tubes nearer the beach); tapping the sky always launches one
     autoLaunch: true,
     shellsPerMinute: 34,
     maxShells: 7, // most shells bursting or burning at once

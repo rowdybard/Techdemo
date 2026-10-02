@@ -7,6 +7,10 @@ A real-time Three.js beach at dusk with a firework show anyone can design: Gerst
 - **Live:** https://techdemo.maxpug17.workers.dev/ (Cloudflare). Private preview: https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j
 - Add `#hero` to a link to open as a website header with a sample headline, or `#debug` to show frame rate and memory counts.
 
+## Send someone fireworks
+
+The **Send someone fireworks** button (bottom left) lets anyone type a message of up to 24 characters and who it's from, preview it in the sky, and get a link. Phones open the share sheet, and other devices copy the link. Opening `?msg=HAPPY%20BDAY%20SAM&from=Max` spells the message every 13 seconds over a calmer show. A card says who sent it, with buttons for **Again**, **Send your own** and **Play with the show**. Anyone can also tap or click the sky to launch a shell, except on an embedded header.
+
 ## Client mockups and embeds
 
 In the panel's **Client mockup** folder, type a prospect's business name, headline, tagline and button text. **Copy client link** gives a link that opens straight into their header with the whole current look; **Copy embed code** gives the snippet for their site:

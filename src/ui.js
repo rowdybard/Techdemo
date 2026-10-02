@@ -56,7 +56,7 @@ export function create(ctx) {
   show.add(config.show, 'autoLaunch').name('Auto-launch');
   show.add(config.show, 'shellsPerMinute', 4, 120, 1).name('Shells per minute');
   show.add(config.show, 'maxShells', 1, 20, 1).name('Most in the air');
-  show.add(config.show, 'launchSite', { 'Offshore barge': 'barge', 'Along the shore': 'shore', 'Tap the sky to aim': 'tap' }).name('Launch site');
+  show.add(config.show, 'launchSite', { 'Offshore barge': 'barge', 'Along the shore': 'shore' }).name('Launch site');
   show.add(config.loop, 'timeScale', 0.1, 1, 0.05).name('Slow motion');
 
   const ground = gui.addFolder('Ground show').close();

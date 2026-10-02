@@ -1,7 +1,7 @@
 // Fireworks module: the particle pool, the barge the shells launch from, and the
 // scheduler that decides when to fire. The scheduler keeps a fixed ring of shell
 // records; launching a shell writes all of its particles at once (see shells.js).
-// With the 'tap' launch site, a quick tap on the sky sends a shell to that spot.
+// A quick tap on the sky sends a shell to that spot (except on an embedded header).
 import * as THREE from 'three';
 import { createPool } from './particles.js';
 import { fireShell, planShell } from './shells.js';
@@ -97,14 +97,18 @@ export function create(ctx) {
     downY = event.clientY;
     downAt = performance.now();
   }, { signal });
+  let lastTap = -Infinity;
   canvas.addEventListener('pointerup', (event) => {
-    if (config.show.launchSite !== 'tap') return;
+    // Anyone can tap the sky to launch a shell (not on a client's embedded header).
+    if (ctx.link.embed) return;
     if (Math.hypot(event.clientX - downX, event.clientY - downY) > TAP_PIXELS || performance.now() - downAt > TAP_MS) return;
     const box = canvas.getBoundingClientRect();
     pointer.set(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1);
     ray.setFromCamera(pointer, camera);
     aimPlane.constant = -config.show.bargePosition[2];
     if (!ray.ray.intersectPlane(aimPlane, aimPoint) || aimPoint.y < 20) return;
+    if (performance.now() - lastTap < 200) return; // a few a second at most
+    lastTap = performance.now();
     launch(uniforms.uTime.value, aimPoint.x, Math.min(aimPoint.y, 260));
   }, { signal });
 
