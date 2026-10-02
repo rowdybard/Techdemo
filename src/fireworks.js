@@ -71,7 +71,6 @@ export function create(ctx) {
   }
 
   // Shells already in flight when the page opens, so the first burst comes within a second.
-  syncWind(config);
   for (let i = 0; i < config.show.openingShells; i++) {
     plan.launch = 0;
     planShell(plan, config, phone);
@@ -106,13 +105,11 @@ export function create(ctx) {
     ray.setFromCamera(pointer, camera);
     aimPlane.constant = -config.show.bargePosition[2];
     if (!ray.ray.intersectPlane(aimPlane, aimPoint) || aimPoint.y < 20) return;
-    syncWind(config);
     launch(uniforms.uTime.value, aimPoint.x, Math.min(aimPoint.y, 260));
   }, { signal });
 
   const api = {
     update(dt, time) {
-      syncWind(config);
       const { show } = config;
       if (time < finaleUntil) {
         // Finale: shells as fast as the pool can take them.
@@ -159,14 +156,6 @@ export function create(ctx) {
   ctx.fireworks.launch = api.launch;
   ctx.fireworks.finale = api.finale;
   return api;
-}
-
-// Wind speed and direction (degrees, 0 blows away from the beach) as x and z.
-function syncWind(config) {
-  const { physics } = config;
-  const a = (physics.windDirection * Math.PI) / 180;
-  physics.windX = Math.sin(a) * physics.windSpeed;
-  physics.windZ = -Math.cos(a) * physics.windSpeed;
 }
 
 // A long, dark barge silhouette on the water: mortar racks along the deck, a cabin at

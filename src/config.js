@@ -124,7 +124,8 @@ export const config = {
     drag: 1,
     windSpeed: 2, // m/s
     windDirection: 90, // degrees; 0 blows out to sea, 90 blows left to right
-    windX: 0, // worked out each frame from speed and direction
+    gustiness: 1, // gusts, lulls and a wandering direction around that average; 0 is steady
+    windX: 0, // worked out each frame by wind.js
     windZ: 0,
     heightMin: 85, // burst height range, metres
     heightMax: 135,

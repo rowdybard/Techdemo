@@ -32,13 +32,18 @@ const beamFragment = /* glsl */ `
 
 const grassVertex = /* glsl */ `
   uniform float uTime;
+  uniform vec2 uWind; // m/s, x and z
   attribute float aPhase;
   varying float vTip;
   void main() {
     vTip = position.y;
     vec4 world = instanceMatrix * vec4(position, 1.0);
-    // Blades sway in the breeze, more at the tip.
-    world.x += sin(uTime * 1.6 + aPhase) * 0.12 * position.y;
+    // Blades lean with the wind and flutter, harder in a gust, more at the tip.
+    float speed = length(uWind);
+    vec2 along = speed > 0.01 ? uWind / speed : vec2(1.0, 0.0);
+    float bend = min(speed * 0.025, 0.3) * position.y * position.y;
+    float flutter = sin(uTime * (1.6 + speed * 0.35) + aPhase) * (0.06 + min(speed * 0.02, 0.12)) * position.y;
+    world.xz += along * (bend + flutter);
     gl_Position = projectionMatrix * viewMatrix * modelMatrix * world;
   }
 `;
@@ -109,6 +114,7 @@ export function create(ctx) {
   const phases = new Float32Array(clumps * perClump);
   const grassUniforms = {
     uTime: ctx.ocean.uniforms.uTime,
+    uWind: { value: new THREE.Vector2() },
     uBase: { value: new THREE.Color(0x0c0d08) },
     uTipColor: { value: new THREE.Color(0x3d3a22) },
   };
@@ -158,6 +164,7 @@ export function create(ctx) {
     update(dt, time) {
       pier.visible = settings.pier;
       grass.visible = settings.grass;
+      grassUniforms.uWind.value.set(ctx.config.physics.windX, ctx.config.physics.windZ);
       // A slow sweep, and a lamp that flashes every four seconds like a harbour light.
       beam.rotation.y = time * 0.9;
       const flash = 0.55 + 0.45 * Math.pow(Math.max(0, Math.sin(time * Math.PI * 0.5)), 8);

@@ -50,7 +50,7 @@ export function create(ctx) {
   const uniforms = {
     ...ctx.burstLights.uniforms,
     uTime: { value: 0 },
-    uWind: { value: new THREE.Vector3() },
+    uWindOffset: { value: new THREE.Vector3() },
     uAmount: { value: 0 },
     uAmbient: { value: new THREE.Color() },
     uSceneLight: { value: 1 },
@@ -94,9 +94,12 @@ export function create(ctx) {
     const slot = claim();
     if (slot < 0) return;
     const o = slot * 4;
-    origin.array[o] = x;
+    // Where the air will have got to when it's born (the wind now, carried forward).
+    const ahead = born - now;
+    const air = ctx.wind ? ctx.wind.offset : null;
+    origin.array[o] = x - (air ? (air.x + config.physics.windX * ahead) * 0.85 : 0);
     origin.array[o + 1] = y;
-    origin.array[o + 2] = z;
+    origin.array[o + 2] = z - (air ? (air.z + config.physics.windZ * ahead) * 0.85 : 0);
     origin.array[o + 3] = born;
     shape.array[o] = radius;
     shape.array[o + 1] = growth;
@@ -211,7 +214,7 @@ export function create(ctx) {
 
       mesh.visible = settings.enabled && settings.amount > 0;
       uniforms.uTime.value = time;
-      uniforms.uWind.value.set(config.physics.windX, 0, config.physics.windZ);
+      if (ctx.wind) uniforms.uWindOffset.value.copy(ctx.wind.offset);
       uniforms.uAmount.value = settings.amount * 0.32;
       uniforms.uAmbient.value.copy(DUSK).lerp(NIGHT, config.sky.timeOfDay);
       uniforms.uSceneLight.value = config.look.sceneLight;

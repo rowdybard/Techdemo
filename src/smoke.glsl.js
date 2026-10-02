@@ -13,7 +13,7 @@ export const smokeVertex = /* glsl */ `
   attribute vec4 aShape; // start radius, growth, life, seed
   attribute vec4 aLook; // stretch across, stretch up, tilt, noise scale
   uniform float uTime;
-  uniform vec3 uWind;
+  uniform vec3 uWindOffset; // metres the air has moved (origins are stored relative to it)
   uniform float uAmount;
   uniform vec3 uAmbient;
   uniform float uSceneLight;
@@ -33,10 +33,11 @@ export const smokeVertex = /* glsl */ `
       return;
     }
     float seed = aShape.w;
-    // Carried by the wind (a little slower than the air), a slow drift of its own, and
-    // a gentle rise as the warm smoke floats up.
+    // Carried by the wind it met (a little slower than the air, so the origin is stored
+    // minus where the air had got to at its birth), a slow drift of its own, and a gentle
+    // rise as the warm smoke floats up.
     vec3 drift = vec3(sin(seed * 41.0), 0.0, cos(seed * 23.0)) * 0.6;
-    vec3 center = aOrigin.xyz + (uWind * 0.85 + drift) * age;
+    vec3 center = aOrigin.xyz + uWindOffset * 0.85 + drift * age;
     center.y += 0.3 * age;
     float radius = aShape.x + aShape.y * sqrt(age);
 

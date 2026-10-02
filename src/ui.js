@@ -93,6 +93,7 @@ export function create(ctx) {
   physics.add(config.physics, 'drag', 0.3, 2.5, 0.05).name('Air drag');
   physics.add(config.physics, 'windSpeed', 0, 15, 0.1).name('Wind (m/s)');
   physics.add(config.physics, 'windDirection', 0, 360, 1).name('Wind direction (°)');
+  physics.add(config.physics, 'gustiness', 0, 2, 0.05).name('Gustiness');
   physics.add(config.physics, 'heightMin', 40, 200, 1).name('Lowest burst (m)');
   physics.add(config.physics, 'heightMax', 60, 260, 1).name('Highest burst (m)');
   physics.add(config.physics, 'launchSpread', 0, 150, 1).name('Launch spread (m)');
