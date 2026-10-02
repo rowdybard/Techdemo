@@ -1,0 +1,118 @@
+// Smoke shaders. Each puff is a camera-facing quad, stretched and tilted its own way,
+// filled with domain-warped noise that's cut off against a soft edge, so every puff has
+// its own ragged outline of lobes, holes and wisps. As a puff ages the noise keeps
+// churning and the cut-off rises, so it billows and then tears apart into wisps
+// instead of fading as a disc. Offsets stay small so the noise holds up on GPUs with
+// low float precision (the tablet that drew stars as streaks).
+import { noiseGLSL } from './glsl.js';
+import { BURST_LIGHTS, burstLightGLSL } from './burstlights.js';
+
+export const smokeVertex = /* glsl */ `
+  ${burstLightGLSL}
+  attribute vec4 aOrigin; // xyz, birth time
+  attribute vec4 aShape; // start radius, growth, life, seed
+  attribute vec4 aLook; // stretch across, stretch up, tilt, noise scale
+  uniform float uTime;
+  uniform vec3 uWind;
+  uniform float uAmount;
+  uniform vec3 uAmbient;
+  uniform float uSceneLight;
+  varying vec2 vUv;
+  varying vec2 vNoise; // where this puff's noise starts
+  varying vec3 vLight;
+  varying float vAlpha;
+  varying float vAge;
+  varying float vTear;
+  varying float vScale;
+
+  void main() {
+    float age = uTime - aOrigin.w;
+    float life = aShape.z;
+    if (age < 0.0 || age > life || uAmount <= 0.0) {
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // off screen: costs nothing to draw
+      return;
+    }
+    float seed = aShape.w;
+    // Carried by the wind (a little slower than the air), a slow drift of its own, and
+    // a gentle rise as the warm smoke floats up.
+    vec3 drift = vec3(sin(seed * 41.0), 0.0, cos(seed * 23.0)) * 0.6;
+    vec3 center = aOrigin.xyz + (uWind * 0.85 + drift) * age;
+    center.y += 0.3 * age;
+    float radius = aShape.x + aShape.y * sqrt(age);
+
+    float fadeIn = smoothstep(0.0, 1.2, age);
+    float fadeOut = 1.0 - smoothstep(life * 0.55, life, age);
+    vAlpha = uAmount * fadeIn * fadeOut * pow(aShape.x / radius, 0.6);
+    vTear = smoothstep(0.15, 1.0, age / life); // how far it has broken up
+
+    // Lit at its middle: the sky's glow, plus every firework light nearby. Light falls
+    // off quickly, so a burst lights the smoke it's in, not smoke a few hundred metres off.
+    vec3 light = uAmbient;
+    for (int i = 0; i < ${BURST_LIGHTS}; i++) {
+      float intensity = uBurstPosition[i].w;
+      if (intensity <= 0.0) continue;
+      vec3 offset = uBurstPosition[i].xyz - center;
+      float reach = radius + 45.0;
+      light += uBurstColor[i] * intensity * uSceneLight * 0.2 / (1.0 + dot(offset, offset) / (reach * reach));
+    }
+    vLight = light;
+
+    // Stretched (wind shear draws it out sideways as it ages) and tilted, facing the camera.
+    vec2 stretch = aLook.xy * vec2(1.0 + age * 0.025, 1.0);
+    float angle = aLook.z;
+    vec2 corner = mat2(cos(angle), sin(angle), -sin(angle), cos(angle)) * (position.xy * stretch);
+    vec4 view = viewMatrix * vec4(center, 1.0);
+    view.xy += corner * radius;
+    gl_Position = projectionMatrix * view;
+    vUv = position.xy;
+    vNoise = vec2(fract(seed * 7.13), fract(seed * 3.71)) * 40.0;
+    vAge = age;
+    vScale = aLook.w;
+  }
+`;
+
+export const smokeFragment = /* glsl */ `
+  ${noiseGLSL}
+  uniform int uOctaves;
+  varying vec2 vUv;
+  varying vec2 vNoise;
+  varying vec3 vLight;
+  varying float vAlpha;
+  varying float vAge;
+  varying float vTear;
+  varying float vScale;
+
+  float billow(vec2 p) {
+    float sum = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 4; i++) {
+      if (i >= uOctaves) break;
+      sum += amplitude * valueNoise(p);
+      p = p * 2.03 + vec2(1.7, 9.2);
+      amplitude *= 0.5;
+    }
+    return sum;
+  }
+
+  void main() {
+    float r = length(vUv);
+    if (r > 1.0) discard;
+    vec2 p = vUv * vScale + vNoise;
+    float t = vAge * 0.05;
+    // Warp the noise by more noise, so lobes curl into each other instead of sitting in a grid.
+    vec2 warp = vec2(valueNoise(p * 0.7 + t), valueNoise(p * 0.7 + vec2(5.2, 1.3) - t)) - 0.5;
+    float n = billow(p + warp * 1.8 + vec2(t, -0.6 * t));
+    // Cut against a soft edge: thick in the middle, ragged lobes toward the outside,
+    // and as it ages the cut rises until only wisps are left.
+    float edge = smoothstep(0.2, 1.0, r);
+    float d = n - edge * 0.62 - 0.1 - vTear * 0.18;
+    // A wide ramp keeps the outlines soft, like smoke, not cut out like paper.
+    float density = smoothstep(-0.04, 0.42, d) * (1.0 - smoothstep(0.75, 1.0, r));
+    float alpha = density * vAlpha;
+    if (alpha < 0.004) discard;
+    // Thin edges let more light through than the dense middle. Kept under the bloom
+    // threshold, so lit smoke glows softly instead of flaring.
+    vec3 color = min(vLight * (1.15 - 0.45 * density + 0.3 * n), vec3(0.4));
+    gl_FragColor = vec4(color, alpha);
+  }
+`;

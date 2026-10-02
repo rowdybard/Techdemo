@@ -1,8 +1,10 @@
-// Smoke. Every burst leaves a few big, soft puffs where it broke, and the ground show
-// leaves low haze over the barge. Puffs drift with the wind, rise a little, spread and
-// thin out over half a minute, so a busy show slowly builds a haze over the water. The
-// burst lights (burstlights.js) light the puffs, so each new burst glows through the
-// smoke of earlier ones in its own colour.
+// Smoke. Every burst leaves smoke along where its sparks flew: a ragged shell of puffs
+// around the break, sagging where sparks fell, long hanging curtains under willows and
+// palms, and a wide band across the sky under text. The ground show leaves low haze over
+// the barge. Puffs drift with the wind, rise a little, billow and tear into wisps over
+// half a minute, so a busy show slowly builds a haze over the water. The burst lights
+// (burstlights.js) light the puffs, so each new burst glows through the smoke of earlier
+// ones in its own colour. Shaders are in smoke.glsl.js.
 //
 // Like the sparks, a puff's whole life is written once, when it's made: one instanced
 // quad per puff in a fixed ring, all drawn in a single call. A puff is only replaced
@@ -10,99 +12,16 @@
 // there instead of puffs vanishing mid-air. That also caps how much smoke is ever drawn
 // over the screen, which is what costs time on phones.
 import * as THREE from 'three';
-import { noiseGLSL } from './glsl.js';
-import { BURST_LIGHTS, burstLightGLSL } from './burstlights.js';
+import { smokeFragment, smokeVertex } from './smoke.glsl.js';
 
-const PUFFS = { desktop: 96, phone: 40 };
-const PER_SHELL = { desktop: 4, phone: 3 };
+const PUFFS = { desktop: 128, phone: 48 };
+const PER_SHELL = { desktop: 7, phone: 4 };
 const SHELL_RECORDS = 64; // fireworks.js keeps this many burst records
 const FOUNTAIN_RECORDS = 14;
+const HANGING = { willow: true, palm: true }; // sparks that fall a long way, leaving curtains
 // Colour of smoke lit only by the sky: dusk-grey at dusk, near black at night.
 const DUSK = new THREE.Color(0.075, 0.07, 0.085);
 const NIGHT = new THREE.Color(0.012, 0.014, 0.022);
-
-const vertexShader = /* glsl */ `
-  ${burstLightGLSL}
-  attribute vec4 aOrigin; // xyz, birth time
-  attribute vec4 aShape; // start radius, growth, life, seed
-  uniform float uTime;
-  uniform vec3 uWind;
-  uniform float uAmount;
-  uniform vec3 uAmbient;
-  uniform float uSceneLight;
-  varying vec2 vUv;
-  varying vec3 vLight;
-  varying float vAlpha;
-  varying float vSeed;
-
-  void main() {
-    float age = uTime - aOrigin.w;
-    float life = aShape.z;
-    if (age < 0.0 || age > life || uAmount <= 0.0) {
-      gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // off screen: costs nothing to draw
-      return;
-    }
-    float seed = aShape.w;
-    // Carried by the wind (a little slower than the air), a slow drift of its own, and
-    // a gentle rise as the warm smoke floats up.
-    vec3 drift = vec3(sin(seed * 41.0), 0.0, cos(seed * 23.0)) * 0.5;
-    vec3 center = aOrigin.xyz + (uWind * 0.85 + drift) * age;
-    center.y += 0.3 * age;
-    float radius = aShape.x + aShape.y * sqrt(age);
-
-    // Fades in as it forms, fades out at the end of its life, and thins as it spreads.
-    float fadeIn = smoothstep(0.0, 1.5, age);
-    float fadeOut = 1.0 - smoothstep(life * 0.4, life, age);
-    vAlpha = uAmount * fadeIn * fadeOut * pow(aShape.x / radius, 0.8);
-
-    // Lit at its middle: the sky's glow, plus every firework light nearby. Light falls
-    // off quickly, so a burst lights the smoke it's in, not smoke a few hundred metres off.
-    vec3 light = uAmbient;
-    for (int i = 0; i < ${BURST_LIGHTS}; i++) {
-      float intensity = uBurstPosition[i].w;
-      if (intensity <= 0.0) continue;
-      vec3 offset = uBurstPosition[i].xyz - center;
-      float reach = radius + 45.0;
-      light += uBurstColor[i] * intensity * uSceneLight * 0.2 / (1.0 + dot(offset, offset) / (reach * reach));
-    }
-    vLight = light;
-
-    // A quad facing the camera, turned by a random angle so puffs don't repeat.
-    float angle = seed * 6.2832 + age * 0.015;
-    vec2 corner = mat2(cos(angle), sin(angle), -sin(angle), cos(angle)) * position.xy;
-    vec4 view = viewMatrix * vec4(center, 1.0);
-    view.xy += corner * radius;
-    gl_Position = projectionMatrix * view;
-    vUv = position.xy;
-    vSeed = seed;
-  }
-`;
-
-const fragmentShader = /* glsl */ `
-  ${noiseGLSL}
-  uniform float uTime;
-  varying vec2 vUv;
-  varying vec3 vLight;
-  varying float vAlpha;
-  varying float vSeed;
-
-  void main() {
-    float r = length(vUv);
-    if (r > 1.0) discard;
-    // Billowy: a soft round body broken up by slowly churning noise.
-    vec2 p = vUv * 1.7 + vSeed * 31.0;
-    float churn = uTime * 0.03;
-    float n = valueNoise(p + churn) * 0.55 + valueNoise(p * 2.1 - churn) * 0.3 + valueNoise(p * 4.3 + churn) * 0.15;
-    float body = 1.0 - smoothstep(0.2, 1.0, r);
-    float density = clamp(body * (0.35 + 1.2 * (n - 0.35)), 0.0, 1.0);
-    float alpha = density * vAlpha;
-    if (alpha < 0.004) discard;
-    // Thicker parts catch a little more light. Kept under the bloom threshold, so lit
-    // smoke glows softly instead of flaring.
-    vec3 color = min(vLight * (0.8 + 0.4 * n), vec3(0.4));
-    gl_FragColor = vec4(color, alpha);
-  }
-`;
 
 export function create(ctx) {
   const { scene, config, phone } = ctx;
@@ -114,10 +33,13 @@ export function create(ctx) {
   quad.setIndex([0, 1, 2, 0, 2, 3]);
   const origin = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
   const shape = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
+  const look = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
   origin.setUsage(THREE.DynamicDrawUsage);
   shape.setUsage(THREE.DynamicDrawUsage);
+  look.setUsage(THREE.DynamicDrawUsage);
   quad.setAttribute('aOrigin', origin);
   quad.setAttribute('aShape', shape);
+  quad.setAttribute('aLook', look);
   quad.instanceCount = size;
   // Unused puffs: born long ago, with no life left.
   for (let i = 0; i < size; i++) {
@@ -132,12 +54,13 @@ export function create(ctx) {
     uAmount: { value: 0 },
     uAmbient: { value: new THREE.Color() },
     uSceneLight: { value: 1 },
+    uOctaves: { value: phone ? 3 : 4 },
   };
   const material = new THREE.ShaderMaterial({
     name: 'Smoke',
     uniforms,
-    vertexShader,
-    fragmentShader,
+    vertexShader: smokeVertex,
+    fragmentShader: smokeFragment,
     transparent: true,
     depthWrite: false,
   });
@@ -164,7 +87,10 @@ export function create(ctx) {
     return slot;
   }
 
-  function puff(x, y, z, born, radius, growth, life) {
+  // One puff: where and when it appears, its starting radius, how fast it spreads (metres
+  // per square-root second), how long it lasts, and its shape: stretched across and up,
+  // tilted, and how fine its noise is.
+  function puff(x, y, z, born, radius, growth, life, across, up, tilt) {
     const slot = claim();
     if (slot < 0) return;
     const o = slot * 4;
@@ -176,6 +102,10 @@ export function create(ctx) {
     shape.array[o + 1] = growth;
     shape.array[o + 2] = life;
     shape.array[o + 3] = Math.random();
+    look.array[o] = across;
+    look.array[o + 1] = up;
+    look.array[o + 2] = tilt;
+    look.array[o + 3] = 1.6 + Math.random() * 1.4;
     if (slot < dirtyFrom) dirtyFrom = slot;
     if (slot > dirtyTo) dirtyTo = slot;
   }
@@ -186,36 +116,66 @@ export function create(ctx) {
     attribute.needsUpdate = true;
   }
 
-  // A shell's smoke: a few puffs scattered through where it broke, appearing as it bursts.
+  // A shell's smoke, appearing as it bursts, laid along where its sparks went.
   function shellSmoke(record) {
     const lowTier = ctx.post && ctx.post.tier === 'low';
-    const count = Math.max(1, Math.round((phone ? PER_SHELL.phone : PER_SHELL.desktop) * (lowTier ? 0.5 : 1)));
-    const spread = record.size * 0.45;
-    for (let k = 0; k < count; k++) {
-      puff(
-        record.x + (Math.random() - 0.5) * 2 * spread,
-        record.y + (Math.random() - 0.6) * spread,
-        record.z + (Math.random() - 0.5) * spread,
-        record.time + 0.15 + Math.random() * 0.5,
-        record.size * (0.28 + Math.random() * 0.14),
-        2.2 + Math.random() * 1.6,
-        settings.linger * (0.7 + Math.random() * 0.5),
-      );
+    const count = Math.max(2, Math.round((phone ? PER_SHELL.phone : PER_SHELL.desktop) * (lowTier ? 0.5 : 1)));
+    const reach = record.size;
+    const life = settings.linger;
+    const born = record.time + 0.2;
+
+    if (record.type === 'text') {
+      // A wide band where the letters were.
+      const width = config.look.textWidth;
+      for (let k = 0; k < count; k++) {
+        const x = record.x + ((k + Math.random()) / count - 0.5) * width;
+        puff(x, record.y + (Math.random() - 0.5) * 12, record.z, born + Math.random() * 0.6,
+          width / count * (0.45 + Math.random() * 0.25), 2 + Math.random() * 1.5, life * (0.6 + Math.random() * 0.5),
+          1.1 + Math.random() * 0.5, 0.75 + Math.random() * 0.3, (Math.random() - 0.5) * 0.3);
+      }
+      return;
+    }
+
+    // A thicker core where the shell broke.
+    puff(record.x, record.y, record.z, born, reach * (0.18 + Math.random() * 0.08), 2.5 + Math.random(),
+      life * (0.8 + Math.random() * 0.4), 1 + Math.random() * 0.5, 0.8 + Math.random() * 0.4, Math.random() * 6.28);
+
+    for (let k = 1; k < count; k++) {
+      if (HANGING[record.type]) {
+        // Curtains hanging under the break, where the sparks fell and burned out.
+        const a = Math.random() * Math.PI * 2;
+        const out = reach * (0.3 + Math.random() * 0.5);
+        puff(record.x + Math.cos(a) * out, record.y - reach * (0.25 + Math.random() * 0.5), record.z + Math.sin(a) * out * 0.5,
+          born + 0.6 + Math.random() * 1.2, reach * (0.12 + Math.random() * 0.06), 1.8 + Math.random(),
+          life * (0.6 + Math.random() * 0.5), 0.55 + Math.random() * 0.25, 1.7 + Math.random() * 0.8, (Math.random() - 0.5) * 0.35);
+        continue;
+      }
+      // A ragged shell around the break, sagging toward the bottom where sparks fell.
+      const a = Math.random() * Math.PI * 2;
+      const up = Math.random() * 2 - 1;
+      const flat = Math.sqrt(1 - up * up);
+      const out = reach * (0.4 + Math.random() * 0.3);
+      puff(record.x + Math.cos(a) * flat * out, record.y + up * out * 0.8 - reach * 0.15, record.z + Math.sin(a) * flat * out,
+        born + Math.random() * 0.5, reach * (0.13 + Math.random() * 0.1), 2 + Math.random() * 1.8,
+        life * (0.55 + Math.random() * 0.6), 0.8 + Math.random() * 1.1, 0.6 + Math.random() * 0.6, Math.random() * 6.28);
     }
   }
 
-  // Ground-show smoke: low haze rolling off the barge over the effect's run.
+  // Ground-show smoke: low, wide haze rolling off the barge over the effect's run.
   function groundSmoke(record) {
     const [, by] = config.show.bargePosition;
     for (let k = 0; k < 2; k++) {
       puff(
-        record.x + (Math.random() - 0.5) * 6,
-        by + 7 + Math.random() * 5,
+        record.x + (Math.random() - 0.5) * 8,
+        by + 6 + Math.random() * 6,
         record.z + (Math.random() - 0.5) * 6,
         record.time + (0.2 + k * 0.5) * Math.max(record.hold, 1),
-        9 + Math.random() * 4,
+        8 + Math.random() * 5,
         2 + Math.random(),
         settings.linger * (0.6 + Math.random() * 0.4),
+        1.8 + Math.random() * 1.2,
+        0.55 + Math.random() * 0.25,
+        (Math.random() - 0.5) * 0.2,
       );
     }
   }
@@ -244,6 +204,7 @@ export function create(ctx) {
       if (dirtyTo >= dirtyFrom) {
         upload(origin);
         upload(shape);
+        upload(look);
         dirtyFrom = size;
         dirtyTo = -1;
       }
