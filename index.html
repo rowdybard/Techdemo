@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SkyGreeting</title>
 <meta name="description" content="Send someone a fireworks show with their name in the sky.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SkyGreeting">
+<meta property="og:title" content="SkyGreeting">
+<meta property="og:description" content="Send someone a fireworks show with their name in the sky.">
+<meta property="og:image" content="https://skygreeting.com/src/og/birthday.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://skygreeting.com/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SkyGreeting">
+<meta name="twitter:description" content="Send someone a fireworks show with their name in the sky.">
+<meta name="twitter:image" content="https://skygreeting.com/src/og/birthday.jpg">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./src/studio.css">
 <style>
@@ -90,6 +102,15 @@
   .send-row { display: flex; gap: 8px; }
   .send-row[hidden] { display: none; }
   .gift-links { display: flex; justify-content: space-between; }
+  .gift-video[hidden], .builder-film[hidden] { display: none; }
+  .builder-film { flex: none; padding-inline: 16px; }
+  .builder-terms { margin: 0; color: var(--muted); font-size: 11px; }
+  .builder-terms a { color: var(--muted); }
+  /* Save as video: only the scene shows while it records. */
+  .video-pill { position: absolute; z-index: 4; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); padding: 8px 14px; border: 0; border-radius: 999px; background: rgb(200 30 40 / 0.85); color: #fff; font: 600 13px var(--sans); cursor: pointer; }
+  .video-pill[hidden], .video-ready[hidden] { display: none; }
+  .video-ready { z-index: 4; }
+  .recording :is(.gift-card, .builder-bar, .send-box:not(.video-ready), .send-open, .studio-open, .studio, .walk-hint, .panel, .debug) { display: none !important; }
   .gift-links[hidden], .gift-report-box[hidden] { display: none; }
   .gift-report-box { display: grid; gap: 10px; }
   .builder-chip[aria-pressed="true"] { border-color: var(--spark); background: rgb(255 180 92 / 0.18); }

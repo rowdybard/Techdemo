@@ -17,13 +17,14 @@ import * as post from './post.js';
 import * as debug from './debug.js';
 import * as ui from './ui.js';
 import * as director from './director.js';
+import * as video from './video.js';
 import * as builder from './builder.js';
 import * as studio from './studio.js';
 import * as gift from './gift.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [wind, sky, burstlights, ocean, beach, landmarks, walk, fireworks, fountains, smoke, audio, post, debug, ui, director, builder, studio, gift];
+const MODULES = [wind, sky, burstlights, ocean, beach, landmarks, walk, fireworks, fountains, smoke, audio, post, debug, ui, director, video, builder, studio, gift];
 
 const DEG = Math.PI / 180;
 
@@ -142,6 +143,7 @@ export function createApp(container, config = defaultConfig) {
     renderer.info.reset();
     if (ctx.render) ctx.render();
     else renderer.render(scene, camera);
+    if (ctx.afterRender) ctx.afterRender(); // video.js copies the frame while it's recording
   }
 
   function resize() {

@@ -104,7 +104,17 @@ export function create(ctx) {
   linkBox.readOnly = true;
   linkBox.hidden = true;
   linkBox.setAttribute('aria-label', 'Link to send');
-  sheet.append(head, chips, message.label, to.label, from.label, customize, included, deluxeBox, row, linkBox, status);
+  const terms = el('p', 'builder-terms');
+  const termsLink = el('a', '', 'Terms');
+  termsLink.href = '/terms';
+  termsLink.target = '_blank';
+  termsLink.rel = 'noopener';
+  const privacyLink = el('a', '', 'Privacy');
+  privacyLink.href = '/privacy';
+  privacyLink.target = '_blank';
+  privacyLink.rel = 'noopener';
+  terms.append('By sending, you agree to SkyGreeting’s ', termsLink, '. ', privacyLink, '.');
+  sheet.append(head, chips, message.label, to.label, from.label, customize, included, deluxeBox, row, linkBox, status, terms);
 
   // While a preview plays: a slim bar instead of the sheet.
   const bar = el('div', 'builder-bar');
@@ -113,7 +123,22 @@ export function create(ctx) {
   edit.type = 'button';
   const barSend = el('button', 'send-primary');
   barSend.type = 'button';
-  bar.append(edit, barSend);
+  // Record the preview as a video to post (watermarked: it isn't a paid greeting yet).
+  const film = el('button', 'send-secondary builder-film', '🎬');
+  film.type = 'button';
+  film.title = 'Save as video';
+  film.setAttribute('aria-label', 'Save as video');
+  film.hidden = !(ctx.video && ctx.video.supported);
+  film.addEventListener('click', () => {
+    if (!wordsOk() || !ctx.video || !ctx.director) return;
+    show('closed');
+    ctx.video.capture({
+      watermark: true,
+      name: `skygreeting-${state.occasion}`,
+      play: () => ctx.director.play(OCCASIONS[state.occasion], words(), state.deluxe),
+    });
+  }, { signal });
+  bar.append(edit, film, barSend);
 
   // When checkout can't start: say why, and offer the free version.
   const soon = el('div', 'send-box');

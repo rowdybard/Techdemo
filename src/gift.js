@@ -45,10 +45,24 @@ export function create(ctx) {
   explore.type = 'button';
   const reportOpen = el('button', 'send-close gift-report', 'Report');
   reportOpen.type = 'button';
+  // Save as video (video.js): the ending, recorded for posting. Clean for a paid greeting.
+  const film = el('button', 'send-secondary gift-video', '🎬 Save as video');
+  film.type = 'button';
+  film.hidden = true;
   const links = el('div', 'gift-links');
   links.append(reportOpen, explore);
   const reportBox = buildReport();
-  card.append(title, note, buttons, links, reportBox.node);
+  card.append(title, note, buttons, film, links, reportBox.node);
+  let occasionName = 'birthday';
+  film.addEventListener('click', () => {
+    if (!occasion || !ctx.video || !ctx.director) return;
+    pending = false;
+    ctx.video.capture({
+      watermark: !deluxe,
+      name: `skygreeting-${occasionName}`,
+      play: () => ctx.director.play(occasion, words, deluxe),
+    });
+  }, { signal });
   container.append(card);
   container.classList.add('gift-mode');
 
@@ -68,6 +82,8 @@ export function create(ctx) {
       return;
     }
     const name = OCCASIONS[data.occasion] ? data.occasion : 'birthday';
+    occasionName = name;
+    film.hidden = !(ctx.video && ctx.video.supported);
     deluxe = isDeluxe;
     occasion = applyOccasion(config, name, deluxe);
     // The sender's design, then (for a free greeting) only free effects.
@@ -89,6 +105,7 @@ export function create(ctx) {
     buttons.hidden = false;
     again.hidden = true;
     reportOpen.hidden = true;
+    film.hidden = true;
     pending = false;
   }
 

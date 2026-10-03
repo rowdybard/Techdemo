@@ -8,6 +8,7 @@
 //                             directly if the webhook hasn't arrived yet)
 //   POST /api/report          a recipient reports a greeting (three people take it down)
 //   GET  /api/taken-down?o=…  whether a free greeting has been taken down
+//   GET  /?g=… or /?msg=…     the page itself, with the link preview filled in for that greeting
 //   GET  /api/config          the Deluxe price, for the send button, and whether the
 //                             Stripe keys are present (true/false, never the keys)
 //
@@ -36,6 +37,9 @@ export default {
       if (url.pathname === '/api/report' && request.method === 'POST') return await report(request, env);
       if (url.pathname === '/api/taken-down' && request.method === 'GET') return await takenDown(env, url.searchParams);
       if (url.pathname.startsWith('/api/')) return json({ error: 'Not found' }, 404);
+      if (url.pathname === '/' && request.method === 'GET' && (url.searchParams.has('g') || url.searchParams.has('msg'))) {
+        return await preview(request, env, url);
+      }
     } catch (error) {
       console.error(error);
       return json({ error: 'Something went wrong. Please try again.' }, 500);
@@ -82,7 +86,7 @@ async function checkout(request, env, url) {
     // Stripe asks for the buyer's email. Its receipt shows this description, so the
     // private link reaches their inbox (with receipts turned on in Stripe's settings).
     'payment_intent_data[description]': `Your SkyGreeting: ${site}/?g=${id}`,
-    'custom_text[submit][message]': 'Your private SkyGreeting link is shown right after payment and sent with your receipt.',
+    'custom_text[submit][message]': `Your private SkyGreeting link is shown right after payment and sent with your receipt. Terms and refunds: ${site}/terms`,
     success_url: `${site}/?g=${id}&sent=1`,
     cancel_url: `${site}/?canceled=1`,
   });
@@ -206,6 +210,39 @@ async function textKey({ occasion, message, to, from }) {
 async function sha256(text) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Link previews: when a greeting's link is shared, messaging apps fetch the page and show
+// its title, description and picture. The page is served with those filled in for the
+// greeting: who made it, the occasion's emoji and picture. Never the message itself (the
+// recipient should see that in the sky first).
+const EMOJI = { halloween: '🎃', birthday: '🎂', love: '❤️', congrats: '🎉', thanks: '🙏' };
+
+async function preview(request, env, url) {
+  const page = await env.ASSETS.fetch(new Request(new URL('/', url), request));
+  let occasion = '';
+  let from = '';
+  const id = url.searchParams.get('g');
+  if (id && /^[A-Za-z0-9]{8}$/.test(id)) {
+    const record = await load(env, id);
+    if (record && record.status === 'paid' && !record.hidden) ({ occasion, from } = record);
+  } else {
+    occasion = clean(url.searchParams.get('o'), 20);
+    from = clean(url.searchParams.get('from'), LIMITS.from);
+  }
+  if (!OCCASIONS.has(occasion)) occasion = 'birthday';
+  if (greetingBlocked({ message: '', to: '', from })) from = '';
+  const title = `${from ? `${from} made you a SkyGreeting` : 'You’ve got a SkyGreeting'} ${EMOJI[occasion]}`;
+  const description = 'A fireworks show made just for you. Tap to watch it light up the sky.';
+  const image = `${url.origin}/src/og/${occasion}.jpg`;
+  const set = (value) => ({ element(element) { element.setAttribute('content', value); } });
+  return new HTMLRewriter()
+    .on('title', { element(element) { element.setInnerContent(title); } })
+    .on('meta[property="og:title"], meta[name="twitter:title"]', set(title))
+    .on('meta[property="og:description"], meta[name="description"], meta[name="twitter:description"]', set(description))
+    .on('meta[property="og:image"], meta[name="twitter:image"]', set(image))
+    .on('meta[property="og:url"]', set(url.href))
+    .transform(page);
 }
 
 async function load(env, id) {
