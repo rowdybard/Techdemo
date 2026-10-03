@@ -32,6 +32,7 @@ In the panel's **Client mockup** folder, type a prospect's business name, headli
 
 Link parameters: `s` (the settings JSON, base64url), `business`, `headline`, `copy`, `button` (plain text, length-capped), `hero=1` (open as a header), `embed=1` (scene only: no panel, text, hints or keys, drag scrolls the host page, sound off unless `sound=1`, and remembered settings are ignored). The scene stops rendering while it's scrolled off screen or the tab is hidden.
 - The **Lake Michigan** preset adds a pier and lighthouse (with a sweeping beam and a lamp reflected in the water), dune grass, and calmer freshwater waves.
+- **Customize** (bottom right) is the everyday settings drawer: style presets, colour swatches, which fireworks and ground show, sliders for pace, size, sparkle, sky, wind and smoke, sound, the pier and grass, and the camera. **Advanced settings** at its foot (or `#advanced` on the link) opens the full developer panel, which has the Client mockup folder and Save & load.
 - Keys: `WASD` or arrows to walk the beach (drag to look, `Shift` to run, `Esc` to go back), `H` hero mode, `` ` `` stats overlay, `Shift+R` rebuild (the leak test).
 
 ## Run it locally

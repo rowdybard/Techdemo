@@ -37,7 +37,20 @@ export function create(ctx) {
   const gui = new GUI({ container, title: 'Show designer', width: phone ? 280 : 300 });
   gui.domElement.classList.add('panel');
   ctx.gui = gui; // main.js destroys it early in teardown
-  if (phone) gui.close();
+  // The friendly Customize drawer (studio.js) is the everyday panel. This one is
+  // "Advanced settings": hidden unless asked for, or opened from the link with #advanced.
+  if (!location.hash.includes('advanced')) gui.hide();
+  ctx.advanced = {
+    open() {
+      gui.show();
+      gui.open();
+      refresh();
+    },
+    refresh() {
+      for (const controller of gui.controllersRecursive()) controller.updateDisplay();
+    },
+  };
+  gui.add({ back: () => { gui.hide(); if (ctx.studio) ctx.studio.open(); } }, 'back').name('← Back to Customize');
 
   const state = {
     preset: 'Default',
@@ -212,7 +225,7 @@ export function create(ctx) {
   const hero = createHero(ctx, () => {
     state.hero = false;
     hero.set(false);
-    gui.open();
+    if (ctx.studio) ctx.studio.open();
     refresh();
   });
   addEventListener('keydown', (event) => {
@@ -235,6 +248,7 @@ export function create(ctx) {
       hero.dispose();
       container.classList.remove('embed-mode');
       ctx.gui = null; // main.js has already destroyed it
+      ctx.advanced = null;
     },
   };
 }

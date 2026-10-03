@@ -18,11 +18,12 @@ import * as debug from './debug.js';
 import * as ui from './ui.js';
 import * as director from './director.js';
 import * as builder from './builder.js';
+import * as studio from './studio.js';
 import * as gift from './gift.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [wind, sky, burstlights, ocean, beach, landmarks, walk, fireworks, fountains, smoke, audio, post, debug, ui, director, builder, gift];
+const MODULES = [wind, sky, burstlights, ocean, beach, landmarks, walk, fireworks, fountains, smoke, audio, post, debug, ui, director, builder, studio, gift];
 
 const DEG = Math.PI / 180;
 

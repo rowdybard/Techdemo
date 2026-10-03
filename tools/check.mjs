@@ -157,11 +157,13 @@ async function rebuild({ page, overlay }) {
   return leaks;
 }
 
-// Runs the Finale preset (chosen in the panel, as a person would) and samples the counts
+// Runs the Finale preset (chosen in Customize, as a person would) and samples the counts
 // and heap. The particle pool wraps many times; nothing should grow.
 async function soak(page) {
   const cdp = await page.context().newCDPSession(page);
-  await page.selectOption('.panel select >> nth=0', 'Finale');
+  await page.click('.studio-open');
+  await page.click('.studio-card:has-text("Big finale")');
+  await page.click('.studio-done');
   const samples = [];
   const started = Date.now();
   console.log(`\nSoak: Finale preset for ${soakSeconds} s`);
