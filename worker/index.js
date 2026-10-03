@@ -72,6 +72,10 @@ async function checkout(request, env, url) {
     'line_items[0][price_data][product_data][description]': `A ${words.occasion} fireworks greeting with every effect and the grand finale`,
     client_reference_id: id,
     'metadata[greeting]': id,
+    // Stripe asks for the buyer's email. Its receipt shows this description, so the
+    // private link reaches their inbox (with receipts turned on in Stripe's settings).
+    'payment_intent_data[description]': `Your SkyGreeting: ${site}/?g=${id}`,
+    'custom_text[submit][message]': 'Your private SkyGreeting link is shown right after payment and sent with your receipt.',
     success_url: `${site}/?g=${id}&sent=1`,
     cancel_url: `${site}/?canceled=1`,
   });
@@ -95,7 +99,7 @@ async function webhook(request, env) {
   const event = JSON.parse(body);
   if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
     const session = event.data.object;
-    if (session.payment_status === 'paid' && session.client_reference_id) await markPaid(env, session.client_reference_id);
+    if (session.payment_status === 'paid' && session.client_reference_id) await markPaid(env, session.client_reference_id, session);
   }
   return json({ received: true });
 }
@@ -107,7 +111,7 @@ async function greeting(env, id) {
   // The buyer may land here before Stripe's webhook does: ask Stripe directly.
   if (record.status !== 'paid' && record.session && env.STRIPE_SECRET_KEY) {
     const session = await stripe(env, 'GET', `/v1/checkout/sessions/${encodeURIComponent(record.session)}`);
-    if (session.payment_status === 'paid') record = await markPaid(env, id);
+    if (session.payment_status === 'paid') record = await markPaid(env, id, session);
   }
   if (record.status !== 'paid') return json({ status: 'pending' });
   const { occasion, message, to, from, deluxe, look } = record;
@@ -119,12 +123,15 @@ async function load(env, id) {
   return text ? JSON.parse(text) : null;
 }
 
-async function markPaid(env, id) {
+// Keeps the greeting for good, with the buyer's email (from Stripe), so a lost link can be resent.
+async function markPaid(env, id, session) {
   const record = await load(env, id);
   if (!record) return null;
   if (record.status !== 'paid') {
     record.status = 'paid';
     record.paid = Date.now();
+    const email = session && session.customer_details && session.customer_details.email;
+    if (email) record.email = String(email).slice(0, 254);
     await env.GREETINGS.put(`g:${id}`, JSON.stringify(record)); // no expiry: a paid link lasts
   }
   return record;
