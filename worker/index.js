@@ -6,6 +6,8 @@
 //   POST /api/stripe-webhook  Stripe says a checkout was paid: the greeting is kept for good
 //   GET  /api/greeting?id=…   a greeting's words and occasion, once paid (asks Stripe
 //                             directly if the webhook hasn't arrived yet)
+//   POST /api/report          a recipient reports a greeting (three people take it down)
+//   GET  /api/taken-down?o=…  whether a free greeting has been taken down
 //   GET  /api/config          the Deluxe price, for the send button, and whether the
 //                             Stripe keys are present (true/false, never the keys)
 //
@@ -31,6 +33,8 @@ export default {
       if (url.pathname === '/api/checkout' && request.method === 'POST') return await checkout(request, env, url);
       if (url.pathname === '/api/stripe-webhook' && request.method === 'POST') return await webhook(request, env);
       if (url.pathname === '/api/greeting' && request.method === 'GET') return await greeting(env, url.searchParams.get('id'));
+      if (url.pathname === '/api/report' && request.method === 'POST') return await report(request, env);
+      if (url.pathname === '/api/taken-down' && request.method === 'GET') return await takenDown(env, url.searchParams);
       if (url.pathname.startsWith('/api/')) return json({ error: 'Not found' }, 404);
     } catch (error) {
       console.error(error);
@@ -117,8 +121,91 @@ async function greeting(env, id) {
     if (session.payment_status === 'paid') record = await markPaid(env, id, session);
   }
   if (record.status !== 'paid') return json({ status: 'pending' });
+  if (record.hidden) return json({ status: 'hidden' });
   const { occasion, message, to, from, deluxe, look } = record;
   return json({ status: 'paid', occasion, message, to, from, deluxe, look: look || null });
+}
+
+// Reports. A recipient reports a greeting with a reason; reports are kept 90 days under
+// "r:" keys (read them in the Cloudflare dashboard: KV → skygreeting-greetings). Three
+// reports from different people take a greeting down for everyone. Reporters are told
+// apart by a salted hash of their IP address; the address itself is never stored, and
+// each may send at most 10 reports an hour.
+const REASONS = new Set(['hateful', 'threatening', 'sexual', 'spam', 'other']);
+const TAKE_DOWN_AT = 3;
+const REPORTS_PER_HOUR = 10;
+
+async function report(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Bad request' }, 400);
+  }
+  const reason = REASONS.has(body.reason) ? body.reason : 'other';
+  const note = clean(body.note, 200);
+  const id = typeof body.id === 'string' && /^[A-Za-z0-9]{8}$/.test(body.id) ? body.id : null;
+  const words = {
+    occasion: clean(body.occasion, 20),
+    message: clean(body.message, LIMITS.message).toUpperCase(),
+    to: clean(body.to, LIMITS.to).toUpperCase(),
+    from: clean(body.from, LIMITS.from),
+  };
+  if (!id && !words.message) return json({ error: 'Nothing to report.' }, 400);
+
+  const reporter = (await sha256(`skygreeting:${request.headers.get('cf-connecting-ip') || 'unknown'}`)).slice(0, 16);
+  const hour = Math.floor(Date.now() / 3600000);
+  const limitKey = `l:${reporter}:${hour}`;
+  const sent = Number((await env.GREETINGS.get(limitKey)) || 0);
+  if (sent >= REPORTS_PER_HOUR) return json({ error: 'Too many reports. Try again later.' }, 429);
+  await env.GREETINGS.put(limitKey, String(sent + 1), { expirationTtl: 3700 });
+
+  const target = id ? `g:${id}` : `t:${await textKey(words)}`;
+  const at = new Date().toISOString();
+  await env.GREETINGS.put(`r:${at}:${newId()}`, JSON.stringify({ target, id, ...(id ? {} : words), reason, note, at }),
+    { expirationTtl: 90 * 24 * 3600 });
+
+  // Count different reporters; at three, take it down.
+  const tallyKey = `n:${target}`;
+  const tally = JSON.parse((await env.GREETINGS.get(tallyKey)) || '{"by":[]}');
+  if (!tally.by.includes(reporter)) {
+    tally.by.push(reporter);
+    await env.GREETINGS.put(tallyKey, JSON.stringify(tally));
+    if (tally.by.length >= TAKE_DOWN_AT) {
+      if (id) {
+        const record = await load(env, id);
+        if (record && !record.hidden) {
+          record.hidden = true;
+          await env.GREETINGS.put(`g:${id}`, JSON.stringify(record));
+        }
+      } else {
+        await env.GREETINGS.put(`h:${target}`, '1');
+      }
+    }
+  }
+  return json({ received: true });
+}
+
+// Whether a free greeting (its words travel in the link) has been taken down.
+async function takenDown(env, params) {
+  const words = {
+    occasion: clean(params.get('o'), 20),
+    message: clean(params.get('msg'), LIMITS.message).toUpperCase(),
+    to: clean(params.get('to'), LIMITS.to).toUpperCase(),
+    from: clean(params.get('from'), LIMITS.from),
+  };
+  if (!words.message) return json({ hidden: false });
+  return json({ hidden: Boolean(await env.GREETINGS.get(`h:t:${await textKey(words)}`)) });
+}
+
+// A free greeting is known by its words (the same words make the same key).
+async function textKey({ occasion, message, to, from }) {
+  return (await sha256([occasion, message, to, from].join('\u0001'))).slice(0, 24);
+}
+
+async function sha256(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 async function load(env, id) {

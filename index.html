@@ -89,6 +89,10 @@
   .send-link { font: 12px var(--mono); text-transform: none; }
   .send-row { display: flex; gap: 8px; }
   .send-row[hidden] { display: none; }
+  .gift-links { display: flex; justify-content: space-between; }
+  .gift-links[hidden], .gift-report-box[hidden] { display: none; }
+  .gift-report-box { display: grid; gap: 10px; }
+  .builder-chip[aria-pressed="true"] { border-color: var(--spark); background: rgb(255 180 92 / 0.18); }
   .send-primary, .send-secondary, .send-close { flex: 1; padding: 11px 12px; border: 0; border-radius: 999px; font: 600 14px var(--sans); cursor: pointer; }
   .send-primary { background: var(--spark); color: #1a1006; }
   .send-secondary { background: rgb(233 237 245 / 0.14); color: var(--ink); }

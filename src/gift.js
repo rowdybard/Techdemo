@@ -7,6 +7,9 @@
 // payment. A buyer coming back from checkout (&sent=1) gets their link to share.
 // Older links with only a message play as a birthday-style greeting.
 //
+// A small Report link lets the recipient flag it (worker/index.js keeps the report, and
+// three reports from different people take a greeting down for everyone).
+//
 // The words only ever reach the page as textContent and the sky as canvas text.
 import { OCCASIONS, applyOccasion } from './occasions.js';
 import { paidLink } from './link.js';
@@ -40,7 +43,12 @@ export function create(ctx) {
   buttons.append(again, yours);
   const explore = el('button', 'send-close', 'Play with the show');
   explore.type = 'button';
-  card.append(title, note, buttons, explore);
+  const reportOpen = el('button', 'send-close gift-report', 'Report');
+  reportOpen.type = 'button';
+  const links = el('div', 'gift-links');
+  links.append(reportOpen, explore);
+  const reportBox = buildReport();
+  card.append(title, note, buttons, links, reportBox.node);
   container.append(card);
   container.classList.add('gift-mode');
 
@@ -75,12 +83,32 @@ export function create(ctx) {
     playAt = now + FIRST_PLAY;
   }
 
+  function takenDown() {
+    title.textContent = 'This SkyGreeting has been taken down.';
+    note.textContent = 'People reported it. You can make a kind one of your own.';
+    buttons.hidden = false;
+    again.hidden = true;
+    reportOpen.hidden = true;
+    pending = false;
+  }
+
   if (gift.id) {
     title.textContent = gift.sent ? 'Confirming your payment…' : 'Opening your SkyGreeting…';
     buttons.hidden = true;
     loadPaid(0);
   } else {
     ready(gift, false);
+    // A free greeting carries its words, so ask whether it has been taken down (if the
+    // server can't be reached, it plays).
+    if (!gift.blocked && /^https?:$/.test(location.protocol)) {
+      const query = new URLSearchParams({ o: gift.occasion || '', msg: gift.message, to: gift.to || '', from: gift.from || '' });
+      fetch(`/api/taken-down?${query}`, { signal }).then((response) => (response.ok ? response.json() : null)).then((data) => {
+        if (data && data.hidden) {
+          if (ctx.director) ctx.director.stop();
+          takenDown();
+        }
+      }, () => {});
+    }
   }
 
   // A paid greeting: ask the server until Stripe has confirmed it (usually at once).
@@ -95,6 +123,10 @@ export function create(ctx) {
     }
     if (data && data.status === 'pending' && tries < POLL_TRIES) {
       setTimeout(() => { if (!signal.aborted) loadPaid(tries + 1); }, POLL_MS);
+      return;
+    }
+    if (data && data.status === 'hidden') {
+      takenDown();
       return;
     }
     if (!data || data.status !== 'paid') {
@@ -133,6 +165,73 @@ export function create(ctx) {
     card.insertBefore(box, buttons);
     // Their own visit keeps the link clean if they copy it from the address bar.
     history.replaceState(null, '', `?g=${gift.id}`);
+  }
+
+  // Report: a reason, an optional note, and off it goes.
+  function buildReport() {
+    const node = el('div', 'gift-report-box');
+    node.hidden = true;
+    const reasons = [['hateful', 'Hateful'], ['threatening', 'Threatening'], ['sexual', 'Sexual'], ['spam', 'Spam'], ['other', 'Something else']];
+    let reason = '';
+    const chips = el('div', 'builder-chips');
+    const chipButtons = [];
+    for (const [value, label] of reasons) {
+      const chip = el('button', 'builder-chip', label);
+      chip.type = 'button';
+      chip.setAttribute('aria-pressed', 'false');
+      chip.addEventListener('click', () => {
+        reason = value;
+        for (const other of chipButtons) other.setAttribute('aria-pressed', String(other === chip));
+      }, { signal });
+      chipButtons.push(chip);
+      chips.append(chip);
+    }
+    const detail = el('input', 'send-link');
+    detail.maxLength = 200;
+    detail.placeholder = 'Anything else? (optional)';
+    detail.setAttribute('aria-label', 'Details');
+    const status = el('p', 'send-status');
+    status.setAttribute('role', 'status');
+    const row = el('div', 'send-row');
+    const cancel = el('button', 'send-secondary', 'Cancel');
+    cancel.type = 'button';
+    const send = el('button', 'send-primary', 'Send report');
+    send.type = 'button';
+    row.append(cancel, send);
+    node.append(el('p', 'gift-from', 'What’s wrong with it?'), chips, detail, row, status);
+
+    cancel.addEventListener('click', () => show(false), { signal });
+    send.addEventListener('click', async () => {
+      if (!reason) {
+        status.textContent = 'Pick a reason first.';
+        return;
+      }
+      send.disabled = true;
+      status.textContent = 'Sending…';
+      const body = gift.id ? { id: gift.id } : { occasion: gift.occasion || '', message: gift.message, to: gift.to || '', from: gift.from || '' };
+      try {
+        const response = await fetch('/api/report', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ...body, reason, note: detail.value }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'failed');
+        node.replaceChildren(el('p', 'send-status', 'Thanks. We’ll look at it.'));
+        reportOpen.hidden = true;
+      } catch (error) {
+        status.textContent = error.message && error.message !== 'failed' ? error.message : 'That didn’t send. Try again in a moment.';
+        send.disabled = false;
+      }
+    }, { signal });
+
+    function show(on) {
+      node.hidden = !on;
+      buttons.hidden = on;
+      links.hidden = on;
+    }
+    reportOpen.addEventListener('click', () => show(true), { signal });
+    return { node };
   }
 
   // Back to the full site: the builder, the panel and the hints.
