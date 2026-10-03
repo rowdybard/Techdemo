@@ -8,7 +8,8 @@ import { config as defaults } from './config.js';
 // camera geometry) belongs to the app.
 const SAVED = ['sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'smoke', 'look', 'physics', 'bloom', 'sound', 'hero'];
 const STORAGE_KEY = 'beach-fireworks-settings';
-const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text'];
+const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text',
+  'pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'];
 
 const DEFAULTS = snapshot(defaults);
 
@@ -36,6 +37,15 @@ export const PRESETS = {
     landmarks: { pier: true, grass: true },
     look: { mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1.5, ring: 1, crossette: 1, crackle: 1, multibreak: 1, text: 0.5 }) },
     show: { shellsPerMinute: 30 },
+  },
+  Halloween: {
+    look: { palette: 'halloween', lifetime: 2.9, mix: mixOf({ pumpkin: 2, skull: 1.3, bat: 1.5, ghost: 1.5, web: 1.1, brew: 1.6, eyes: 1.2, wisp: 1.6, crackle: 0.6, strobe: 0.4 }) },
+    show: { shellsPerMinute: 30, maxShells: 7 },
+    fountains: { style: 'halloween', every: 20, duration: 9 },
+    sky: { timeOfDay: 0.9, cloudCoverage: 0.6 },
+    smoke: { amount: 1.4 },
+    physics: { windSpeed: 3 },
+    bloom: { strength: 0.7 },
   },
   Neon: {
     look: { palette: 'neon', brightness: 1.9, glitter: 0.6, mix: mixOf({ ring: 2, peony: 2, chrysanthemum: 2, strobe: 1.2, multibreak: 1 }) },

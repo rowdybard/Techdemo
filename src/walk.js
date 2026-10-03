@@ -39,7 +39,7 @@ export function create(ctx) {
   hint.className = 'walk-hint';
   hint.textContent = phone
     ? 'Tap the sky to launch a firework'
-    : 'Click the sky to launch · WASD to walk · drag to look · Shift to run';
+    : 'Click the sky to launch · WASD to walk · drag to look';
   hint.hidden = ctx.link.embed;
   container.append(hint);
   const hideHint = setTimeout(() => hint.classList.add('faded'), 9000);

@@ -93,7 +93,8 @@ export const config = {
     height: 42, // metres
     nozzles: 9, // along the barge (fewer on phones)
     color: 'gold', // fountains: 'gold' or 'silver'; the other effects use the palette
-    style: 'mixed', // 'mixed' rotates through all; or 'fountains', 'shooters', 'candles', 'mines', 'fans'
+    style: 'mixed', // 'mixed' rotates through the five below; 'halloween' through the four spooky ones
+    // Single styles: 'fountains', 'shooters', 'candles', 'mines', 'fans', 'cauldron', 'wisps', 'lightning', 'lanterns'
   },
 
   // Smoke left by the bursts and the ground show, lit by later bursts.
@@ -140,6 +141,7 @@ export const config = {
     gold: [[1, 0.55, 0.16], [1, 0.75, 0.35], [1, 0.9, 0.6]],
     neon: [[1, 0.1, 0.8], [0.1, 0.95, 1], [0.6, 1, 0.1], [0.55, 0.2, 1]],
     pastel: [[1, 0.6, 0.75], [0.6, 0.85, 1], [0.8, 1, 0.7], [1, 0.9, 0.6]],
+    halloween: [[1, 0.4, 0.04], [0.6, 0.18, 1], [0.3, 1, 0.2], [1, 0.82, 0.25]],
     custom: [[1, 0.3, 0.1], [0.2, 0.6, 1], [1, 0.85, 0.4]], // the panel's colour pickers edit these
   },
 

@@ -20,6 +20,14 @@ const TYPE_LABELS = {
   heart: 'Heart',
   star: 'Star',
   text: 'Your text',
+  pumpkin: "Jack-o'-lantern",
+  skull: 'Skull',
+  bat: 'Bat',
+  ghost: 'Ghost',
+  web: 'Spider web',
+  brew: "Witch's brew",
+  eyes: 'Eyes in the dark',
+  wisp: "Will-o'-the-wisp",
 };
 
 export function create(ctx) {
@@ -62,7 +70,7 @@ export function create(ctx) {
   const ground = gui.addFolder('Ground show').close();
   ground.add(state, 'fountains').name('Ground show now');
   ground.add(config.fountains, 'enabled').name('Ground show on');
-  ground.add(config.fountains, 'style', { 'Mix of everything': 'mixed', Fountains: 'fountains', 'Sweeping shooters': 'shooters', 'Roman candles': 'candles', Mines: 'mines', 'V fans': 'fans' }).name('Style');
+  ground.add(config.fountains, 'style', { 'Mix of everything': 'mixed', Fountains: 'fountains', 'Sweeping shooters': 'shooters', 'Roman candles': 'candles', Mines: 'mines', 'V fans': 'fans', 'Halloween mix': 'halloween', 'Bubbling cauldrons': 'cauldron', "Will-o'-the-wisps": 'wisps', Lightning: 'lightning', 'Floating lanterns': 'lanterns' }).name('Style');
   ground.add(config.fountains, 'every', 8, 90, 1).name('Every (s)');
   ground.add(config.fountains, 'duration', 3, 20, 0.5).name('Run time (s)');
   ground.add(config.fountains, 'height', 8, 50, 1).name('Height (m)');
@@ -76,7 +84,7 @@ export function create(ctx) {
   }
 
   const look = gui.addFolder('Look').close();
-  look.add(config.look, 'palette', { Classic: 'classic', 'Red, white & blue': 'usa', Gold: 'gold', Neon: 'neon', Pastel: 'pastel', Custom: 'custom' }).name('Palette');
+  look.add(config.look, 'palette', { Classic: 'classic', 'Red, white & blue': 'usa', Gold: 'gold', Neon: 'neon', Pastel: 'pastel', Halloween: 'halloween', Custom: 'custom' }).name('Palette');
   const custom = config.palettes.custom;
   for (let i = 0; i < custom.length; i++) look.addColor(custom, i).name(`Custom colour ${i + 1}`);
   look.add(config.look, 'textWidth', 60, 260, 1).name('Text width (m)');

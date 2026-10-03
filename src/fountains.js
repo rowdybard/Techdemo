@@ -8,9 +8,11 @@
 import { KIND } from './fireworks.glsl.js';
 import { BARGE_LENGTH } from './fireworks.js';
 import { candles, fans, mines, shooters } from './ground.js';
+import { cauldron, lanterns, lightning, wisps } from './haunt.js';
 
 const STYLES = ['fountains', 'shooters', 'candles', 'mines', 'fans'];
-const EFFECTS = { shooters, candles, mines, fans };
+const HALLOWEEN = ['cauldron', 'wisps', 'lightning', 'lanterns']; // style 'halloween' rotates these
+const EFFECTS = { shooters, candles, mines, fans, cauldron, wisps, lightning, lanterns };
 
 const MAX_NOZZLES = 14;
 const PATTERNS = ['together', 'sweep', 'alternate', 'sweep-back'];
@@ -43,7 +45,9 @@ export function create(ctx) {
     const span = BARGE_LENGTH * 0.85;
     tubes.length = 0;
     for (let i = 0; i < nozzles; i++) tubes.push(bx - span / 2 + (span * (i + 0.5)) / nozzles);
-    const style = settings.style === 'mixed' ? STYLES[turn++ % STYLES.length] : settings.style;
+    let style = settings.style;
+    if (style === 'mixed') style = STYLES[turn++ % STYLES.length];
+    else if (style === 'halloween') style = HALLOWEEN[turn++ % HALLOWEEN.length];
     if (EFFECTS[style]) {
       EFFECTS[style](pool, config, phone, start, tubes, by + 2.5, bz, config.palettes[config.look.palette], lights);
       return;
