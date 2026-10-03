@@ -36,8 +36,10 @@ export function create(ctx) {
   let turn = 0;
   let now = 0;
   const tubes = []; // x of each tube along the barge, reused show to show
+  let listFor = ''; // a style list, split once
+  let list = [];
 
-  function runShow(start) {
+  function runShow(start, forced = null) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return;
     const nozzles = Math.min(MAX_NOZZLES, Math.round(settings.nozzles * (phone ? 0.6 : 1)));
@@ -45,9 +47,17 @@ export function create(ctx) {
     const span = BARGE_LENGTH * 0.85;
     tubes.length = 0;
     for (let i = 0; i < nozzles; i++) tubes.push(bx - span / 2 + (span * (i + 0.5)) / nozzles);
-    let style = settings.style;
+    let style = forced || settings.style;
     if (style === 'mixed') style = STYLES[turn++ % STYLES.length];
     else if (style === 'halloween') style = HALLOWEEN[turn++ % HALLOWEEN.length];
+    else if (style.includes(',')) {
+      // A list of styles (an occasion's ground effects) takes turns.
+      if (style !== listFor) {
+        listFor = style;
+        list = style.split(',');
+      }
+      style = list[turn++ % list.length];
+    }
     if (EFFECTS[style]) {
       EFFECTS[style](pool, config, phone, start, tubes, by + 2.5, bz, config.palettes[config.look.palette], lights);
       return;
@@ -105,6 +115,8 @@ export function create(ctx) {
     lights,
     /** Starts a ground show right away. */
     start: () => runShow(now),
+    /** Starts one ground effect right away, whatever the style setting. */
+    play: (style) => runShow(now, style),
   };
 
   return {
@@ -112,6 +124,11 @@ export function create(ctx) {
       now = time;
       if (!settings.enabled) {
         nextShow = Math.max(nextShow, time + 2);
+        return;
+      }
+      // An ending is playing: it fires its own ground effects.
+      if (ctx.director && ctx.director.active) {
+        nextShow = Math.max(nextShow, time + 6);
         return;
       }
       // After a long pause, skip the shows that were missed.

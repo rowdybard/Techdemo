@@ -7,9 +7,10 @@ import { loadSettings, recall, settingsJSON } from './presets.js';
 
 // Where client links point when the page itself isn't on a public address (a local file
 // or the claude.ai preview).
-const SITE = 'https://techdemo.maxpug17.workers.dev/';
+const SITE = 'https://skygreeting.com/';
 const TEXT_LIMITS = { business: 48, headline: 90, copy: 160, button: 32 };
 export const MESSAGE_LIMIT = 24; // characters a fireworks message can hold
+export const NAME_LIMIT = 16; // the recipient's name, spelled on its own line
 
 /**
  * Applies remembered settings, then anything in the link. Returns how the page should open.
@@ -36,15 +37,16 @@ export function readLink(config) {
   }
   // Embedded headers stay quiet unless the link asks for sound.
   if (embed && params.get('sound') !== '1') config.sound.enabled = false;
-  // A fireworks message someone sent (see gift.js): their words go up in the sky.
-  const message = cleanText(params.get('msg'), MESSAGE_LIMIT);
-  const gift = !embed && message ? { message, from: cleanText(params.get('from'), MESSAGE_LIMIT) } : null;
-  // Set before the first shells are planned, so every text shell spells the message.
-  // A calmer show around it, so other bursts don't cover the words.
-  if (gift) {
-    config.look.text = message.toUpperCase();
-    config.show.shellsPerMinute = Math.min(config.show.shellsPerMinute, 16);
-  }
+  // A SkyGreeting someone sent (see gift.js): an occasion, their words and their name.
+  const message = cleanText(params.get('msg'), MESSAGE_LIMIT).toUpperCase();
+  const gift = !embed && message ? {
+    occasion: cleanText(params.get('o'), 20),
+    message,
+    to: cleanText(params.get('to'), NAME_LIMIT).toUpperCase(),
+    from: cleanText(params.get('from'), MESSAGE_LIMIT),
+  } : null;
+  // Set before the first shells are planned, so any text shell spells the message.
+  if (gift) config.look.text = message;
   return {
     embed,
     gift,
@@ -52,10 +54,13 @@ export function readLink(config) {
   };
 }
 
-/** A link that spells `message` in fireworks for whoever opens it. */
-export function giftLink(message, from) {
+/** A link that plays a SkyGreeting for whoever opens it. */
+export function giftLink({ occasion, message, to, from }) {
   const params = new URLSearchParams();
+  params.set('o', occasion);
   params.set('msg', cleanText(message, MESSAGE_LIMIT));
+  const name = cleanText(to, NAME_LIMIT);
+  if (name) params.set('to', name);
   const sender = cleanText(from, MESSAGE_LIMIT);
   if (sender) params.set('from', sender);
   return `${siteBase()}?${params}`;

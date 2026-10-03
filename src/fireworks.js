@@ -122,7 +122,7 @@ export function create(ctx) {
           if (inTheAir(time) < FINALE_MAX_SHELLS) launch(nextLaunch);
           nextLaunch += 0.12 + Math.random() * 0.18;
         }
-      } else if (show.autoLaunch) {
+      } else if (show.autoLaunch && !(ctx.director && ctx.director.active)) {
         // A long pause skips the shells it missed instead of firing them all at once.
         if (nextLaunch < time - 1) nextLaunch = time;
         while (time >= nextLaunch) {
@@ -139,6 +139,11 @@ export function create(ctx) {
     /** Fires one shell now, whatever the schedule; optionally of one type. */
     launch(type = null) {
       launch(uniforms.uTime.value, NaN, NaN, type);
+    },
+
+    /** Fires one shell of `type` from the barge to burst at (x, height). */
+    launchAt(type, x, height) {
+      launch(uniforms.uTime.value, x, height, type);
     },
 
     /** A few seconds of shells as fast as the pool allows. */
@@ -158,6 +163,7 @@ export function create(ctx) {
   };
   ctx.fireworks.pool = pool; // the ground-show fountains write into the same pool
   ctx.fireworks.launch = api.launch;
+  ctx.fireworks.launchAt = api.launchAt;
   ctx.fireworks.finale = api.finale;
   return api;
 }
