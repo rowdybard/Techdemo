@@ -49,6 +49,10 @@ const waitMs = Number(options.wait) * 1000;
 
 const server = createServer(async (request, response) => {
   const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+  // The one server route the page calls on load (worker/index.js answers it live).
+  if (path === '/api/config') {
+    return void response.writeHead(200, { 'content-type': 'application/json' }).end('{"priceCents":499}');
+  }
   const file = resolve(ROOT, `.${path.endsWith('/') ? `${path}index.html` : path}`);
   if (!file.startsWith(ROOT)) return void response.writeHead(403).end();
   try {

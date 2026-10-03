@@ -47,11 +47,20 @@ export function readLink(config) {
   } : null;
   // Set before the first shells are planned, so any text shell spells the message.
   if (gift) config.look.text = message;
+  // A paid greeting's private link (?g=…): its words come from the server (gift.js).
+  // `sent` marks the buyer arriving back from checkout.
+  const id = params.get('g');
+  const paid = !embed && id && /^[A-Za-z0-9]{8}$/.test(id) ? { id, sent: params.get('sent') === '1' } : null;
   return {
     embed,
-    gift,
-    hero: !gift && (embed || params.get('hero') === '1' || location.hash === '#hero'),
+    gift: paid || gift,
+    hero: !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero'),
   };
+}
+
+/** The private link of a paid greeting. */
+export function paidLink(id) {
+  return `${siteBase()}?g=${id}`;
 }
 
 /** A link that plays a SkyGreeting for whoever opens it. */

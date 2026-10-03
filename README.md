@@ -17,7 +17,10 @@ A real-time Three.js beach at dusk with a firework show anyone can design: Gerst
 
 Occasions are data in `src/occasions.js`: a preset, a suggested message, free and Deluxe effects, stand-ins for Deluxe effects in a free send, and an ending (a timed list of cues that `src/director.js` plays). A new season is a new entry there.
 
-Opening a link (`?o=halloween&msg=HAPPY%20HALLOWEEN&to=SAM&from=Max`) sets the scene for the occasion and plays the ending with the words. A card shows who made it, with **Watch again**, **Make one for someone else** and **Play with the show**. Older `?msg=` links play as a birthday greeting. Deluxe checkout isn't connected to a payment provider yet: a Deluxe send says so and offers the free version.
+Opening a link (`?o=halloween&msg=HAPPY%20HALLOWEEN&to=SAM&from=Max`) sets the scene for the occasion and plays the ending with the words. A card shows who made it, with **Watch again**, **Make one for someone else** and **Play with the show**. Older `?msg=` links play as a birthday greeting. **Paid Deluxe sends** go through Stripe Checkout, using `worker/index.js`, the only server code. The server saves the greeting as pending in the `GREETINGS` KV namespace and opens a Stripe checkout. It marks the greeting paid when Stripe's webhook arrives, or when the buyer returns, by asking Stripe directly. The buyer lands on `?g=<id>&sent=1` with their private link to share. Recipients of `?g=<id>` get the full Deluxe show, and the words come from the server, so they aren't in the link.
+
+- The price is `DELUXE_PRICE_CENTS` in `wrangler.jsonc`. It's 100 ($1) for testing with real cards; set it to 499 to sell.
+- Secrets go in Cloudflare (Worker → Settings → Variables and Secrets, type Secret): `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` from a Stripe webhook pointing at `https://skygreeting.com/api/stripe-webhook` for `checkout.session.completed`. Without the webhook, payments still confirm when the buyer returns from checkout.
 
 Anyone can tap or click the sky to launch a shell, except on an embedded header.
 

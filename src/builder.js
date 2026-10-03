@@ -3,14 +3,25 @@
 // the whole show, then send it. Nothing asks for money while you're making it; the
 // send button says up front whether this one is free or $4.99.
 //
-// Paid sending isn't wired to a payment provider yet: a Deluxe send explains that and
-// offers the free version. Words only ever reach the page as textContent.
+// A Deluxe send goes to Stripe Checkout through the site's server (worker/index.js),
+// which keeps the greeting until payment and returns the buyer to a private ?g= link.
+// The price shown comes from the server. Words only ever reach the page as textContent.
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, giftLink } from './link.js';
 import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion } from './occasions.js';
 
 export function create(ctx) {
   const { config, container, signal } = ctx;
-  const state = { occasion: DEFAULT_OCCASION, deluxe: false, typed: false };
+  const state = { occasion: DEFAULT_OCCASION, deluxe: false, typed: false, paying: false };
+  let price = PRICE;
+  // The real price, from the server (a test price while trying out checkout).
+  if (/^https?:$/.test(location.protocol)) {
+    fetch('/api/config', { signal }).then((response) => (response.ok ? response.json() : null)).then((data) => {
+      if (data && data.priceCents >= 50) {
+        price = `$${(data.priceCents / 100).toFixed(2)}`;
+        refresh();
+      }
+    }, () => {});
+  }
 
   const open = el('button', 'send-open', 'Make a SkyGreeting');
   open.type = 'button';
@@ -45,7 +56,7 @@ export function create(ctx) {
   const deluxeInput = el('input');
   deluxeInput.type = 'checkbox';
   const deluxeText = el('span');
-  const deluxeTitle = el('strong', '', `✦ Deluxe · ${PRICE} to send`);
+  const deluxeTitle = el('strong');
   const deluxeList = el('span', 'builder-deluxe-list');
   deluxeText.append(deluxeTitle, deluxeList);
   deluxeBox.append(deluxeInput, deluxeText);
@@ -78,7 +89,7 @@ export function create(ctx) {
   barSend.type = 'button';
   bar.append(edit, barSend);
 
-  // A Deluxe send, until checkout exists.
+  // When checkout can't start: say why, and offer the free version.
   const soon = el('div', 'send-box');
   soon.hidden = true;
   const soonFree = el('button', 'send-primary', 'Send the free version');
@@ -87,8 +98,8 @@ export function create(ctx) {
   soonBack.type = 'button';
   const soonRow = el('div', 'send-row');
   soonRow.append(soonBack, soonFree);
-  soon.append(el('p', 'send-title', '✦ Deluxe checkout opens in a few days'),
-    el('p', 'send-status', 'Your Deluxe show is ready to go the moment it does. You can send the free version now.'), soonRow);
+  const soonText = el('p', 'send-status');
+  soon.append(el('p', 'send-title', 'Checkout couldn’t start'), soonText, soonRow);
 
   container.append(open, sheet, bar, soon);
 
@@ -107,7 +118,8 @@ export function create(ctx) {
     for (const name in chipFor) chipFor[name].setAttribute('aria-checked', String(name === state.occasion));
     included.textContent = `Free: ${occasion.free.map((item) => LABELS[item]).join(', ')}`;
     deluxeList.textContent = `Adds ${occasion.deluxe.map((item) => LABELS[item]).join(', ')}`;
-    const label = state.deluxe ? `Send · ${PRICE} ✦` : 'Send · Free';
+    deluxeTitle.textContent = `✦ Deluxe · ${price} to send`;
+    const label = state.deluxe ? `Send · ${price} ✦` : 'Send · Free';
     send.textContent = label;
     barSend.textContent = label;
   }
@@ -135,7 +147,7 @@ export function create(ctx) {
 
   function sendIt() {
     if (state.deluxe) {
-      show('soon');
+      payForDeluxe();
       return;
     }
     show('sheet');
@@ -150,6 +162,35 @@ export function create(ctx) {
     } else {
       copy(url);
     }
+  }
+
+  // Saves the greeting on the server and goes to Stripe's checkout page.
+  async function payForDeluxe() {
+    if (state.paying) return;
+    state.paying = true;
+    show('sheet');
+    status.textContent = 'Opening secure checkout…';
+    let error = 'Checkout isn’t available right now.';
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ occasion: state.occasion, ...words(), from: from.input.value }),
+      });
+      const data = await response.json();
+      if (response.ok && data.url) {
+        location.assign(data.url);
+        return;
+      }
+      if (data.error) error = data.error;
+    } catch {
+      // Offline, or not on the real site (the preview has no server).
+    } finally {
+      state.paying = false;
+    }
+    soonText.textContent = `${error} You can send the free version now.`;
+    status.textContent = '';
+    show('soon');
   }
 
   function copy(url) {
