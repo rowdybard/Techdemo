@@ -36,20 +36,37 @@ export function create(ctx) {
   // One reusable plan and a ring of burst records (time, place, colour) for the lights.
   const plan = { launch: 0 };
   const bursts = [];
-  for (let i = 0; i < SHELLS; i++) bursts.push({ time: -1e9, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, end: -1e9, type: '' });
+  for (let i = 0; i < SHELLS; i++) bursts.push({ time: -1e9, launch: -1e9, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, end: -1e9, type: '' });
   ctx.fireworks = { bursts };
   let next = 0;
   let nextLaunch = 0;
 
   let finaleUntil = -1;
 
-  function launch(time, aimX = NaN, aimY = NaN, type = null) {
+  // Is a message in the sky (or about to be)? Then random shells go to the sides.
+  function wordsUp(time) {
+    for (let i = 0; i < SHELLS; i++) {
+      const b = bursts[i];
+      if (b.type === 'text' && b.time - 4 < time && b.time + config.look.lifetime * 1.6 > time) return true;
+    }
+    return false;
+  }
+
+  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false) {
     plan.launch = time;
     planShell(plan, config, phone, aimX, aimY, type);
+    if (random && plan.type !== 'text' && wordsUp(time)) {
+      // Clear of the words: out to one side, at any height.
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const [bx] = config.show.bargePosition;
+      const { heightMin, heightMax } = config.physics;
+      planShell(plan, config, phone, bx + side * (90 + Math.random() * 70), heightMin + Math.random() * (heightMax - heightMin), plan.type);
+    }
     const record = bursts[next];
     next = (next + 1) % SHELLS;
     fireShell(pool, plan, config, config.palettes[config.look.palette], record);
     record.end = record.time + config.look.lifetime * 1.2;
+    record.launch = time;
   }
 
   function inTheAir(time) {
@@ -79,6 +96,7 @@ export function create(ctx) {
     next = (next + 1) % SHELLS;
     fireShell(pool, plan, config, config.palettes[config.look.palette], record);
     record.end = record.time + config.look.lifetime * 1.2;
+    record.launch = plan.launch;
   }
   nextLaunch = 1.2;
 
@@ -119,14 +137,14 @@ export function create(ctx) {
         // Finale: shells as fast as the pool can take them.
         if (nextLaunch < time - 1) nextLaunch = time;
         while (time >= nextLaunch) {
-          if (inTheAir(time) < FINALE_MAX_SHELLS) launch(nextLaunch);
+          if (inTheAir(time) < FINALE_MAX_SHELLS) launch(nextLaunch, NaN, NaN, null, true);
           nextLaunch += 0.12 + Math.random() * 0.18;
         }
       } else if (show.autoLaunch && !(ctx.director && ctx.director.active)) {
         // A long pause skips the shells it missed instead of firing them all at once.
         if (nextLaunch < time - 1) nextLaunch = time;
         while (time >= nextLaunch) {
-          if (inTheAir(time) < show.maxShells) launch(nextLaunch);
+          if (inTheAir(time) < show.maxShells) launch(nextLaunch, NaN, NaN, null, true);
           nextLaunch += (60 / show.shellsPerMinute) * (0.4 + Math.random() * 1.2);
         }
       } else {

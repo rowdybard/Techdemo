@@ -29,7 +29,7 @@ export function create(ctx) {
   // One light per nozzle, read by burstlights.js: steady while the fountain runs.
   const lights = [];
   for (let i = 0; i < MAX_NOZZLES; i++) {
-    lights.push({ time: -1e9, hold: 0, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0 });
+    lights.push({ time: -1e9, hold: 0, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, smoke: 0, sound: 'none' });
   }
   let nextShow = settings.firstAt;
   let pattern = 0;
@@ -109,6 +109,8 @@ export function create(ctx) {
     light.g = hot[1];
     light.b = hot[2];
     light.size = 26;
+    light.smoke = 1; // fountains pour smoke the whole time they burn
+    light.sound = 'hiss';
   }
 
   ctx.fountains = {

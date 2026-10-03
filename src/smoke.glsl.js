@@ -12,6 +12,7 @@ export const smokeVertex = /* glsl */ `
   attribute vec4 aOrigin; // xyz, birth time
   attribute vec4 aShape; // start radius, growth, life, seed
   attribute vec4 aLook; // stretch across, stretch up, tilt, noise scale
+  attribute vec4 aExtra; // rise (m/s, buoyant at first), glow (how strongly firework light lights it), density
   uniform float uTime;
   uniform vec3 uWindOffset; // metres the air has moved (origins are stored relative to it)
   uniform float uAmount;
@@ -24,6 +25,7 @@ export const smokeVertex = /* glsl */ `
   varying float vAge;
   varying float vTear;
   varying float vScale;
+  varying float vGlow;
 
   void main() {
     float age = uTime - aOrigin.w;
@@ -38,12 +40,13 @@ export const smokeVertex = /* glsl */ `
     // rise as the warm smoke floats up.
     vec3 drift = vec3(sin(seed * 41.0), 0.0, cos(seed * 23.0)) * 0.6;
     vec3 center = aOrigin.xyz + uWindOffset * 0.85 + drift * age;
-    center.y += 0.3 * age;
+    // Warm smoke from a ground effect rises as a plume, slowing as it cools.
+    center.y += 0.3 * age + aExtra.x * 4.0 * (1.0 - exp(-age / 4.0));
     float radius = aShape.x + aShape.y * sqrt(age);
 
     float fadeIn = smoothstep(0.0, 1.2, age);
     float fadeOut = 1.0 - smoothstep(life * 0.55, life, age);
-    vAlpha = uAmount * fadeIn * fadeOut * pow(aShape.x / radius, 0.6);
+    vAlpha = uAmount * aExtra.z * fadeIn * fadeOut * pow(aShape.x / radius, 0.6);
     vTear = smoothstep(0.15, 1.0, age / life); // how far it has broken up
 
     // Lit at its middle: the sky's glow, plus every firework light nearby. Light falls
@@ -54,7 +57,7 @@ export const smokeVertex = /* glsl */ `
       if (intensity <= 0.0) continue;
       vec3 offset = uBurstPosition[i].xyz - center;
       float reach = radius + 45.0;
-      light += uBurstColor[i] * intensity * uSceneLight * 0.2 / (1.0 + dot(offset, offset) / (reach * reach));
+      light += uBurstColor[i] * intensity * uSceneLight * 0.2 * aExtra.y / (1.0 + dot(offset, offset) / (reach * reach));
     }
     vLight = light;
 
@@ -69,6 +72,7 @@ export const smokeVertex = /* glsl */ `
     vNoise = vec2(fract(seed * 7.13), fract(seed * 3.71)) * 40.0;
     vAge = age;
     vScale = aLook.w;
+    vGlow = aExtra.y;
   }
 `;
 
@@ -82,6 +86,7 @@ export const smokeFragment = /* glsl */ `
   varying float vAge;
   varying float vTear;
   varying float vScale;
+  varying float vGlow;
 
   float billow(vec2 p) {
     float sum = 0.0;
@@ -113,7 +118,9 @@ export const smokeFragment = /* glsl */ `
     if (alpha < 0.004) discard;
     // Thin edges let more light through than the dense middle. Kept under the bloom
     // threshold, so lit smoke glows softly instead of flaring.
-    vec3 color = min(vLight * (1.15 - 0.45 * density + 0.3 * n), vec3(0.4));
+    // Shell smoke is kept dim (it read as white blobs); smoke lit from inside by a ground
+    // effect may glow brighter, still under the bloom threshold so it never flares.
+    vec3 color = min(vLight * (1.15 - 0.45 * density + 0.3 * n), vec3(mix(0.4, 0.9, clamp((vGlow - 1.0) / 20.0, 0.0, 1.0))));
     gl_FragColor = vec4(color, alpha);
   }
 `;

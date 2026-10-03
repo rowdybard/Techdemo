@@ -22,7 +22,11 @@ const p = [0, 0, 0];
 const path = []; // lightning bolt corners, reused
 for (let i = 0; i < 24; i++) path.push([0, 0, 0]);
 
-function light(record, start, hold, x, y, z, color, size) {
+// smoke: how much smoke the effect gives off (smoke.js), 0 for none. sound: what it
+// sounds like (audio.js): 'hiss', 'whoosh', 'pops', 'boom', 'bubble', 'thunder' or 'none'.
+function light(record, start, hold, x, y, z, color, size, smoke = 1, sound = 'hiss') {
+  record.smoke = smoke;
+  record.sound = sound;
   record.time = start;
   record.hold = hold;
   record.x = x;
@@ -63,7 +67,7 @@ export function cauldron(pool, config, phone, start, tubes, y, z, palette, light
       pool.set(i++, x + Math.cos(a) * r, y + 2 + Math.random() * config.fountains.height * 0.35, z + Math.sin(a) * r, born,
         0, 1, 0, 3, c[0] * 1.6, c[1] * 1.6, c[2] * 1.6, c[0], c[1], c[2], 99, 0.28, 1.3 * look.sparkSize, 0, KIND.pop);
     }
-    light(lights[t], start, duration, x, y + 10, z, SLIME, 20);
+    light(lights[t], start, duration, x, y + 10, z, SLIME, 20, 1, 'bubble');
   }
   pool.end();
 }
@@ -96,7 +100,7 @@ export function wisps(pool, config, phone, start, tubes, y, z, palette, lights) 
           0.75, 0.75 * look.sparkSize, 0.12, KIND.spark);
       }
     }
-    light(lights[t], start, duration, tubes[t], y + rise * 0.5, z, ECTO, 14);
+    light(lights[t], start, duration, tubes[t], y + rise * 0.5, z, ECTO, 14, 0, 'none');
   }
   pool.end();
 }
@@ -152,7 +156,7 @@ export function lightning(pool, config, phone, start, tubes, y, z, palette, ligh
           life * 0.8, 0.35 * look.sparkSize, 0.02, KIND.spark);
       }
     }
-    light(lights[t], born, 0.45, tubes[t], y + 30, z, BOLT, 60);
+    light(lights[t], born, 0.45, tubes[t], y + 30, z, BOLT, 60, 0, 'thunder');
   }
   pool.end();
 }
@@ -179,7 +183,7 @@ export function lanterns(pool, config, phone, start, tubes, y, z, palette, light
         c[0] * fade * flicker, c[1] * fade * flicker, c[2] * fade * flicker, c[0] * fade * 0.3, c[1] * fade * 0.3, c[2] * fade * 0.3,
         0.3, 0.55, 0.8 * look.sparkSize, 0.05, KIND.spark);
     }
-    light(lights[t], start + delay, duration, tubes[t], y + 15, z, LANTERN, 16);
+    light(lights[t], start + delay, duration, tubes[t], y + 15, z, LANTERN, 16, 0, 'none');
   }
   pool.end();
 }

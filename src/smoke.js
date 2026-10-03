@@ -14,13 +14,14 @@
 import * as THREE from 'three';
 import { smokeFragment, smokeVertex } from './smoke.glsl.js';
 
-const PUFFS = { desktop: 128, phone: 48 };
+const PUFFS = { desktop: 176, phone: 64 };
+const GROUND_EVERY = { desktop: 0.9, phone: 1.8 }; // seconds between puffs from each burning tube
 const PER_SHELL = { desktop: 7, phone: 4 };
 const SHELL_RECORDS = 64; // fireworks.js keeps this many burst records
 const FOUNTAIN_RECORDS = 14;
 const HANGING = { willow: true, palm: true }; // sparks that fall a long way, leaving curtains
 // Colour of smoke lit only by the sky: dusk-grey at dusk, near black at night.
-const DUSK = new THREE.Color(0.075, 0.07, 0.085);
+const DUSK = new THREE.Color(0.15, 0.125, 0.14);
 const NIGHT = new THREE.Color(0.012, 0.014, 0.022);
 
 export function create(ctx) {
@@ -34,6 +35,9 @@ export function create(ctx) {
   const origin = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
   const shape = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
   const look = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
+  const extra = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
+  extra.setUsage(THREE.DynamicDrawUsage);
+  quad.setAttribute('aExtra', extra);
   origin.setUsage(THREE.DynamicDrawUsage);
   shape.setUsage(THREE.DynamicDrawUsage);
   look.setUsage(THREE.DynamicDrawUsage);
@@ -90,7 +94,7 @@ export function create(ctx) {
   // One puff: where and when it appears, its starting radius, how fast it spreads (metres
   // per square-root second), how long it lasts, and its shape: stretched across and up,
   // tilted, and how fine its noise is.
-  function puff(x, y, z, born, radius, growth, life, across, up, tilt) {
+  function puff(x, y, z, born, radius, growth, life, across, up, tilt, rise = 0, glow = 1, density = 1) {
     const slot = claim();
     if (slot < 0) return;
     const o = slot * 4;
@@ -109,6 +113,9 @@ export function create(ctx) {
     look.array[o + 1] = up;
     look.array[o + 2] = tilt;
     look.array[o + 3] = 1.6 + Math.random() * 1.4;
+    extra.array[o] = rise;
+    extra.array[o + 1] = glow;
+    extra.array[o + 2] = density;
     if (slot < dirtyFrom) dirtyFrom = slot;
     if (slot > dirtyTo) dirtyTo = slot;
   }
@@ -164,21 +171,31 @@ export function create(ctx) {
     }
   }
 
-  // Ground-show smoke: low, wide haze rolling off the barge over the effect's run.
+  // Ground-show smoke: while a tube burns it pours out smoke that rises as a glowing plume
+  // (lit gold from inside by the effect's own light), leans downwind, and once the effect
+  // stops hangs as a bank that greys and drifts off. Effects without smoke (lightning,
+  // wisps, lanterns) say so with smoke 0 on their light.
   function groundSmoke(record) {
+    if (!(record.smoke > 0)) return;
     const [, by] = config.show.bargePosition;
-    for (let k = 0; k < 2; k++) {
+    const every = (phone ? GROUND_EVERY.phone : GROUND_EVERY.desktop) / Math.min(1, record.smoke + 0.3);
+    const count = Math.max(1, Math.min(12, Math.ceil(record.hold / every)));
+    const output = 0.6 + Math.random() * 0.7; // tubes smoke unevenly
+    for (let k = 0; k < count; k++) {
       puff(
-        record.x + (Math.random() - 0.5) * 8,
-        by + 6 + Math.random() * 6,
-        record.z + (Math.random() - 0.5) * 6,
-        record.time + (0.2 + k * 0.5) * Math.max(record.hold, 1),
-        8 + Math.random() * 5,
-        2 + Math.random(),
-        settings.linger * (0.6 + Math.random() * 0.4),
-        1.8 + Math.random() * 1.2,
-        0.55 + Math.random() * 0.25,
-        (Math.random() - 0.5) * 0.2,
+        record.x + (Math.random() - 0.5) * 3,
+        by + 2 + Math.random() * 2,
+        record.z + (Math.random() - 0.5) * 3,
+        record.time + 0.3 + k * every + Math.random() * 0.4,
+        3.5 + Math.random() * 1.5,
+        3.8 + Math.random() * 1.2,
+        settings.linger * (0.5 + Math.random() * 0.3),
+        0.9 + Math.random() * 0.3,
+        1.1 + Math.random() * 0.3,
+        (Math.random() - 0.5) * 0.3,
+        1.4 + Math.random() * 1.6,
+        40, // lit strongly by the effect's own fire (its light is faint, made for the water)
+        1.4 * record.smoke * output,
       );
     }
   }
@@ -208,6 +225,7 @@ export function create(ctx) {
         upload(origin);
         upload(shape);
         upload(look);
+        upload(extra);
         dirtyFrom = size;
         dirtyTo = -1;
       }

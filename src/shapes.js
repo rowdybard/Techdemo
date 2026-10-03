@@ -128,7 +128,7 @@ function text(pool, shell, config, palette, born, at, velocity, out) {
   if (textCount === 0) return;
   const color = pick(palette);
   const count = Math.min(Math.max(textCount, 300), Math.round(shell.count * 2.2));
-  shapeBurst(pool, count, textPoint, born, at, config.look.textWidth / 2, config, color, config.look.lifetime * 1.5, 0.3);
+  shapeBurst(pool, count, textPoint, born, at, (config.look.textWidth / 2) * (shell.textScale || 1), config, color, config.look.lifetime * 1.5, 0.3);
   fillLight(out, born, at, color, shell.size * 1.3);
 }
 

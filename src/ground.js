@@ -43,7 +43,11 @@ function speedFor(config, height) {
   return Math.sqrt(2 * 9.81 * config.physics.gravity * height) * 1.25;
 }
 
-function light(record, start, hold, x, y, z, color, size) {
+// smoke: how much smoke the effect gives off (smoke.js), 0 for none. sound: what it
+// sounds like (audio.js): 'hiss', 'whoosh', 'pops', 'boom', 'bubble', 'thunder' or 'none'.
+function light(record, start, hold, x, y, z, color, size, smoke = 1, sound = 'hiss') {
+  record.smoke = smoke;
+  record.sound = sound;
   record.time = start;
   record.hold = hold;
   record.x = x;
@@ -70,7 +74,7 @@ export function shooters(pool, config, phone, start, tubes, y, z, palette, light
       const lean = 0.87 * Math.sin((time / duration) * Math.PI * 3 + phase);
       i = comet(pool, i, config, start + time, tubes[t], y, z, lean, speed * (0.95 + Math.random() * 0.1), color, 0.9, 2.4);
     }
-    light(lights[t], start, duration, tubes[t], y + 20, z, color, 18);
+    light(lights[t], start, duration, tubes[t], y + 20, z, color, 18, 1, 'whoosh');
   }
   pool.end();
 }
@@ -87,7 +91,7 @@ export function candles(pool, config, phone, start, tubes, y, z, palette, lights
       const lean = (Math.random() - 0.5) * 0.12;
       i = comet(pool, i, config, start + offset + b * every, tubes[t], y, z, lean, speed * (0.9 + Math.random() * 0.2), color, 1.7, 2.6);
     }
-    light(lights[t], start, balls * every + 1, tubes[t], y + 25, z, pick(palette, t), 18);
+    light(lights[t], start, balls * every + 1, tubes[t], y + 25, z, pick(palette, t), 18, 0.6, 'pops');
   }
   pool.end();
 }
@@ -110,7 +114,7 @@ export function mines(pool, config, phone, start, tubes, y, z, palette, lights) 
       i = comet(pool, i, config, start + m * gap, tubes[t], y, z, lean, speed * (0.7 + Math.random() * 0.4), dim, 0.6, 1.8);
     }
   }
-  for (let t = 0; t < tubes.length; t++) light(lights[t], start + t * gap, 2.5, tubes[t], y + 18, z, pick(palette, t), 22);
+  for (let t = 0; t < tubes.length; t++) light(lights[t], start + t * gap, 2.5, tubes[t], y + 18, z, pick(palette, t), 22, 1, 'boom');
   pool.end();
 }
 
@@ -127,6 +131,6 @@ export function fans(pool, config, phone, start, tubes, y, z, palette, lights) {
       i = comet(pool, i, config, start + v * every, tubes[t], y, z, outward * open, speed, pick(palette, v), 0.9, 2.2);
     }
   }
-  for (let t = 0; t < tubes.length; t++) light(lights[t], start, volleys * every, tubes[t], y + 20, z, pick(palette, t), 16);
+  for (let t = 0; t < tubes.length; t++) light(lights[t], start, volleys * every, tubes[t], y + 20, z, pick(palette, t), 16, 1, 'whoosh');
   pool.end();
 }

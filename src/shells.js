@@ -8,6 +8,9 @@ import { KIND } from './fireworks.glsl.js';
 import { burst } from './bursts.js';
 
 const ROCKET_DRAG = 0.06;
+// Words burst this far in front of the barge, toward the beach, so they're in front of
+// every other burst; they're drawn smaller in proportion, so they look the same size.
+export const TEXT_FORWARD = 110;
 const SHED = 22; // sparks shed along the climb
 
 const at = [0, 0, 0];
@@ -32,6 +35,10 @@ export function planShell(shell, config, phone, aimX = NaN, aimY = NaN, type = n
     aimX = bx;
     aimY = (physics.heightMin + physics.heightMax) / 2;
   }
+  // Words burst nearer (TEXT_FORWARD), so they burst lower and smaller in the same
+  // proportion, to look the same size and in the same place from the beach.
+  const nearer = shell.type === 'text' ? (Math.abs(bz) + 16 - TEXT_FORWARD) / (Math.abs(bz) + 16) : 1;
+  if (shell.type === 'text') aimY = by + 2 + (aimY - by - 2) * nearer;
   const aimed = !Number.isNaN(aimX);
   const shore = !aimed && show.launchSite === 'shore';
 
@@ -52,7 +59,7 @@ export function planShell(shell, config, phone, aimX = NaN, aimY = NaN, type = n
     // Lean just enough to drift over to the aim point by the time the fuse runs out.
     shell.vx = ((aimX - shell.x) / shell.fuse) * 1.05;
     shell.vy = climb;
-    shell.vz = 0;
+    shell.vz = shell.type === 'text' ? (TEXT_FORWARD / shell.fuse) * 1.05 : 0;
   } else {
     const lean = ((Math.random() * 2 - 1) * physics.angleVariance * Math.PI) / 180;
     const heading = Math.random() * Math.PI * 2;
@@ -61,6 +68,7 @@ export function planShell(shell, config, phone, aimX = NaN, aimY = NaN, type = n
     shell.vz = Math.sin(lean) * Math.sin(heading) * climb * 0.4;
   }
   shell.count = Math.round(look.particles * (phone ? 0.55 : 1));
+  shell.textScale = nearer;
   shell.size = look.burstSize * (0.8 + Math.random() * 0.4);
   return shell;
 }
