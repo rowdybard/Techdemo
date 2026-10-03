@@ -13,6 +13,8 @@
 //   STRIPE_SECRET_KEY, and STRIPE_WEBHOOK_SECRET once a webhook exists.
 // Plain variables (wrangler.jsonc): DELUXE_PRICE_CENTS. Storage: the GREETINGS KV namespace.
 
+import { greetingBlocked } from '../src/moderate.js';
+
 const OCCASIONS = new Set(['halloween', 'birthday', 'love', 'congrats', 'thanks']);
 const LIMITS = { message: 24, to: 16, from: 24 };
 const PENDING_SECONDS = 2 * 24 * 3600; // unpaid greetings are forgotten after two days
@@ -58,6 +60,7 @@ async function checkout(request, env, url) {
     from: clean(body.from, LIMITS.from),
   };
   if (!words.message) return json({ error: 'Type a message first.' }, 400);
+  if (greetingBlocked(words)) return json({ error: 'That can’t go in the sky. Please keep it kind.' }, 400);
   // The sender's design (checked value by value when it's shown, in the page's look.js).
   const look = body.look && typeof body.look === 'object' && !Array.isArray(body.look) && JSON.stringify(body.look).length < 1500 ? body.look : null;
 

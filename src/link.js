@@ -4,6 +4,7 @@
 // Everything in a link is untrusted: settings go through loadSettings, which only accepts
 // known keys with matching types, and text is length-capped and shown with textContent.
 import { loadSettings, recall, settingsJSON } from './presets.js';
+import { greetingBlocked } from './moderate.js';
 
 // Where client links point when the page itself isn't on a public address (a local file
 // or the claude.ai preview).
@@ -46,8 +47,13 @@ export function readLink(config) {
     from: cleanText(params.get('from'), MESSAGE_LIMIT),
     look: readLook(params.get('l')),
   } : null;
+  // A hand-made link can't put blocked words in the sky: it opens as a refusal instead.
+  if (gift && greetingBlocked(gift)) {
+    gift.blocked = true;
+    gift.message = gift.to = gift.from = '';
+  }
   // Set before the first shells are planned, so any text shell spells the message.
-  if (gift) config.look.text = message;
+  if (gift && !gift.blocked) config.look.text = message;
   // A paid greeting's private link (?g=…): its words come from the server (gift.js).
   // `sent` marks the buyer arriving back from checkout.
   const id = params.get('g');

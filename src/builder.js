@@ -10,6 +10,7 @@
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, giftLink } from './link.js';
 import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion } from './occasions.js';
 import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
+import { BLOCKED_NOTE, greetingBlocked, isBlocked } from './moderate.js';
 
 const TEXT_WEIGHT = 0.7; // how often the live show spells the message while building
 
@@ -58,8 +59,14 @@ export function create(ctx) {
   let spellTimer = 0;
   message.input.addEventListener('input', () => {
     state.typed = true;
-    config.look.text = words().message;
     clearTimeout(spellTimer);
+    // Words that can't go in the sky never reach it, even in the live preview.
+    if (isBlocked(words().message)) {
+      status.textContent = BLOCKED_NOTE;
+      return;
+    }
+    if (status.textContent === BLOCKED_NOTE) status.textContent = '';
+    config.look.text = words().message;
     spellTimer = setTimeout(() => { if (ctx.fireworks && !sheet.hidden) ctx.fireworks.launch('text'); }, 1200);
   }, { signal });
 
@@ -166,12 +173,22 @@ export function create(ctx) {
     };
   }
 
+  // The message, their name and the sender's name, checked before anything is shown or sent.
+  function wordsOk() {
+    if (!greetingBlocked({ ...words(), from: from.input.value })) return true;
+    show('sheet');
+    status.textContent = BLOCKED_NOTE;
+    return false;
+  }
+
   function startPreview() {
+    if (!wordsOk()) return;
     show('bar');
     if (ctx.director) ctx.director.play(OCCASIONS[state.occasion], words(), state.deluxe);
   }
 
   function sendIt() {
+    if (!wordsOk()) return;
     if (state.deluxe) {
       payForDeluxe();
       return;

@@ -11,6 +11,7 @@
 import { OCCASIONS, applyOccasion } from './occasions.js';
 import { paidLink } from './link.js';
 import { applyLook, keepFree } from './look.js';
+import { greetingBlocked } from './moderate.js';
 
 const FIRST_PLAY = 1.2; // seconds after the greeting is ready
 const POLL_MS = 2000; // waiting for the payment to be confirmed
@@ -51,6 +52,13 @@ export function create(ctx) {
   explore.addEventListener('click', () => leave(false), { signal });
 
   function ready(data, isDeluxe) {
+    // Words that can't go in the sky (link.js already caught them in a free link).
+    if (data.blocked || greetingBlocked(data)) {
+      title.textContent = 'This SkyGreeting can’t be shown.';
+      note.textContent = 'Its words broke SkyGreeting’s rules. You can make a kind one of your own.';
+      again.hidden = true;
+      return;
+    }
     const name = OCCASIONS[data.occasion] ? data.occasion : 'birthday';
     deluxe = isDeluxe;
     occasion = applyOccasion(config, name, deluxe);
