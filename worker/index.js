@@ -6,7 +6,8 @@
 //   POST /api/stripe-webhook  Stripe says a checkout was paid: the greeting is kept for good
 //   GET  /api/greeting?id=…   a greeting's words and occasion, once paid (asks Stripe
 //                             directly if the webhook hasn't arrived yet)
-//   GET  /api/config          the Deluxe price, for the send button
+//   GET  /api/config          the Deluxe price, for the send button, and whether the
+//                             Stripe keys are present (true/false, never the keys)
 //
 // Secrets (Cloudflare → Worker → Settings → Variables and Secrets, type Secret):
 //   STRIPE_SECRET_KEY, and STRIPE_WEBHOOK_SECRET once a webhook exists.
@@ -21,7 +22,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
-      if (url.pathname === '/api/config' && request.method === 'GET') return json({ priceCents: price(env) });
+      if (url.pathname === '/api/config' && request.method === 'GET') {
+        // Whether each key is present (never the key itself), to check the setup from outside.
+        return json({ priceCents: price(env), payments: Boolean(env.STRIPE_SECRET_KEY), webhook: Boolean(env.STRIPE_WEBHOOK_SECRET) });
+      }
       if (url.pathname === '/api/checkout' && request.method === 'POST') return await checkout(request, env, url);
       if (url.pathname === '/api/stripe-webhook' && request.method === 'POST') return await webhook(request, env);
       if (url.pathname === '/api/greeting' && request.method === 'GET') return await greeting(env, url.searchParams.get('id'));

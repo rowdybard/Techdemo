@@ -13,5 +13,7 @@
   "kv_namespaces": [{ "binding": "GREETINGS", "id": "ce11e2e797df435582f3725b943b236b" }],
   // Deluxe price in cents. $1 while testing with real cards; 499 when it goes on sale.
   "vars": { "DELUXE_PRICE_CENTS": "100" },
+  // Variables added in the dashboard survive deploys (secrets always do).
+  "keep_vars": true,
   "observability": { "enabled": true }
 }
