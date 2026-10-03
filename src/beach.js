@@ -59,11 +59,20 @@ const fragmentShader = /* glsl */ `
     float damp = 1.0 - smoothstep(0.5, 5.5 + 1.5 * valueNoise(p * 0.3), s); // the band the surf usually reaches
     float fresh = 0.0;
     float residue = 0.0;
+    float sheet = 0.0;     // the swash: a thin sheet of water over the sand, right now
+    float sheetFoam = 0.0;
+    float reach = 0.0;     // metres back from the sheet's leading edge
     if (s > -2.0 && s < 9.0) {
       Surf surf = surfAt(p, uTime, uSurf);
+      // Its edge is a couple of pixels soft wherever it is (as in Parla's water).
+      float soft = max(fwidth(s) * 1.5, 0.25);
+      // Below the waterline the sea covers it, so it fades out there instead of stopping.
+      sheet = smoothstep(-soft, soft, surf.edge - s) * smoothstep(-1.2, 0.2, s);
+      reach = max(surf.edge - s, 0.0);
+      sheetFoam = surf.foam * sheet;
       damp = max(damp, exp(-surf.dry / 25.0));
-      fresh = exp(-surf.dry / 1.8) * step(surf.edge, s);
-      residue = surf.residue;
+      fresh = exp(-surf.dry / 1.8) * (1.0 - sheet);
+      residue = surf.residue * (1.0 - sheet);
     }
     float wet = max(damp * 0.75, fresh);
     albedo *= 1.0 - 0.55 * wet;
@@ -91,6 +100,22 @@ const fragmentShader = /* glsl */ `
     float facing = hash13(vec3(cell, floor(dot(view, vec3(31.0, 17.0, 23.0)))));
     float glint = lucky * smoothstep(0.75, 1.0, facing) * (1.0 - smoothstep(3.0, 16.0, distance)) * uGlints;
     color += (fill * 2.5 + glowColor * 1.5 + fireworkLight * 1.2) * glint * (0.35 + 0.65 * wet);
+
+    // The swash sheet: wet, darker sand under a film of water that mirrors the sky,
+    // thickening back from its leading edge, with the foam it carries on top.
+    if (sheet > 0.001) {
+      vec3 film = normalize(vec3(0.0, 1.0, 0.0) + (vec3(valueNoise(p * 3.0 + uTime), 0.0, valueNoise(p * 3.0 - uTime)) - 0.5) * 0.06);
+      vec3 fr = reflect(-view, film);
+      fr.y = abs(fr.y);
+      float filmFresnel = 0.02 + 0.98 * pow(1.0 - clamp(dot(view, film), 0.0, 1.0), 5.0);
+      float depth = smoothstep(0.0, 3.0, reach);
+      vec3 under = color * mix(0.7, 0.45, depth) + vec3(0.004, 0.014, 0.014) * (0.25 + 0.75 * uDusk);
+      vec3 water = mix(under, skyGradient(fr), filmFresnel * 0.9);
+      water += burstReflection(vWorld, fr, 500.0) * mix(0.2, 1.0, filmFresnel);
+      color = mix(color, water, sheet * mix(0.55, 0.9, depth));
+      float bubbles = foamPattern(p + vec2(0.0, -uTime * 0.25), sheetFoam);
+      color = mix(color, FOAM_LIGHT(glowColor) * 0.9 + fireworkLight * 0.08, bubbles * 0.9 * (0.4 + 0.6 * near));
+    }
 
     // Foam the last waves left behind: a bubbly film that breaks into bits as it fades.
     if (residue > 0.01) {

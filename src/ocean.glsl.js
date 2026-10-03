@@ -56,7 +56,9 @@ export const oceanVertex = /* glsl */ `
       normal.x -= (surfAt(rest + vec2(e, 0.0), uTime, uSurf).lift - surf.lift) / e;
       normal.z -= (surfAt(rest + vec2(0.0, e), uTime, uSurf).lift - surf.lift) / e;
     }
-    float surface = max(offset.y + surf.lift, swashSurface(rest, surf.edge));
+    // The swash running up the sand is drawn by the beach's shader, per pixel, so it
+    // has no geometric edge to leave seams (as in Parla's water).
+    float surface = offset.y + surf.lift;
 
     vWorld = vec3(rest.x + offset.x, surface, rest.y + offset.z);
     vNormal = normal;
@@ -94,6 +96,7 @@ export const oceanFragment = /* glsl */ `
   void main() {
     float water = vWorld.y - terrainHeight(vWorld.xz); // how deep the water is here
     if (water < -0.02) discard;                          // under dry sand
+    Surf surf = surfAt(vWorld.xz, uTime, uSurf);
 
     vec3 toEye = cameraPosition - vWorld;
     float distance = length(toEye);
@@ -124,11 +127,12 @@ export const oceanFragment = /* glsl */ `
     // wherever the water thins to nothing, and a little on offshore crests. It's drawn as
     // bubbles, and only where there is any, which keeps the cost down on phones.
     vec2 p = vWorld.xz;
-    float thin = 1.0 - smoothstep(0.0, 0.012, water); // only the very edge of the water
     float crest = smoothstep(0.7, 1.2, vCrest) * 0.45;
     // Surf foam is worked out per pixel: from the vertices it came out blocky.
-    float surfFoam = surfAt(vWorld.xz, uTime, uSurf).foam;
-    float amount = clamp(max(max(surfFoam, thin * 0.6), crest) * uFoam, 0.0, 1.0) * detail;
+    float surfFoam = surf.foam;
+    // (The line where the water meets the sand is drawn by the beach, per pixel: a lip
+    // drawn here followed every wave's intersection with the sand as a thin bright line.)
+    float amount = clamp(max(surfFoam, crest) * uFoam, 0.0, 1.0) * detail;
     float foam = 0.0;
     if (amount > 0.01) foam = foamPattern(p + vec2(0.0, -uTime * 0.3), amount);
     vec3 foamLight = FOAM_LIGHT(skyGradient(normalize(vec3(uSunDirection.x, 0.06, uSunDirection.z))) * 0.5);
@@ -137,7 +141,9 @@ export const oceanFragment = /* glsl */ `
 
     // Soft waterline: the sheet of water fades out as it thins, so there is no hard edge.
     float alpha = smoothstep(0.0, 0.06, water) * mix(0.5, 0.97, smoothstep(0.05, 1.5, water));
-    alpha = max(alpha, foam * smoothstep(-0.02, 0.02, water));
+    // Foam thins out with the water too: kept opaque to where the sea meets the sand, it
+    // was cut off there in a crisp line. The beach draws the swash and its foam beyond.
+    alpha = max(alpha, foam * smoothstep(0.0, 0.08, water));
 
     gl_FragColor = vec4(color, alpha);
 

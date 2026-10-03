@@ -62,6 +62,9 @@ export const surfGLSL = /* glsl */ `
       // switches off at once (each stretch of beach is at a different moment, so a sudden
       // change would draw a hard line along the shore).
       float handOver = 1.0 - smoothstep(0.82, 1.0, tau / SURF_TRAVEL);
+      // Once broken, the bore's front is where the water reaches, so the swash edge
+      // carries on from it without a jump (a jump showed as a cut across the beach).
+      if (broken > 0.5) o.edge = max(o.edge, c);
       float crest = broken * exp(-d * d / 3.0);
       float trail = broken * (d < 0.0 ? exp(d / (2.0 + 7.0 * broken)) : 0.0);
       o.foam = max(o.foam, clamp(crest * 1.3 + trail * 0.75, 0.0, 1.0) * handOver);
@@ -101,11 +104,28 @@ export const surfGLSL = /* glsl */ `
     }
   }
 
+  // Smooth 1D noise, -0.5 to 0.5 (also used in vertex shaders, so no fwidth here).
+  float surfNoise(float x) {
+    float i = floor(x);
+    float f = fract(x);
+    float a = fract(sin(i * 127.1) * 43758.5453);
+    float b = fract(sin((i + 1.0) * 127.1) * 43758.5453);
+    return mix(a, b, f * f * (3.0 - 2.0 * f)) - 0.5;
+  }
+
+  // How far the surf's fronts are pushed up or down the beach here: wave fronts and the
+  // swash edge wander in lobes along the shore and over time instead of running dead
+  // straight (straight, every edge read as a drawn line).
+  float surfWobble(vec2 xz, float t) {
+    return surfNoise(xz.x * 0.08 + t * 0.07) * 3.2 + surfNoise(xz.x * 0.31 - t * 0.13 + 7.0) * 1.1
+         + surfNoise(xz.x * 1.1 + t * 0.4 + 3.0) * 0.35;
+  }
+
   // Surf at a point on the beach or in the water, at time t. scale is the wave height (m).
   Surf surfAt(vec2 xz, float t, float scale) {
     Surf o = Surf(0.0, 0.0, -2.0, 0.0, 1e4);
     if (scale <= 0.0) return o;
-    float s = shoreDistance(xz);
+    float s = shoreDistance(xz) + surfWobble(xz, t);
     if (s < SURF_START - 30.0 || s > 10.0) return o; // wide enough that a wave's back tails off to nothing
     for (int i = 0; i < 3; i++) {
       float train = float(i);
@@ -116,13 +136,8 @@ export const surfGLSL = /* glsl */ `
       surfWave(train, n, tau, s, scale, o);           // this wave
       surfWave(train, n - 1.0, tau + period, s, scale, o); // the one before, still draining
     }
+    // Back to the real shore distance, so callers compare edge with shoreDistance().
+    o.edge -= surfWobble(xz, t);
     return o;
-  }
-
-  // The thin sheet of swash water: just above the sand wherever the swash reaches.
-  float swashSurface(vec2 xz, float edge) {
-    float s = shoreDistance(xz);
-    if (s >= edge) return -1e4;
-    return terrainHeight(xz) + 0.03 + 0.018 * (edge - s);
   }
 `;

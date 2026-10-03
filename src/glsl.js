@@ -55,26 +55,25 @@ export const noiseGLSL = /* glsl */ `
   // which matters when a breaking wave fills the lower half of the screen with foam.
   float foamPattern(vec2 p, float amount) {
     if (amount <= 0.01) return 0.0;
-    vec2 lacePoint = p * vec2(1.7, 2.8);
-    float laceBlur = smoothstep(0.4, 1.2, length(fwidth(lacePoint)));
-    float lace = 0.5;
-    if (laceBlur < 1.0) {
-      vec2 warp = vec2(valueNoise(p * 0.9), valueNoise(p * 0.9 + 5.3)) * 0.9;
-      float wall = cells(lacePoint + warp).y;                      // 0 on the lace lines
-      lace = mix(1.0 - smoothstep(0.02, 0.1 + 0.3 * amount, wall), 0.5, laceBlur);
-    }
-    float body = smoothstep(0.6, 0.95, amount + 0.25 * valueNoise(p * 2.3));
-    float scraps = smoothstep(0.62 - amount * 0.5, 0.82 - amount * 0.5, valueNoise(p * 1.7 + 11.0));
-    float cover = max(body, lace * scraps * smoothstep(0.05, 0.4, amount));
+    float pixel = length(fwidth(p));
+    // Big soft patches, so the outline of the foam wanders instead of following the
+    // amount exactly, and a streaky lace of soft noise inside it (cell walls drew thin
+    // bright lines). Detail finer than a few pixels settles to its average, so nothing
+    // shimmers into dashes in the distance (as in Parla's water).
+    float patches = valueNoise(p * 0.45 + 3.1) * 0.6 + valueNoise(p * 1.3 + 8.7) * 0.4;
+    vec2 q = p * vec2(1.6, 2.6);
+    float lace = valueNoise(q) * 0.6 + valueNoise(q * 2.3 + 7.0) * 0.4;
+    lace = mix(lace, 0.5, smoothstep(0.15, 0.6, pixel * 2.6));
+    float cover = smoothstep(0.3, 0.72, amount * 1.15 + (patches - 0.5) * 0.5 + (lace - 0.5) * (0.55 - 0.25 * amount));
     if (cover <= 0.001) return 0.0;
     // Bubble holes, 5 to 15 cm, opening up as the foam thins.
-    vec2 q = p * 8.0;
-    float blur = smoothstep(0.25, 0.8, length(fwidth(q)));
-    float holes = 0.75;
+    vec2 b = p * 8.0;
+    float blur = smoothstep(0.25, 0.8, pixel * 8.0);
+    float holes = 0.8;
     if (blur < 1.0) {
-      vec3 c = cells(q);
-      float radius = (0.06 + 0.22 * (1.0 - amount)) * (0.6 + 0.8 * c.z);
-      holes = mix(smoothstep(radius, radius + 0.12, c.x), 0.75, blur);
+      vec3 c = cells(b);
+      float radius = (0.05 + 0.2 * (1.0 - amount)) * (0.6 + 0.8 * c.z);
+      holes = mix(smoothstep(radius, radius + 0.18, c.x), 0.8, blur);
     }
     return cover * holes;
   }
