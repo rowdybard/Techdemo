@@ -6,6 +6,7 @@
 // low float precision (the tablet that drew stars as streaks).
 import { noiseGLSL } from './glsl.js';
 import { BURST_LIGHTS, burstLightGLSL } from './burstlights.js';
+import { beamGLSL } from './lighthouse.glsl.js';
 
 export const smokeVertex = /* glsl */ `
   ${burstLightGLSL}
@@ -26,6 +27,7 @@ export const smokeVertex = /* glsl */ `
   varying float vTear;
   varying float vScale;
   varying float vGlow;
+  varying vec3 vWorld;
 
   void main() {
     float age = uTime - aOrigin.w;
@@ -68,6 +70,10 @@ export const smokeVertex = /* glsl */ `
     vec4 view = viewMatrix * vec4(center, 1.0);
     view.xy += corner * radius;
     gl_Position = projectionMatrix * view;
+    // Where this corner is in the world (for the lighthouse beams).
+    vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+    vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+    vWorld = center + (right * corner.x + up * corner.y) * radius;
     vUv = position.xy;
     vNoise = vec2(fract(seed * 7.13), fract(seed * 3.71)) * 40.0;
     vAge = age;
@@ -78,6 +84,7 @@ export const smokeVertex = /* glsl */ `
 
 export const smokeFragment = /* glsl */ `
   ${noiseGLSL}
+  ${beamGLSL}
   uniform int uOctaves;
   varying vec2 vUv;
   varying vec2 vNoise;
@@ -87,6 +94,7 @@ export const smokeFragment = /* glsl */ `
   varying float vTear;
   varying float vScale;
   varying float vGlow;
+  varying vec3 vWorld;
 
   float billow(vec2 p) {
     float sum = 0.0;
@@ -121,6 +129,11 @@ export const smokeFragment = /* glsl */ `
     // Shell smoke is kept dim (it read as white blobs); smoke lit from inside by a ground
     // effect may glow brighter, still under the bloom threshold so it never flares.
     vec3 color = min(vLight * (1.15 - 0.45 * density + 0.3 * n), vec3(mix(0.4, 0.9, clamp((vGlow - 1.0) / 20.0, 0.0, 1.0))));
+    // A lighthouse beam passing through lights a band across the puff, brightest when it
+    // points toward you (the puff's middle plane stands in for its depth).
+    if (uBeamColor.r + uBeamColor.g + uBeamColor.b > 0.0) {
+      color += min(beamLight(vWorld, normalize(cameraPosition - vWorld)) * (1.2 - 0.5 * density + 0.3 * n), vec3(0.85));
+    }
     gl_FragColor = vec4(color, alpha);
   }
 `;

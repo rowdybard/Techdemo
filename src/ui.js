@@ -129,6 +129,9 @@ export function create(ctx) {
   scene.add(config.ocean, 'surf', 0, 1.6, 0.01).name('Breakers (m)');
   scene.add(config.landmarks, 'pier').name('Pier & lighthouse');
   scene.add(config.landmarks, 'grass').name('Dune grass');
+  scene.add(config.landmarks, 'light', 0, 2, 0.05).name('Lighthouse light');
+  scene.add(config.landmarks, 'sweep', 0, 20, 0.5).name('Beam turns a minute');
+  scene.add(config.landmarks, 'lightColor', ['warm', 'white', 'red', 'green']).name('Lighthouse colour');
   scene.add(config.beach, 'glints', 0, 2, 0.05).name('Sand glints');
   scene.add(config.look, 'sceneLight', 0, 3, 0.05).name('Firework light');
   scene.add(config.smoke, 'enabled').name('Smoke');

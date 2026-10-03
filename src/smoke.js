@@ -4,7 +4,8 @@
 // the barge. Puffs drift with the wind, rise a little, billow and tear into wisps over
 // half a minute, so a busy show slowly builds a haze over the water. The burst lights
 // (burstlights.js) light the puffs, so each new burst glows through the smoke of earlier
-// ones in its own colour. Shaders are in smoke.glsl.js.
+// ones in its own colour, and the lighthouse beams (lighthouse.js) light a band through
+// any smoke they sweep across. Shaders are in smoke.glsl.js.
 //
 // Like the sparks, a puff's whole life is written once, when it's made: one instanced
 // quad per puff in a fixed ring, all drawn in a single call. A puff is only replaced
@@ -15,7 +16,7 @@ import * as THREE from 'three';
 import { smokeFragment, smokeVertex } from './smoke.glsl.js';
 
 const PUFFS = { desktop: 176, phone: 64 };
-const GROUND_EVERY = { desktop: 0.9, phone: 1.8 }; // seconds between puffs from each burning tube
+const GROUND_EVERY = { desktop: 1.1, phone: 2 }; // seconds between puffs from each burning tube
 const PER_SHELL = { desktop: 7, phone: 4 };
 const SHELL_RECORDS = 64; // fireworks.js keeps this many burst records
 const FOUNTAIN_RECORDS = 14;
@@ -51,8 +52,15 @@ export function create(ctx) {
     shape.array[i * 4 + 2] = 1;
   }
 
+  const beam = ctx.lighthouse ? ctx.lighthouse.uniforms : {
+    uBeamOrigin: { value: new THREE.Vector3() },
+    uBeamDir: { value: new THREE.Vector3(1, 0, 0) },
+    uBeamColor: { value: new THREE.Color(0, 0, 0) },
+    uBeamShape: { value: new THREE.Vector2(1, 0.05) },
+  };
   const uniforms = {
     ...ctx.burstLights.uniforms,
+    ...beam,
     uTime: { value: 0 },
     uWindOffset: { value: new THREE.Vector3() },
     uAmount: { value: 0 },
@@ -187,15 +195,15 @@ export function create(ctx) {
         by + 2 + Math.random() * 2,
         record.z + (Math.random() - 0.5) * 3,
         record.time + 0.3 + k * every + Math.random() * 0.4,
-        3.5 + Math.random() * 1.5,
-        3.8 + Math.random() * 1.2,
+        3 + Math.random() * 1.2,
+        3.2 + Math.random() * 1,
         settings.linger * (0.5 + Math.random() * 0.3),
         0.9 + Math.random() * 0.3,
         1.1 + Math.random() * 0.3,
         (Math.random() - 0.5) * 0.3,
         1.4 + Math.random() * 1.6,
         40, // lit strongly by the effect's own fire (its light is faint, made for the water)
-        1.4 * record.smoke * output,
+        0.9 * record.smoke * output,
       );
     }
   }

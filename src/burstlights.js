@@ -108,7 +108,7 @@ export function create(ctx) {
         colors[i].set(record.r, record.g, record.b);
       }
       // The lighthouse lamp takes the dimmest slot when it outshines what's there.
-      const lamp = ctx.landmarks ? ctx.landmarks.lamp : null;
+      const lamp = ctx.lighthouse ? ctx.lighthouse.lamp : null;
       const last = BURST_LIGHTS - 1;
       if (lamp && lamp.intensity > positions[last].w) {
         positions[last].set(lamp.x, lamp.y, lamp.z, lamp.intensity);

@@ -5,6 +5,7 @@
 // settings". Every change writes the config the modules read each frame, so it's live.
 import { PRESETS, applyPreset, remember } from './presets.js';
 import { LABELS } from './occasions.js';
+import { LIGHT_COLORS } from './lighthouse.js';
 
 const PRESET_CARDS = [
   ['Default', '🎆', 'Classic'], ['Halloween', '🎃', 'Halloween'], ['Fourth of July', '🇺🇸', 'Fourth of July'],
@@ -32,6 +33,12 @@ const SLIDERS = [
   { name: 'Smoke', low: 'None', high: 'Lots', get: (c) => (c.smoke.enabled ? c.smoke.amount / 2 : 0),
     set: (c, v) => { c.smoke.amount = v * 2; c.smoke.enabled = v > 0.01; } },
 ];
+// The lighthouse's light, shown while the pier is on.
+const LIGHTHOUSE = [
+  { name: 'Light', low: 'Off', high: 'Bright', get: (c) => c.landmarks.light / 2, set: (c, v) => { c.landmarks.light = v * 2; } },
+  { name: 'Beam', low: 'Still', high: 'Fast', get: (c) => c.landmarks.sweep / 20, set: (c, v) => { c.landmarks.sweep = v * 20; } },
+];
+const LIGHT_NAMES = { warm: 'Warm', white: 'White', red: 'Red', green: 'Green' };
 
 export function create(ctx) {
   const { config, container, signal } = ctx;
@@ -137,21 +144,19 @@ export function create(ctx) {
 
   // Sliders.
   const sliders = el('div', 'studio-sliders');
-  for (const slider of SLIDERS) {
-    const row = el('label', 'studio-slider');
-    const input = el('input');
-    input.type = 'range';
-    input.min = '0';
-    input.max = '1';
-    input.step = '0.01';
-    const ends = el('span', 'studio-ends');
-    ends.append(el('span', '', slider.low), el('span', '', slider.high));
-    row.append(el('span', 'studio-slider-name', slider.name), input, ends);
-    input.addEventListener('input', () => { slider.set(config, Number(input.value)); sync(); }, { signal });
-    input.addEventListener('change', () => remember(config), { signal });
-    refreshers.push(() => { input.value = String(Math.min(1, Math.max(0, slider.get(config)))); });
-    sliders.append(row);
+  for (const def of SLIDERS) sliders.append(slider(def));
+  const lighthouse = el('div', 'studio-sliders');
+  for (const def of LIGHTHOUSE) lighthouse.append(slider(def));
+  const lightColors = el('div', 'studio-chips');
+  for (const name in LIGHT_COLORS) {
+    const chip = button('studio-chip', LIGHT_NAMES[name], () => {
+      config.landmarks.lightColor = name;
+      changed();
+    });
+    refreshers.push(() => chip.setAttribute('aria-pressed', String(config.landmarks.lightColor === name)));
+    lightColors.append(chip);
   }
+  lighthouse.append(lightColors);
 
   // Switches.
   const switches = el('div', 'studio-switches');
@@ -172,6 +177,9 @@ export function create(ctx) {
     cameras.append(segment);
   }
 
+  const lighthouseSection = section('Lighthouse', lighthouse);
+  refreshers.push(() => { lighthouseSection.hidden = !config.landmarks.pier; });
+
   const footer = el('div', 'studio-footer');
   footer.append(
     button('studio-link', 'Start over', () => { currentPreset = 'Default'; applyPreset(config, 'Default'); changed(); }),
@@ -180,7 +188,7 @@ export function create(ctx) {
 
   sheet.append(head, making, actions,
     section('Style', presets), section('Colours', swatches), section('Fireworks', shellGroups),
-    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), section('View', cameras), footer);
+    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('View', cameras), footer);
   container.append(open, sheet);
 
   // Opened from the greeting builder, Done goes back to it.
@@ -218,6 +226,22 @@ export function create(ctx) {
   }
   function refresh() {
     for (let i = 0; i < refreshers.length; i++) refreshers[i]();
+  }
+
+  function slider(def) {
+    const row = el('label', 'studio-slider');
+    const input = el('input');
+    input.type = 'range';
+    input.min = '0';
+    input.max = '1';
+    input.step = '0.01';
+    const ends = el('span', 'studio-ends');
+    ends.append(el('span', '', def.low), el('span', '', def.high));
+    row.append(el('span', 'studio-slider-name', def.name), input, ends);
+    input.addEventListener('input', () => { def.set(config, Number(input.value)); sync(); }, { signal });
+    input.addEventListener('change', () => remember(config), { signal });
+    refreshers.push(() => { input.value = String(Math.min(1, Math.max(0, def.get(config)))); });
+    return row;
   }
 
   function toggle(label, get, set) {

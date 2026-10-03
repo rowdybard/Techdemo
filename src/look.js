@@ -1,8 +1,10 @@
 // A greeting's look: the parts of a show someone designs in Customize (colours, which
-// fireworks, ground show, pace, size, sparkle, sky, wind, smoke, pier, grass, view),
+// fireworks, ground show, pace, size, sparkle, sky, wind, smoke, pier and its light,
+// grass, view),
 // packed small enough to ride in a free link or be stored with a paid greeting. Also
 // what a free send may use: an occasion's Deluxe effects are taken back out.
 import { GROUND } from './occasions.js';
+import { LIGHT_COLORS } from './lighthouse.js';
 
 const MIXES = {
   mixed: ['fountains', 'shooters', 'candles', 'mines', 'fans'],
@@ -14,7 +16,7 @@ const CAMERAS = new Set(['sand', 'drone', 'water']);
 export function lookOf(config) {
   const mix = {};
   for (const type in config.look.mix) if (type !== 'text' && config.look.mix[type] > 0) mix[type] = Math.round(config.look.mix[type] * 10) / 10;
-  return {
+  const look = {
     p: config.look.palette,
     m: mix,
     g: config.fountains.enabled ? config.fountains.style : '',
@@ -29,6 +31,13 @@ export function lookOf(config) {
     d: config.landmarks.grass ? 1 : 0,
     c: config.camera.preset,
   };
+  // The lighthouse's light, only when there's a lighthouse.
+  if (config.landmarks.pier) {
+    look.h = Math.round(config.landmarks.light * 100) / 100;
+    look.v = Math.round(config.landmarks.sweep * 10) / 10;
+    look.u = config.landmarks.lightColor;
+  }
+  return look;
 }
 
 /** Applies a look (from a link or the server: untrusted, so every value is checked). */
@@ -62,6 +71,9 @@ export function applyLook(config, look) {
   config.smoke.amount = smoke;
   if (look.i === 0 || look.i === 1) config.landmarks.pier = look.i === 1;
   if (look.d === 0 || look.d === 1) config.landmarks.grass = look.d === 1;
+  config.landmarks.light = number(look.h, 0, 2, config.landmarks.light);
+  config.landmarks.sweep = number(look.v, 0, 20, config.landmarks.sweep);
+  if (typeof look.u === 'string' && Object.hasOwn(LIGHT_COLORS, look.u)) config.landmarks.lightColor = look.u;
   if (CAMERAS.has(look.c)) config.camera.preset = look.c;
 }
 

@@ -65,6 +65,9 @@ export const config = {
   landmarks: {
     pier: false, // a pier and lighthouse, as on Lake Michigan
     grass: false, // dune grass in the foreground
+    light: 1, // lighthouse lamp and beams; 0 is dark, 2 is very bright
+    sweep: 6, // turns of the lens a minute (two beams, so a flash every five seconds)
+    lightColor: 'warm', // 'warm', 'white', 'red' or 'green'
   },
 
   show: {
