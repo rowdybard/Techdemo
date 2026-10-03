@@ -16,7 +16,7 @@
 // that a real GPU draws.
 
 import { createServer } from 'node:http';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir } from 'node:fs/promises';
 import { extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -93,7 +93,7 @@ try {
   if (soakSeconds > 0) leaks.push(...(await soak(desktop.page)));
   await desktop.context.close();
 
-  const problems = [...desktop.problems, ...phone.problems];
+  const problems = [...desktop.problems, ...phone.problems, ...(await preloadProblems())];
   console.log(problems.length ? `\nConsole problems:\n  ${problems.join('\n  ')}` : '\nConsole: clean');
   console.log(`Screenshots: ${['desktop', 'phone', 'rebuilt'].map((name) => relative(ROOT, join(OUT, `${name}.png`))).join(', ')}`);
   failed = problems.length > 0 || leaks.length > 0;
@@ -103,6 +103,30 @@ try {
   server.close();
 }
 process.exitCode = failed ? 1 : 0;
+
+// Load time depends on index.html preloading every module (see the comment there): a
+// module left off the list is fetched only after the file importing it, restarting the
+// chain. Reports modules imported but not preloaded, and preloads of files that are gone.
+async function preloadProblems() {
+  const html = await readFile(join(ROOT, 'index.html'), 'utf8');
+  const preloaded = new Set([...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map((m) => m[1]));
+  const files = (await readdir(join(ROOT, 'src'))).filter((name) => name.endsWith('.js'));
+  const wanted = new Set();
+  for (const name of files) {
+    const source = await readFile(join(ROOT, 'src', name), 'utf8');
+    for (const [, spec] of source.matchAll(/from '([^']+)'/g)) {
+      if (spec.startsWith('./')) wanted.add(`./src/${spec.slice(2)}`);
+      else if (spec.startsWith('three/addons/')) wanted.add(`https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/${spec.slice(13)}`);
+    }
+  }
+  wanted.add('./src/main.js');
+  const out = [];
+  for (const href of wanted) if (!preloaded.has(href)) out.push(`not preloaded in index.html: ${href}`);
+  for (const href of preloaded) {
+    if (href.startsWith('./src/') && !files.includes(href.slice(6))) out.push(`preloaded but missing: ${href}`);
+  }
+  return out;
+}
 
 async function open(name, contextOptions) {
   const context = await browser.newContext(contextOptions);

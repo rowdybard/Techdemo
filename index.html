@@ -18,6 +18,7 @@
 <meta name="twitter:description" content="Send someone a fireworks show with their name in the sky.">
 <meta name="twitter:image" content="https://skygreeting.com/src/og/birthday.jpg">
 <link rel="icon" href="data:,">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="./src/studio.css">
 <style>
   /* One full-bleed dusk scene. The page keeps this dark look whatever the viewer's theme. */
@@ -133,14 +134,71 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
+    "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
     "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.21.0/dist/lil-gui.esm.min.js"
   }
 }
 </script>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js">
+<!-- Load time: every module is listed here so the browser fetches them all at once, instead
+     of discovering each only after the file that imports it arrives (a chain five deep).
+     jsDelivr's minified three.module imports the full-size core, so the import map above
+     points that at the minified core too. tools/check.mjs fails if a module is missing here. -->
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/controls/OrbitControls.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/EffectComposer.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/RenderPass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/UnrealBloomPass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/OutputPass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/ShaderPass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/MaskPass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/Pass.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/shaders/CopyShader.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/shaders/LuminosityHighPassShader.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/shaders/OutputShader.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/lil-gui@0.21.0/dist/lil-gui.esm.min.js">
+<link rel="modulepreload" href="./src/audio.js">
+<link rel="modulepreload" href="./src/beach.js">
+<link rel="modulepreload" href="./src/builder.js">
+<link rel="modulepreload" href="./src/burstlights.js">
+<link rel="modulepreload" href="./src/bursts.js">
+<link rel="modulepreload" href="./src/config.js">
+<link rel="modulepreload" href="./src/debug.js">
+<link rel="modulepreload" href="./src/director.js">
+<link rel="modulepreload" href="./src/fireworks.glsl.js">
+<link rel="modulepreload" href="./src/fireworks.js">
+<link rel="modulepreload" href="./src/fountains.js">
+<link rel="modulepreload" href="./src/gift.js">
+<link rel="modulepreload" href="./src/glsl.js">
+<link rel="modulepreload" href="./src/ground.js">
+<link rel="modulepreload" href="./src/halloween.js">
+<link rel="modulepreload" href="./src/haunt.js">
+<link rel="modulepreload" href="./src/hero.js">
+<link rel="modulepreload" href="./src/landmarks.js">
+<link rel="modulepreload" href="./src/link.js">
+<link rel="modulepreload" href="./src/look.js">
+<link rel="modulepreload" href="./src/main.js">
+<link rel="modulepreload" href="./src/moderate.js">
+<link rel="modulepreload" href="./src/occasions.js">
+<link rel="modulepreload" href="./src/ocean.glsl.js">
+<link rel="modulepreload" href="./src/ocean.js">
+<link rel="modulepreload" href="./src/particles.js">
+<link rel="modulepreload" href="./src/post.js">
+<link rel="modulepreload" href="./src/presets.js">
+<link rel="modulepreload" href="./src/shapes.js">
+<link rel="modulepreload" href="./src/shells.js">
+<link rel="modulepreload" href="./src/sky.js">
+<link rel="modulepreload" href="./src/smoke.glsl.js">
+<link rel="modulepreload" href="./src/smoke.js">
+<link rel="modulepreload" href="./src/studio.js">
+<link rel="modulepreload" href="./src/surf.glsl.js">
+<link rel="modulepreload" href="./src/terrain.glsl.js">
+<link rel="modulepreload" href="./src/ui.js">
+<link rel="modulepreload" href="./src/video.js">
+<link rel="modulepreload" href="./src/walk.js">
+<link rel="modulepreload" href="./src/wind.js">
 </head>
 <body>
 <div id="app"></div>

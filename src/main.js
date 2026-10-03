@@ -107,6 +107,7 @@ export function createApp(container, config = defaultConfig) {
   let onScreen = true;
   let viewObserver = null;
   let time = 0;
+  let firstFrame = false;
 
   try {
     for (const module of MODULES) modules.push(module.create(ctx));
@@ -144,6 +145,10 @@ export function createApp(container, config = defaultConfig) {
     if (ctx.render) ctx.render();
     else renderer.render(scene, camera);
     if (ctx.afterRender) ctx.afterRender(); // video.js copies the frame while it's recording
+    if (!firstFrame) {
+      firstFrame = true;
+      performance.mark('first-frame'); // load time: from opening the page to the first picture
+    }
   }
 
   function resize() {
