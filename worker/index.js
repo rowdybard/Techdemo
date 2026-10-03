@@ -74,7 +74,11 @@ async function checkout(request, env, url) {
     cancel_url: `${site}/?canceled=1`,
   });
   const session = await stripe(env, 'POST', '/v1/checkout/sessions', form);
-  if (!session.url) return json({ error: 'Checkout could not start. Please try again.' }, 502);
+  if (!session.url) {
+    // Stripe's own reason (it masks keys), so a setup problem can be read off the page.
+    const reason = session.error && session.error.message ? ` (Stripe: ${session.error.message})` : '';
+    return json({ error: `Checkout could not start.${reason}` }, 502);
+  }
 
   await env.GREETINGS.put(`g:${id}`, JSON.stringify({ ...words, deluxe: true, status: 'pending', session: session.id, created: Date.now() }),
     { expirationTtl: PENDING_SECONDS });
