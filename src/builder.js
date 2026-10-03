@@ -1,13 +1,17 @@
-// The greeting builder: "Make a SkyGreeting". Pick an occasion, write the words, see
-// what's free and what Deluxe adds (marked ✦, with the price always in view), preview
-// the whole show, then send it. Nothing asks for money while you're making it; the
-// send button says up front whether this one is free or $4.99.
+// The greeting builder: "Make a SkyGreeting". Pick an occasion, write the words (they go
+// up in the live show as you type), design the show in Customize, preview the ending,
+// then send exactly that. Deluxe effects are marked ✦; using any, or ticking Deluxe,
+// makes it a paid send, and the send button always says which. Nothing asks for money
+// while you're making it.
 //
 // A Deluxe send goes to Stripe Checkout through the site's server (worker/index.js),
 // which keeps the greeting until payment and returns the buyer to a private ?g= link.
 // The price shown comes from the server. Words only ever reach the page as textContent.
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, giftLink } from './link.js';
 import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion } from './occasions.js';
+import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
+
+const TEXT_WEIGHT = 0.7; // how often the live show spells the message while building
 
 export function create(ctx) {
   const { config, container, signal } = ctx;
@@ -49,7 +53,15 @@ export function create(ctx) {
   const message = field('Message', MESSAGE_LIMIT, 'builder-loud');
   const to = field('Their name (optional)', NAME_LIMIT, 'builder-loud');
   const from = field('From (optional)', MESSAGE_LIMIT, '');
-  message.input.addEventListener('input', () => { state.typed = true; }, { signal });
+  // The words go up in the live show: the sky text follows the message, and a moment
+  // after typing stops it's spelled once so you see it right away.
+  let spellTimer = 0;
+  message.input.addEventListener('input', () => {
+    state.typed = true;
+    config.look.text = words().message;
+    clearTimeout(spellTimer);
+    spellTimer = setTimeout(() => { if (ctx.fireworks && !sheet.hidden) ctx.fireworks.launch('text'); }, 1200);
+  }, { signal });
 
   const included = el('p', 'builder-included');
   const deluxeBox = el('label', 'builder-deluxe');
@@ -61,9 +73,16 @@ export function create(ctx) {
   deluxeText.append(deluxeTitle, deluxeList);
   deluxeBox.append(deluxeInput, deluxeText);
   deluxeInput.addEventListener('change', () => {
-    state.deluxe = deluxeInput.checked;
-    applyOccasion(config, state.occasion, state.deluxe);
+    const occasion = OCCASIONS[state.occasion];
+    if (deluxeInput.checked) addDeluxe(config, occasion);
+    else keepFree(config, occasion);
     refresh();
+  }, { signal });
+  const customize = el('button', 'send-secondary builder-customize', '🎨 Customize the show');
+  customize.type = 'button';
+  customize.addEventListener('click', () => {
+    show('studio');
+    if (ctx.studio) ctx.studio.open(() => { show('sheet'); refresh(); });
   }, { signal });
 
   const row = el('div', 'send-row');
@@ -78,7 +97,7 @@ export function create(ctx) {
   linkBox.readOnly = true;
   linkBox.hidden = true;
   linkBox.setAttribute('aria-label', 'Link to send');
-  sheet.append(head, chips, message.label, to.label, from.label, included, deluxeBox, row, linkBox, status);
+  sheet.append(head, chips, message.label, to.label, from.label, customize, included, deluxeBox, row, linkBox, status);
 
   // While a preview plays: a slim bar instead of the sheet.
   const bar = el('div', 'builder-bar');
@@ -109,12 +128,18 @@ export function create(ctx) {
       message.input.value = OCCASIONS[name].message;
       state.typed = false;
     }
-    applyOccasion(config, name, state.deluxe);
+    applyOccasion(config, name, deluxeInput.checked);
+    config.look.text = words().message;
+    config.look.mix.text = TEXT_WEIGHT;
     refresh();
   }
 
   function refresh() {
     const occasion = OCCASIONS[state.occasion];
+    // Paid if Deluxe is ticked or the design uses any Deluxe effect.
+    const used = deluxeInUse(config, occasion);
+    if (used.length && !deluxeInput.checked) deluxeInput.checked = true;
+    state.deluxe = deluxeInput.checked;
     for (const name in chipFor) chipFor[name].setAttribute('aria-checked', String(name === state.occasion));
     included.textContent = `Free: ${occasion.free.map((item) => LABELS[item]).join(', ')}`;
     deluxeList.textContent = `Adds ${occasion.deluxe.map((item) => LABELS[item]).join(', ')}`;
@@ -129,6 +154,7 @@ export function create(ctx) {
     bar.hidden = which !== 'bar';
     soon.hidden = which !== 'soon';
     open.hidden = which !== 'closed';
+    state.view = which;
     container.classList.toggle('building', which !== 'closed');
     if (which !== 'bar' && ctx.director) ctx.director.stop();
   }
@@ -151,7 +177,7 @@ export function create(ctx) {
       return;
     }
     show('sheet');
-    const url = giftLink({ occasion: state.occasion, ...words(), from: from.input.value });
+    const url = giftLink({ occasion: state.occasion, ...words(), from: from.input.value, look: lookOf(config) });
     linkBox.value = url;
     linkBox.hidden = false;
     linkBox.select();
@@ -175,7 +201,7 @@ export function create(ctx) {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ occasion: state.occasion, ...words(), from: from.input.value }),
+        body: JSON.stringify({ occasion: state.occasion, ...words(), from: from.input.value, look: lookOf(config) }),
       });
       const data = await response.json();
       if (response.ok && data.url) {
@@ -219,19 +245,25 @@ export function create(ctx) {
   barSend.addEventListener('click', sendIt, { signal });
   soonBack.addEventListener('click', () => show('sheet'), { signal });
   soonFree.addEventListener('click', () => {
-    state.deluxe = false;
     deluxeInput.checked = false;
-    applyOccasion(config, state.occasion, false);
+    keepFree(config, OCCASIONS[state.occasion]);
     refresh();
     sendIt();
   }, { signal });
 
-  ctx.builder = { open: () => open.click() };
+  ctx.builder = {
+    open: () => open.click(),
+    refresh: () => refresh(),
+    /** While a greeting is being made: its occasion's Deluxe effects, for the ✦ marks. */
+    get deluxe() { return state.view && state.view !== 'closed' ? OCCASIONS[state.occasion].deluxe : null; },
+    get summary() { return state.view && state.view !== 'closed' ? `${OCCASIONS[state.occasion].label} greeting · ${send.textContent}` : ''; },
+  };
   refresh();
 
   return {
     update() {},
     dispose() {
+      clearTimeout(spellTimer);
       open.remove();
       sheet.remove();
       bar.remove();

@@ -44,6 +44,7 @@ export function readLink(config) {
     message,
     to: cleanText(params.get('to'), NAME_LIMIT).toUpperCase(),
     from: cleanText(params.get('from'), MESSAGE_LIMIT),
+    look: readLook(params.get('l')),
   } : null;
   // Set before the first shells are planned, so any text shell spells the message.
   if (gift) config.look.text = message;
@@ -64,7 +65,7 @@ export function paidLink(id) {
 }
 
 /** A link that plays a SkyGreeting for whoever opens it. */
-export function giftLink({ occasion, message, to, from }) {
+export function giftLink({ occasion, message, to, from, look }) {
   const params = new URLSearchParams();
   params.set('o', occasion);
   params.set('msg', cleanText(message, MESSAGE_LIMIT));
@@ -72,6 +73,7 @@ export function giftLink({ occasion, message, to, from }) {
   if (name) params.set('to', name);
   const sender = cleanText(from, MESSAGE_LIMIT);
   if (sender) params.set('from', sender);
+  if (look) params.set('l', pack(JSON.stringify(look)));
   return `${siteBase()}?${params}`;
 }
 
@@ -100,6 +102,17 @@ function siteBase() {
 export function embedCode(config) {
   return `<iframe src="${clientLink(config, true)}" title="${escapeAttribute(config.hero.business)}" `
     + 'style="display:block;width:100%;height:80vh;border:0" loading="lazy"></iframe>';
+}
+
+// A designed look from a link (look.js checks every value when it's applied).
+function readLook(packed) {
+  if (!packed || packed.length > 2000) return null;
+  try {
+    const look = JSON.parse(unpack(packed));
+    return look && typeof look === 'object' && !Array.isArray(look) ? look : null;
+  } catch {
+    return null;
+  }
 }
 
 function pack(text) {

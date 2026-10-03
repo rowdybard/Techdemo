@@ -9,7 +9,7 @@ A real-time Three.js beach at dusk with a firework show anyone can design: Gerst
 
 ## SkyGreeting: make and send a greeting
 
-**Make a SkyGreeting** (bottom left) opens the builder:
+**Make a SkyGreeting** (bottom left) opens the builder. The message goes up in the live show as you type, and **🎨 Customize the show** designs the greeting itself: what you set there is what gets sent (`src/look.js` packs it into the free link's `l=` or the paid greeting on the server). Effects marked ✦ are Deluxe for that occasion; using any of them makes it a paid send automatically.
 1. Pick an occasion (Halloween, Birthday, Love you, Congrats, Thank you).
 2. Write the message (24 characters), their name and yours.
 3. Optionally tick **✦ Deluxe**, which previews the paid effects and grand finale. The send button always shows the price: `Send · Free` or `Send · $4.99 ✦`.

@@ -62,3 +62,9 @@
 .customizing :is(.send-open, .walk-hint, .panel, .debug) { display: none; }
 :is(.gift-mode, .building, .hero-mode) .studio-open { display: none; }
 .embed-mode :is(.studio-open, .studio) { display: none !important; }
+
+/* Making a greeting: its summary, and ✦ on effects that make it a Deluxe send. */
+.studio-making { margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: rgb(255 180 92 / 0.12); color: var(--ink); font-size: 12px; line-height: 1.4; }
+.studio-making[hidden] { display: none; }
+.studio-chip.is-deluxe::after { content: ' ✦'; color: var(--spark); }
+.builder-customize { flex: none; }

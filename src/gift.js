@@ -10,6 +10,7 @@
 // The words only ever reach the page as textContent and the sky as canvas text.
 import { OCCASIONS, applyOccasion } from './occasions.js';
 import { paidLink } from './link.js';
+import { applyLook, keepFree } from './look.js';
 
 const FIRST_PLAY = 1.2; // seconds after the greeting is ready
 const POLL_MS = 2000; // waiting for the payment to be confirmed
@@ -53,7 +54,14 @@ export function create(ctx) {
     const name = OCCASIONS[data.occasion] ? data.occasion : 'birthday';
     deluxe = isDeluxe;
     occasion = applyOccasion(config, name, deluxe);
+    // The sender's design, then (for a free greeting) only free effects.
+    applyLook(config, data.look);
+    if (!deluxe) keepFree(config, occasion);
+    if (ctx.setCameraPreset) ctx.setCameraPreset(config.camera.preset);
     words = { message: data.message, to: data.to };
+    // After the ending, the show keeps spelling the message now and then.
+    config.look.text = data.message;
+    config.look.mix.text = 0.5;
     title.textContent = `✨ ${data.from ? `${data.from} made you a SkyGreeting` : 'Someone made you a SkyGreeting'}`;
     pending = true;
     playAt = now + FIRST_PLAY;

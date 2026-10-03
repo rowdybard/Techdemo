@@ -58,6 +58,8 @@ async function checkout(request, env, url) {
     from: clean(body.from, LIMITS.from),
   };
   if (!words.message) return json({ error: 'Type a message first.' }, 400);
+  // The sender's design (checked value by value when it's shown, in the page's look.js).
+  const look = body.look && typeof body.look === 'object' && !Array.isArray(body.look) && JSON.stringify(body.look).length < 1500 ? body.look : null;
 
   const id = newId();
   const site = url.origin;
@@ -80,7 +82,7 @@ async function checkout(request, env, url) {
     return json({ error: `Checkout could not start.${reason}` }, 502);
   }
 
-  await env.GREETINGS.put(`g:${id}`, JSON.stringify({ ...words, deluxe: true, status: 'pending', session: session.id, created: Date.now() }),
+  await env.GREETINGS.put(`g:${id}`, JSON.stringify({ ...words, look, deluxe: true, status: 'pending', session: session.id, created: Date.now() }),
     { expirationTtl: PENDING_SECONDS });
   return json({ url: session.url });
 }
@@ -108,8 +110,8 @@ async function greeting(env, id) {
     if (session.payment_status === 'paid') record = await markPaid(env, id);
   }
   if (record.status !== 'paid') return json({ status: 'pending' });
-  const { occasion, message, to, from, deluxe } = record;
-  return json({ status: 'paid', occasion, message, to, from, deluxe });
+  const { occasion, message, to, from, deluxe, look } = record;
+  return json({ status: 'paid', occasion, message, to, from, deluxe, look: look || null });
 }
 
 async function load(env, id) {

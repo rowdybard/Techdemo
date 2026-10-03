@@ -47,6 +47,13 @@ export function create(ctx) {
   const done = el('button', 'studio-done', 'Done');
   done.type = 'button';
   head.append(el('h2', '', 'Customize'), done);
+  // While making a greeting: what it is and what sending it costs, and the ✦ key.
+  const making = el('p', 'studio-making');
+  refreshers.push(() => {
+    const summary = ctx.builder ? ctx.builder.summary : '';
+    making.hidden = !summary;
+    making.textContent = summary ? `${summary}. ✦ effects make it a Deluxe send.` : '';
+  });
 
   // Big moments.
   const actions = el('div', 'studio-actions');
@@ -103,7 +110,10 @@ export function create(ctx) {
         }
         changed();
       });
-      refreshers.push(() => chip.setAttribute('aria-pressed', String(config.look.mix[type] > 0)));
+      refreshers.push(() => {
+        chip.setAttribute('aria-pressed', String(config.look.mix[type] > 0));
+        chip.classList.toggle('is-deluxe', deluxeItem(type));
+      });
       chips.append(chip);
     }
     shellGroups.append(el('p', 'studio-sub', group), chips);
@@ -118,7 +128,10 @@ export function create(ctx) {
       changed();
       if (style !== 'off' && ctx.fountains) ctx.fountains.start();
     });
-    refreshers.push(() => chip.setAttribute('aria-pressed', String(style === 'off' ? !config.fountains.enabled : config.fountains.enabled && config.fountains.style === style)));
+    refreshers.push(() => {
+      chip.setAttribute('aria-pressed', String(style === 'off' ? !config.fountains.enabled : config.fountains.enabled && config.fountains.style === style));
+      chip.classList.toggle('is-deluxe', deluxeItem(style) || (style === 'halloween' && Boolean(ctx.builder && ctx.builder.deluxe)));
+    });
     ground.append(chip);
   }
 
@@ -162,19 +175,30 @@ export function create(ctx) {
   const footer = el('div', 'studio-footer');
   footer.append(
     button('studio-link', 'Start over', () => { currentPreset = 'Default'; applyPreset(config, 'Default'); changed(); }),
-    button('studio-link', 'Advanced settings', () => { show(false); if (ctx.advanced) ctx.advanced.open(); }),
+    button('studio-link', 'Advanced settings', () => { onDone = null; show(false); if (ctx.advanced) ctx.advanced.open(); }),
   );
 
-  sheet.append(head, actions,
+  sheet.append(head, making, actions,
     section('Style', presets), section('Colours', swatches), section('Fireworks', shellGroups),
     section('Ground show', ground), section('Feel', sliders), section('Extras', switches), section('View', cameras), footer);
   container.append(open, sheet);
 
+  // Opened from the greeting builder, Done goes back to it.
+  let onDone = null;
   function show(on) {
     if (on) refresh();
     sheet.hidden = !on;
     open.hidden = on;
     container.classList.toggle('customizing', on);
+    if (!on && onDone) {
+      const back = onDone;
+      onDone = null;
+      back();
+    }
+  }
+  function deluxeItem(item) {
+    const deluxe = ctx.builder && ctx.builder.deluxe;
+    return Boolean(deluxe && deluxe.includes(item));
   }
   open.addEventListener('click', () => show(true), { signal });
   done.addEventListener('click', () => show(false), { signal });
@@ -184,6 +208,7 @@ export function create(ctx) {
 
   // After any change: redraw this drawer and the advanced panel, and remember it.
   function changed() {
+    if (ctx.builder) ctx.builder.refresh(); // the send price follows the design
     sync();
     remember(config);
   }
@@ -213,7 +238,12 @@ export function create(ctx) {
     return node;
   }
 
-  ctx.studio = { open: () => show(true) };
+  ctx.studio = {
+    open(then = null) {
+      onDone = then;
+      show(true);
+    },
+  };
   refresh();
 
   return {

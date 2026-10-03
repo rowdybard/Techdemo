@@ -1,0 +1,107 @@
+// A greeting's look: the parts of a show someone designs in Customize (colours, which
+// fireworks, ground show, pace, size, sparkle, sky, wind, smoke, pier, grass, view),
+// packed small enough to ride in a free link or be stored with a paid greeting. Also
+// what a free send may use: an occasion's Deluxe effects are taken back out.
+import { GROUND } from './occasions.js';
+
+const MIXES = {
+  mixed: ['fountains', 'shooters', 'candles', 'mines', 'fans'],
+  halloween: ['cauldron', 'wisps', 'lightning', 'lanterns'],
+};
+const CAMERAS = new Set(['sand', 'drone', 'water']);
+
+/** The designed parts of the config, as a small plain object. */
+export function lookOf(config) {
+  const mix = {};
+  for (const type in config.look.mix) if (type !== 'text' && config.look.mix[type] > 0) mix[type] = Math.round(config.look.mix[type] * 10) / 10;
+  return {
+    p: config.look.palette,
+    m: mix,
+    g: config.fountains.enabled ? config.fountains.style : '',
+    s: config.show.shellsPerMinute,
+    x: config.show.maxShells,
+    b: config.look.burstSize,
+    r: Math.round(config.look.brightness * 100) / 100,
+    t: Math.round(config.sky.timeOfDay * 100) / 100,
+    w: Math.round(config.physics.windSpeed * 10) / 10,
+    k: config.smoke.enabled ? Math.round(config.smoke.amount * 100) / 100 : 0,
+    i: config.landmarks.pier ? 1 : 0,
+    d: config.landmarks.grass ? 1 : 0,
+    c: config.camera.preset,
+  };
+}
+
+/** Applies a look (from a link or the server: untrusted, so every value is checked). */
+export function applyLook(config, look) {
+  if (!look || typeof look !== 'object') return;
+  const number = (value, min, max, fallback) => (typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback);
+  if (typeof look.p === 'string' && config.palettes[look.p] && look.p !== 'custom') config.look.palette = look.p;
+  if (look.m && typeof look.m === 'object') {
+    let any = false;
+    for (const type in config.look.mix) {
+      if (type === 'text') continue;
+      const weight = number(look.m[type], 0, 5, 0);
+      config.look.mix[type] = weight;
+      if (weight > 0) any = true;
+    }
+    if (!any) config.look.mix.peony = 1;
+  }
+  if (typeof look.g === 'string') {
+    const styles = look.g.split(',').filter((style) => GROUND.has(style) || MIXES[style]);
+    config.fountains.enabled = styles.length > 0;
+    if (styles.length) config.fountains.style = styles.join(',');
+  }
+  config.show.shellsPerMinute = number(look.s, 4, 120, config.show.shellsPerMinute);
+  config.show.maxShells = Math.round(number(look.x, 1, 20, config.show.maxShells));
+  config.look.burstSize = number(look.b, 20, 110, config.look.burstSize);
+  config.look.brightness = number(look.r, 0.5, 4, config.look.brightness);
+  config.sky.timeOfDay = number(look.t, 0, 1, config.sky.timeOfDay);
+  config.physics.windSpeed = number(look.w, 0, 15, config.physics.windSpeed);
+  const smoke = number(look.k, 0, 2, config.smoke.enabled ? config.smoke.amount : 0);
+  config.smoke.enabled = smoke > 0.01;
+  config.smoke.amount = smoke;
+  if (look.i === 0 || look.i === 1) config.landmarks.pier = look.i === 1;
+  if (look.d === 0 || look.d === 1) config.landmarks.grass = look.d === 1;
+  if (CAMERAS.has(look.c)) config.camera.preset = look.c;
+}
+
+/** The Deluxe effects of `occasion` this config uses. */
+export function deluxeInUse(config, occasion) {
+  const used = [];
+  for (const item of occasion.deluxe) {
+    if (item === 'finale') continue;
+    if (GROUND.has(item) ? groundStyles(config).includes(item) : config.look.mix[item] > 0) used.push(item);
+  }
+  return used;
+}
+
+/** Takes an occasion's Deluxe effects back out, for a free send. */
+export function keepFree(config, occasion) {
+  for (const item of occasion.deluxe) if (!GROUND.has(item) && item in config.look.mix) config.look.mix[item] = 0;
+  let any = false;
+  for (const type in config.look.mix) if (type !== 'text' && config.look.mix[type] > 0) any = true;
+  if (!any) for (const item of occasion.free) if (item in config.look.mix) config.look.mix[item] = 1;
+  if (config.fountains.enabled) {
+    let styles = groundStyles(config).filter((style) => !occasion.deluxe.includes(style));
+    if (!styles.length) styles = occasion.free.filter((item) => GROUND.has(item));
+    if (styles.length) config.fountains.style = styles.join(',');
+    else config.fountains.enabled = false;
+  }
+}
+
+// The ground effects a style setting plays: one, a list, or a named mix.
+function groundStyles(config) {
+  if (!config.fountains.enabled) return [];
+  return config.fountains.style.split(',').flatMap((style) => MIXES[style] || [style]);
+}
+
+/** Adds an occasion's Deluxe effects to the show (Deluxe ticked in the builder). */
+export function addDeluxe(config, occasion) {
+  for (const item of occasion.deluxe) if (!GROUND.has(item) && item in config.look.mix) config.look.mix[item] = Math.max(config.look.mix[item], 1.2);
+  const extra = occasion.deluxe.filter((item) => GROUND.has(item));
+  if (extra.length) {
+    const styles = new Set(groundStyles(config).concat(extra));
+    config.fountains.enabled = true;
+    config.fountains.style = [...styles].join(',');
+  }
+}
