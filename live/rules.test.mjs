@@ -86,3 +86,17 @@ test('blocked display names fall back to the user id, then "someone"', () => {
   assert.equal(rules.handle(chat('!heart', 'cool_id', 'nazi'))[0].by, 'cool_id');
   assert.equal(rules.handle(chat('!heart', 'nazi', 'nazi'))[0].by, 'someone');
 });
+
+test('!sky messages keep jokes, plugs and mild swearing, drop harm, and share the queue', () => {
+  const { rules, tick } = setup({ dedications: 'manual' });
+  rules.handle(chat('!sky follow @maya.makes', 'u1', 'Maya'));
+  rules.handle(chat('!say damn this is cool', 'u2', 'Bo'));
+  assert.deepEqual(rules.handle(chat('!sky kill yourself', 'u3', 'Troll')), []);
+  assert.equal(rules.handle(chat('!sky', 'u4', 'Cy'))[0].do, 'callout', 'asks for words');
+  const queue = rules.state().pending;
+  assert.deepEqual(queue.map((request) => request.text), ['follow @maya.makes', 'damn this is cool']);
+  assert.equal(queue[0].said, '!sky follow @maya.makes', 'the original line, for context');
+  assert.deepEqual(rules.approve(queue[0].id), [{ do: 'message', id: queue[0].id, text: 'follow @maya.makes', by: 'Maya' }]);
+  tick(1000);
+  assert.deepEqual(rules.handle(chat('!sky again', 'u1', 'Maya')), [], 'one ask per cooldown');
+});

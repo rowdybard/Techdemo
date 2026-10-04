@@ -30,6 +30,11 @@ export const OCCASION_WORDS = {
   halloween: 'halloween', boo: 'halloween',
 };
 
+// Words for a viewer's own message in the sky (`!sky FOLLOW @maya`): jokes, plugs, anything
+// that isn't harmful. Queued like dedications.
+export const MESSAGE_WORDS = { sky: true, say: true, msg: true };
+export const MESSAGE_LIMIT = 24; // characters, as shapes.js spells at most
+
 // What each gift effect is, for the help text and the admin page.
 export const GIFT_EFFECTS = {
   rose: 'a red bloom per rose',

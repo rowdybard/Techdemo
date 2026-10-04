@@ -10,10 +10,10 @@
 // Actions out (to src/live.js):
 //   { do: 'shell', shape, color, by }    { do: 'chaos', by }
 //   { do: 'gift', effect, count, by, gift }
-//   { do: 'dedication', id, occasion, to, by }
+//   { do: 'dedication', id, occasion, to, by }   { do: 'message', id, text, by }
 //   { do: 'callout', text }   { do: 'finale', reason }
 //   { do: 'leaders', top }    { do: 'likes', total, goal, step }
-import { COLORS, NAME_LIMIT, OCCASION_WORDS, SHAPES } from '../src/live-catalog.js';
+import { COLORS, MESSAGE_LIMIT, MESSAGE_WORDS, NAME_LIMIT, OCCASION_WORDS, SHAPES } from '../src/live-catalog.js';
 import { isBlocked } from '../src/moderate.js';
 
 export function createRules(settings, now = Date.now) {
@@ -49,8 +49,10 @@ export function createRules(settings, now = Date.now) {
     const command = words[0] || '';
     const t = now();
 
+    const rest = text.slice(1).trim().split(/\s+/).slice(1).join(' ');
     const occasion = OCCASION_WORDS[command];
-    if (occasion) return ask(event, by, occasion, text.slice(1).trim().split(/\s+/).slice(1).join(' '), t);
+    if (occasion) return ask(event, by, occasion, rest, t, text);
+    if (MESSAGE_WORDS[command]) return say(event, by, rest, t, text);
 
     if (command === 'help') {
       if (t - (lastShell.get('help') || -Infinity) < 20000) return [];
@@ -74,21 +76,36 @@ export function createRules(settings, now = Date.now) {
     return [{ do: 'shell', shape: SHAPES[shape] || 'peony', color, by }];
   }
 
-  function ask(event, by, occasion, rawName, t) {
-    const to = rawName.replace(/[^\p{L}\p{N} '.-]/gu, '').trim().slice(0, NAME_LIMIT).toUpperCase();
-    if (!to) return [{ do: 'callout', text: `${by}: try !${occasion} NAME` }];
-    if (isBlocked(to)) return [];
-    if (t - (lastAsk.get(event.userId) || -Infinity) < settings.dedicationCooldownSeconds * 1000) return [];
-    if (pending.length >= settings.maxPending) return [{ do: 'callout', text: 'The dedication queue is full. Try again soon!' }];
-    lastAsk.set(event.userId, t);
-    const request = { id: nextId++, occasion, to, by, userId: event.userId, at: t };
-    if (settings.dedications === 'auto') return [dedication(request), { do: 'callout', text: `${by} is lighting up the sky for ${to}` }];
+  // Moderation stops harm (slurs, hate, sexual terms, threats), not taste: jokes, plugs,
+  // edge and mild swearing all go up.
+  function queue(request, t, note) {
+    if (pending.length >= settings.maxPending) return [{ do: 'callout', text: 'The sky queue is full. Try again soon!' }];
+    lastAsk.set(request.userId, t);
+    if (settings.dedications === 'auto') return [play(request)];
     pending.push(request);
-    return [{ do: 'callout', text: `${by}'s dedication for ${to} is in the queue` }];
+    return [{ do: 'callout', text: note }];
   }
 
-  function dedication({ id, occasion, to, by }) {
-    return { do: 'dedication', id, occasion, to, by };
+  function cooling(userId, t) {
+    return t - (lastAsk.get(userId) || -Infinity) < settings.dedicationCooldownSeconds * 1000;
+  }
+
+  function say(event, by, raw, t, said) {
+    const words = raw.replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, MESSAGE_LIMIT);
+    if (!words) return [{ do: 'callout', text: `${by}: try !sky YOUR MESSAGE` }];
+    if (isBlocked(words) || cooling(event.userId, t)) return [];
+    return queue({ id: nextId++, kind: 'message', text: words, by, userId: event.userId, at: t, said }, t, `${by}'s message is in the sky queue`);
+  }
+
+  function ask(event, by, occasion, rawName, t, said) {
+    const to = rawName.replace(/[^\p{L}\p{N} '.-]/gu, '').trim().slice(0, NAME_LIMIT).toUpperCase();
+    if (!to) return [{ do: 'callout', text: `${by}: try !${occasion} NAME` }];
+    if (isBlocked(to) || cooling(event.userId, t)) return [];
+    return queue({ id: nextId++, kind: 'dedication', occasion, to, by, userId: event.userId, at: t, said }, t, `${by}'s dedication for ${to} is in the queue`);
+  }
+
+  function play({ id, kind, occasion, to, text, by }) {
+    return kind === 'message' ? { do: 'message', id, text, by } : { do: 'dedication', id, occasion, to, by };
   }
 
   function gift(event, by) {
@@ -135,7 +152,7 @@ export function createRules(settings, now = Date.now) {
       const index = pending.findIndex((request) => request.id === id);
       if (index < 0) return [];
       const [request] = pending.splice(index, 1);
-      return [dedication(request)];
+      return [play(request)];
     },
 
     reject(id) {
