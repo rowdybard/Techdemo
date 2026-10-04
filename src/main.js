@@ -45,6 +45,7 @@ export function start(container) {
       'This scene needs WebGL. Turn on hardware acceleration in your browser settings, ' +
       'or open the page in a current version of Chrome, Safari or Firefox.';
     container.append(notice);
+    container.dispatchEvent(new Event('scene-ready', { bubbles: true }));
     return;
   }
 
@@ -117,6 +118,17 @@ export function createApp(container, config = defaultConfig) {
     throw error;
   }
 
+  // Where the browser compiles shaders in parallel (KHR_parallel_shader_compile), they
+  // all compile before the first frame, side by side, instead of one by one inside it.
+  // Elsewhere the first frame compiles them, as before.
+  let compiled = !renderer.extensions.has('KHR_parallel_shader_compile');
+  if (!compiled) {
+    (ctx.compile ? ctx.compile() : renderer.compileAsync(scene, camera)).catch(() => {}).then(() => {
+      compiled = true;
+      onVisibilityChange();
+    });
+  }
+
   resize();
   resizeObserver.observe(container);
   watchPixelRatio();
@@ -149,6 +161,7 @@ export function createApp(container, config = defaultConfig) {
     if (!firstFrame) {
       firstFrame = true;
       performance.mark('first-frame'); // load time: from opening the page to the first picture
+      container.dispatchEvent(new Event('scene-ready', { bubbles: true })); // the load screen fades
     }
   }
 
@@ -182,7 +195,7 @@ export function createApp(container, config = defaultConfig) {
   }
 
   function onVisibilityChange() {
-    const run = !document.hidden && onScreen;
+    const run = !document.hidden && onScreen && compiled && !destroyed;
     if (run === running) return;
     running = run;
     if (run) last = -1; // the first frame back steps by zero

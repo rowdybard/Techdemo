@@ -60,6 +60,26 @@ export function create(ctx) {
   composer.addPass(output);
 
   ctx.render = () => composer.render();
+  // Compiles the scene's shaders for the target they'll draw into (a program for the
+  // screen would differ: tone mapping and sRGB happen in OutputPass here).
+  // The passes' own shaders (all but OutputPass, which sets its defines as it first
+  // draws) compile alongside, on stand-in quads. Hidden parts of the scene (the pier
+  // when it's off) are left out, as a render would; they compile when first shown.
+  ctx.compile = () => {
+    const previous = renderer.getRenderTarget();
+    renderer.setRenderTarget(composer.renderTarget1);
+    const children = scene.children;
+    scene.children = children.filter((child) => child.visible);
+    const quad = new THREE.PlaneGeometry(2, 2).deleteAttribute('normal'); // as the passes' own quad, or the programs differ
+    const passes = new THREE.Scene();
+    for (const material of [safe.material, bloom.materialHighPassFilter, ...bloom.separableBlurMaterials, bloom.compositeMaterial, bloom.blendMaterial]) {
+      if (material) passes.add(new THREE.Mesh(quad, material));
+    }
+    const done = Promise.all([renderer.compileAsync(scene, camera), renderer.compileAsync(passes, camera)]);
+    scene.children = children;
+    renderer.setRenderTarget(previous);
+    return done.finally(() => quad.dispose());
+  };
   ctx.onResize = (width, height) => {
     composer.setPixelRatio(renderer.getPixelRatio());
     composer.setSize(width, height);
@@ -131,6 +151,7 @@ export function create(ctx) {
       output.dispose();
       composer.dispose();
       ctx.render = null;
+      ctx.compile = null;
       ctx.onResize = null;
       ctx.post = null;
       ctx.quality = null;

@@ -60,6 +60,7 @@ export function create(ctx) {
   }
   addMesh(pier, keep(mergeParts(concrete)), deck, 0, 0, 0);
   addMesh(pier, keep(new THREE.BoxGeometry(0.15, 0.15, length)), steel, PIER_X - 2.4, DECK + 1.1, PIER_NEAR - length / 2);
+  pier.visible = settings.pier;
   scene.add(pier);
 
   // Dune grass: clumps on the dry sand either side of the view, drawn as one instanced mesh.
@@ -110,6 +111,7 @@ export function create(ctx) {
   }
   blade.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phases, 1));
   grass.frustumCulled = false;
+  grass.visible = settings.grass;
   scene.add(grass);
 
   return {

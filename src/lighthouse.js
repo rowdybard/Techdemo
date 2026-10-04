@@ -157,6 +157,7 @@ export function create(ctx) {
     beams.add(shaft);
   }
   group.add(beams);
+  group.visible = settings.pier;
   scene.add(group);
 
   // The lamp as a light the water reflects (burstlights.js), and the beams for the smoke.
