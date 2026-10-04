@@ -104,7 +104,7 @@ export const config = {
   // Smoke left by the bursts and the ground show, lit by later bursts.
   smoke: {
     enabled: true,
-    amount: 0.4, // how thick (Customize's Smoke slider at 20%)
+    amount: 0.12, // how thick: a light haze (Customize's Smoke slider at 6%)
     linger: 30, // seconds a puff takes to drift away and fade
   },
 
