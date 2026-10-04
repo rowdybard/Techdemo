@@ -1,7 +1,10 @@
 # Cloudflare static-asset headers. Code and pictures may be cached for five minutes, so
 # repeat visits skip a round trip per file; pages (index, terms, privacy) are revalidated
-# every time so a deploy shows up at once.
+# every time so a deploy shows up at once. vendor/ holds exact library versions whose
+# paths change with the version, so they are cached for a year.
 /src/*
   Cache-Control: public, max-age=300
 /src/og/*
   Cache-Control: public, max-age=86400
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable

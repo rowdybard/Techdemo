@@ -18,7 +18,6 @@
 <meta name="twitter:description" content="Send someone a fireworks show with their name in the sky.">
 <meta name="twitter:image" content="https://skygreeting.com/src/og/birthday.jpg">
 <link rel="icon" href="data:,">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="./src/studio.css">
 <style>
   /* One full-bleed dusk scene. The page keeps this dark look whatever the viewer's theme. */
@@ -163,31 +162,32 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
-    "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-    "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.21.0/dist/lil-gui.esm.min.js"
+    "three": "./vendor/three@0.186.1/build/three.module.min.js",
+    "./vendor/three@0.186.1/build/three.core.js": "./vendor/three@0.186.1/build/three.core.min.js",
+    "three/addons/": "./vendor/three@0.186.1/examples/jsm/",
+    "lil-gui": "./vendor/lil-gui@0.21.0/dist/lil-gui.esm.min.js"
   }
 }
 </script>
 <!-- Load time: every module is listed here so the browser fetches them all at once, instead
      of discovering each only after the file that imports it arrives (a chain five deep).
-     jsDelivr's minified three.module imports the full-size core, so the import map above
-     points that at the minified core too. tools/check.mjs fails if a module is missing here. -->
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/controls/OrbitControls.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/EffectComposer.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/RenderPass.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/UnrealBloomPass.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/OutputPass.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/ShaderPass.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/MaskPass.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/postprocessing/Pass.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/shaders/CopyShader.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/shaders/LuminosityHighPassShader.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/shaders/OutputShader.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/lil-gui@0.21.0/dist/lil-gui.esm.min.js">
+     three.js and lil-gui are served from this site (vendor/, exact versions), so there is
+     no second connection to set up. The minified three.module imports the full-size core,
+     so the import map above points that at the minified core too. tools/check.mjs fails if a module is missing here. -->
+<link rel="modulepreload" href="./vendor/three@0.186.1/build/three.module.min.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/build/three.core.min.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/controls/OrbitControls.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/EffectComposer.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/RenderPass.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/UnrealBloomPass.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/OutputPass.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/ShaderPass.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/MaskPass.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/Pass.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/shaders/CopyShader.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/shaders/LuminosityHighPassShader.js">
+<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/shaders/OutputShader.js">
+<link rel="modulepreload" href="./vendor/lil-gui@0.21.0/dist/lil-gui.esm.min.js">
 <link rel="modulepreload" href="./src/audio.js">
 <link rel="modulepreload" href="./src/beach.js">
 <link rel="modulepreload" href="./src/builder.js">

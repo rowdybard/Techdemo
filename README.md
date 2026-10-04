@@ -62,7 +62,7 @@ The check uses software WebGL, so its frame rate means nothing. Judge speed on r
 
 ## Host it
 
-The page is static files and loads three.js and lil-gui from jsDelivr, so any static host works.
+The page is static files and serves its own pinned copies of three.js and lil-gui (in `vendor/`), so any static host works.
 
 - **Cloudflare (set up):** `wrangler.jsonc` deploys the site as a static-assets Worker named `beach-fireworks`. Connected to this repo in Cloudflare (Workers → Import a repository), every push deploys; the default `npx wrangler deploy` command is all it needs. `wrangler.jsonc` has Wrangler copy `index.html` and `src/` into `.deploy/` first and upload only that. To deploy from a terminal instead, run `npm run deploy` with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` set. The site is at `https://beach-fireworks.<your-subdomain>.workers.dev`.
 
