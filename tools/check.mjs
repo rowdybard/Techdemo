@@ -116,7 +116,7 @@ async function preloadProblems() {
     const source = await readFile(join(ROOT, 'src', name), 'utf8');
     for (const [, spec] of source.matchAll(/from '([^']+)'/g)) {
       if (spec.startsWith('./')) wanted.add(`./src/${spec.slice(2)}`);
-      else if (spec.startsWith('three/addons/')) wanted.add(`./vendor/three@0.186.1/examples/jsm/${spec.slice(13)}`);
+      else if (spec.startsWith('three/addons/')) wanted.add(`./vendor/three-0.186.1/examples/jsm/${spec.slice(13)}`);
     }
   }
   wanted.add('./src/main.js');
@@ -131,6 +131,8 @@ async function preloadProblems() {
 
 async function open(name, contextOptions) {
   const context = await browser.newContext(contextOptions);
+  // Google Analytics is answered here, so a test run never reaches it (or counts as a visit).
+  await context.route(/googletagmanager\.com|google-analytics\.com/, (route) => route.fulfill({ status: 204, body: '' }));
   const page = await context.newPage();
   const problems = watch(page);
   await page.goto(`${url}#debug`, { timeout: 90000 }); // #debug shows the overlay this reads

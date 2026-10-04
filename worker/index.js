@@ -236,13 +236,17 @@ async function preview(request, env, url) {
   const description = 'A fireworks show made just for you. Tap to watch it light up the sky.';
   const image = `${url.origin}/src/og/${occasion}.jpg`;
   const set = (value) => ({ element(element) { element.setAttribute('content', value); } });
-  return new HTMLRewriter()
+  const rewritten = new HTMLRewriter()
     .on('title', { element(element) { element.setInnerContent(title); } })
     .on('meta[property="og:title"], meta[name="twitter:title"]', set(title))
     .on('meta[property="og:description"], meta[name="description"], meta[name="twitter:description"]', set(description))
     .on('meta[property="og:image"], meta[name="twitter:image"]', set(image))
     .on('meta[property="og:url"]', set(url.href))
     .transform(page);
+  // A greeting is private: search engines leave it out (the home page is what they index).
+  const response = new Response(rewritten.body, rewritten);
+  response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  return response;
 }
 
 async function load(env, id) {

@@ -1,0 +1,7 @@
+# Search engines may index the home page, terms and privacy. Greeting links (?g=, ?msg=)
+# are private and the server marks them noindex; /api/ is the server's own.
+User-agent: *
+Disallow: /api/
+Allow: /
+
+Sitemap: https://skygreeting.com/sitemap.xml

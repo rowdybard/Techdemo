@@ -3,22 +3,73 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SkyGreeting</title>
-<meta name="description" content="Send someone a fireworks show with their name in the sky.">
+<title>SkyGreeting: send a fireworks show with their name in the sky</title>
+<meta name="description" content="Make a fireworks show with your own words in the sky and send it to someone as a link. Birthdays, love, congratulations, thank-yous and Halloween. Free to make and send.">
+<link rel="canonical" href="https://skygreeting.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SkyGreeting">
 <meta property="og:title" content="SkyGreeting">
-<meta property="og:description" content="Send someone a fireworks show with their name in the sky.">
+<meta property="og:description" content="Make a fireworks show with your own words in the sky and send it to someone as a link. Birthdays, love, congratulations, thank-yous and Halloween. Free to make and send.">
 <meta property="og:image" content="https://skygreeting.com/src/og/birthday.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://skygreeting.com/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SkyGreeting">
-<meta name="twitter:description" content="Send someone a fireworks show with their name in the sky.">
+<meta name="twitter:description" content="Make a fireworks show with your own words in the sky and send it to someone as a link. Birthdays, love, congratulations, thank-yous and Halloween. Free to make and send.">
 <meta name="twitter:image" content="https://skygreeting.com/src/og/birthday.jpg">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./src/studio.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "SkyGreeting",
+  "alternateName": "Sky Greeting",
+  "url": "https://skygreeting.com/",
+  "description": "Make a fireworks show with your own words in the sky and send it to someone as a link.",
+  "applicationCategory": "EntertainmentApplication",
+  "operatingSystem": "Any (runs in a web browser)",
+  "image": "https://skygreeting.com/src/og/birthday.jpg",
+  "offers": [
+    { "@type": "Offer", "name": "Free greeting", "price": "0", "priceCurrency": "USD" },
+    { "@type": "Offer", "name": "Deluxe greeting", "price": "4.99", "priceCurrency": "USD" }
+  ]
+}
+</script>
+<script>
+  // Google Analytics (GA4): how many people visit and how they found the site. It's told
+  // the page and what kind of visit it is, never the link's words, names or private id.
+  // Not on a client's embed (their visitors, their site). No ads or Google signals. In the
+  // EU, UK, EEA and Switzerland it runs without cookies. Its script loads after the first
+  // frame, so it never slows the show down.
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  (function () {
+    var query = new URLSearchParams(location.search);
+    if (query.get('embed') === '1') return;
+    gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted' });
+    gtag('consent', 'default', { analytics_storage: 'denied', region: ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'] });
+    var view = query.get('g') ? 'paid-greeting' : query.get('msg') ? 'greeting' : query.get('hero') === '1' ? 'hero' : '';
+    gtag('js', new Date());
+    gtag('config', 'G-BTBT8MCNPJ', {
+      page_location: location.origin + location.pathname + (view ? '?view=' + view : ''),
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false,
+    });
+    var loaded = false;
+    function load() {
+      if (loaded) return;
+      loaded = true;
+      var script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=G-BTBT8MCNPJ';
+      document.head.appendChild(script);
+    }
+    addEventListener('scene-ready', load, { once: true });
+    setTimeout(load, 6000); // a slow device still counts
+  })();
+</script>
 <style>
   /* One full-bleed dusk scene. The page keeps this dark look whatever the viewer's theme. */
   :root {
@@ -157,15 +208,16 @@
     .loader-sky i { animation: none !important; }
     .loader-sky .spark { opacity: 0.8; transform: rotate(var(--a)) translateY(-34px); }
   }
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
   .notice { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0 16px; font-size: 16px; line-height: 1.5; text-align: center; text-wrap: balance; }
 </style>
 <script type="importmap">
 {
   "imports": {
-    "three": "./vendor/three@0.186.1/build/three.module.min.js",
-    "./vendor/three@0.186.1/build/three.core.js": "./vendor/three@0.186.1/build/three.core.min.js",
-    "three/addons/": "./vendor/three@0.186.1/examples/jsm/",
-    "lil-gui": "./vendor/lil-gui@0.21.0/dist/lil-gui.esm.min.js"
+    "three": "./vendor/three-0.186.1/build/three.module.min.js",
+    "./vendor/three-0.186.1/build/three.core.js": "./vendor/three-0.186.1/build/three.core.min.js",
+    "three/addons/": "./vendor/three-0.186.1/examples/jsm/",
+    "lil-gui": "./vendor/lil-gui-0.21.0/dist/lil-gui.esm.min.js"
   }
 }
 </script>
@@ -174,20 +226,20 @@
      three.js and lil-gui are served from this site (vendor/, exact versions), so there is
      no second connection to set up. The minified three.module imports the full-size core,
      so the import map above points that at the minified core too. tools/check.mjs fails if a module is missing here. -->
-<link rel="modulepreload" href="./vendor/three@0.186.1/build/three.module.min.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/build/three.core.min.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/controls/OrbitControls.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/EffectComposer.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/RenderPass.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/UnrealBloomPass.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/OutputPass.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/ShaderPass.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/MaskPass.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/postprocessing/Pass.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/shaders/CopyShader.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/shaders/LuminosityHighPassShader.js">
-<link rel="modulepreload" href="./vendor/three@0.186.1/examples/jsm/shaders/OutputShader.js">
-<link rel="modulepreload" href="./vendor/lil-gui@0.21.0/dist/lil-gui.esm.min.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/build/three.module.min.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/build/three.core.min.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/controls/OrbitControls.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/postprocessing/EffectComposer.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/postprocessing/RenderPass.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/postprocessing/UnrealBloomPass.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/postprocessing/OutputPass.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/postprocessing/ShaderPass.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/postprocessing/MaskPass.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/postprocessing/Pass.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/shaders/CopyShader.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/shaders/LuminosityHighPassShader.js">
+<link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/shaders/OutputShader.js">
+<link rel="modulepreload" href="./vendor/lil-gui-0.21.0/dist/lil-gui.esm.min.js">
 <link rel="modulepreload" href="./src/audio.js">
 <link rel="modulepreload" href="./src/beach.js">
 <link rel="modulepreload" href="./src/builder.js">
@@ -232,6 +284,8 @@
 <link rel="modulepreload" href="./src/wind.js">
 </head>
 <body>
+<h1 class="sr-only">SkyGreeting: send a fireworks show with their name in the sky</h1>
+<p class="sr-only">Sky Greeting lets you design a fireworks show over a beach at dusk, write your own words to spell out in the sky, and send it to someone as a link that plays in their browser. Free to make and send; Deluxe greetings add more fireworks.</p>
 <div id="app"></div>
 <div class="loader" id="loader" role="status" aria-live="polite">
   <div class="loader-sky" aria-hidden="true"><i class="rise"></i><i class="spark" style="--a:0deg"></i><i class="spark" style="--a:30deg"></i><i class="spark" style="--a:60deg"></i><i class="spark" style="--a:90deg"></i><i class="spark" style="--a:120deg"></i><i class="spark" style="--a:150deg"></i><i class="spark" style="--a:180deg"></i><i class="spark" style="--a:210deg"></i><i class="spark" style="--a:240deg"></i><i class="spark" style="--a:270deg"></i><i class="spark" style="--a:300deg"></i><i class="spark" style="--a:330deg"></i></div>
