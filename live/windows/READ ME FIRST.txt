@@ -1,0 +1,44 @@
+SKYGREETING LIVE: fireworks your TikTok viewers control
+=======================================================
+
+START
+  1. Unzip this folder somewhere easy, like your Desktop. (Don't run it from inside the zip.)
+  2. Double-click "Start SkyGreeting LIVE.bat".
+     If Windows says "Windows protected your PC", click "More info", then "Run anyway".
+     If the firewall asks, you can click Cancel: it only needs this computer.
+  3. Your browser opens the control panel (http://localhost:8787/live/admin).
+     Keep the black window open the whole time you stream.
+
+PRACTICE FIRST
+  On the control panel press "Practice with pretend viewers", then "Open the stream window".
+  Fake viewers will chat and send gifts so you can see everything working.
+
+GO LIVE
+  1. Start your LIVE in TikTok LIVE Studio.
+  2. On the control panel, type your TikTok username and press Connect.
+     The dot turns green when it's connected.
+  3. Press "Open the stream window". In LIVE Studio add a Window capture of that window.
+     Click the stream window once so its sound starts.
+  (OBS: add a Browser source with the link shown, 1080 x 1920.)
+
+WHILE YOU'RE LIVE (all on the control panel)
+  - Sky queue: press Play or Skip for each dedication or message. Or set
+    "Words in the sky" to play by themselves.
+  - Recent viewers: Ban anyone causing trouble.
+  - Pause chat: stops chat commands for a while (gifts still work).
+  - Test the show: fire any gift or chat command yourself.
+
+WHAT VIEWERS CAN DO (it's also on screen)
+  Free:  !heart !star !boom !chaos !ghost  (add a colour: !pink heart)
+         follows and every 1,000 likes set off fireworks too
+  Gift of 99 diamonds or more (one Hand Hearts):
+         !birthday NAME, !love NAME, !congrats NAME, !thanks NAME
+         !sky ANY WORDS  (their own words in the sky)
+  Gifts: Rose = red bloom, Finger Heart = hearts, Doughnut = ground show,
+         Hand Hearts = their name in the sky, Money Gun = barrage, Galaxy = grand finale
+
+STOP
+  Press "Stop SkyGreeting LIVE" on the control panel, or close the black window.
+
+If something goes wrong, the "What's happening" box at the bottom of the control panel
+says what. More detail is in live\README.md.
