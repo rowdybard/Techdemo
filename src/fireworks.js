@@ -3,6 +3,7 @@
 // records; launching a shell writes all of its particles at once (see shells.js).
 // A quick tap on the sky sends a shell to that spot (except on an embedded header).
 import * as THREE from 'three';
+import { mergeParts } from './lighthouse.js';
 import { createPool } from './particles.js';
 import { fireShell, planShell } from './shells.js';
 
@@ -30,8 +31,12 @@ export function create(ctx) {
   scene.add(pool.mesh);
   stats.poolSize = pool.size;
 
-  const barge = createBarge(config.show.bargePosition);
+  const barge = createBarge(config.show.bargePosition, BARGE_LENGTH, true);
   scene.add(barge.group);
+  // Two small barges either side, for ground shows only (fountains.js runs them).
+  const [mx, my, mz] = config.show.bargePosition;
+  const sides = [-1, 1].map((side) => createBarge([mx + side * SIDE_BARGE_OFFSET, my, mz], SIDE_BARGE_LENGTH, false));
+  for (const side of sides) scene.add(side.group);
 
   // One reusable plan and a ring of burst records (time, place, colour) for the lights.
   const plan = { launch: 0 };
@@ -152,6 +157,9 @@ export function create(ctx) {
       }
       syncUniforms(time);
       stats.poolUsed = pool.liveCount(time);
+      const sidesOn = config.fountains.sideBarges;
+      sides[0].group.visible = sidesOn;
+      sides[1].group.visible = sidesOn;
     },
 
     /** Fires one shell now, whatever the schedule; optionally of one type. */
@@ -171,9 +179,10 @@ export function create(ctx) {
     },
 
     dispose() {
-      scene.remove(pool.mesh, barge.group);
+      scene.remove(pool.mesh, barge.group, sides[0].group, sides[1].group);
       pool.dispose();
       barge.dispose();
+      for (const side of sides) side.dispose();
       stats.poolSize = 0;
       stats.poolUsed = 0;
       ctx.fireworks = null;
@@ -187,34 +196,38 @@ export function create(ctx) {
 }
 
 // A long, dark barge silhouette on the water: mortar racks along the deck, a cabin at
-// one end, and a few dim work lights. Shells launch from along its length.
+// one end, and a few dim work lights. Shells launch from along its length. The two side
+// barges are short ones without a cabin, for ground shows.
 export const BARGE_LENGTH = 130;
+export const SIDE_BARGE_LENGTH = 34;
+export const SIDE_BARGE_OFFSET = 108; // metres from the main barge's middle to each side barge's
 
-function createBarge([x, y, z]) {
+function createBarge([x, y, z], length, cabined) {
   const group = new THREE.Group();
   const dark = new THREE.MeshBasicMaterial({ color: 0x05060a });
   const lamp = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.9, 0.45) });
-  const hull = new THREE.BoxGeometry(BARGE_LENGTH, 2.4, 16);
-  const cabin = new THREE.BoxGeometry(9, 3.5, 7);
-  const rack = new THREE.BoxGeometry(5, 1.2, 3);
-  const light = new THREE.SphereGeometry(0.35, 8, 6);
-  const half = BARGE_LENGTH / 2;
-  const add = (geometry, material, px, py, pz) => {
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x + px, y + py, z + pz);
-    group.add(mesh);
-  };
-  add(hull, dark, 0, 0.6, 0);
-  add(cabin, dark, -half + 8, 3.4, 0);
-  for (let px = -half + 18; px < half - 4; px += 9) add(rack, dark, px, 2.4, (px / 9) % 2 === 0 ? -3 : 3);
-  for (const px of [-half + 8, -half + 30, 0, half - 25, half - 3]) add(light, lamp, px, px === -half + 8 ? 5.6 : 2.4, 6);
+  const half = length / 2;
+  const hull = [];
+  const lamps = [];
+  const box = (w, h, d, px, py, pz) => hull.push([new THREE.BoxGeometry(w, h, d), x + px, y + py, z + pz]);
+  const bulb = (px, py, pz) => lamps.push([new THREE.SphereGeometry(0.35, 8, 6), x + px, y + py, z + pz]);
+  if (cabined) {
+    box(length, 2.4, 16, 0, 0.6, 0);
+    box(9, 3.5, 7, -half + 8, 3.4, 0);
+    for (let px = -half + 18; px < half - 4; px += 9) box(5, 1.2, 3, px, 2.4, (px / 9) % 2 === 0 ? -3 : 3);
+    for (const px of [-half + 8, -half + 30, 0, half - 25, half - 3]) bulb(px, px === -half + 8 ? 5.6 : 2.4, 6);
+  } else {
+    box(length, 1.8, 9, 0, 0.6, 0);
+    for (let k = 0; k < 4; k++) box(5, 1.2, 3, -half + 5 + k * ((length - 10) / 3), 1.9, k % 2 ? -1.5 : 1.5);
+    for (const px of [-half + 2, half - 2]) bulb(px, 1.9, 4.2);
+  }
+  // One mesh for the hull and its racks, one for the lamps: two draw calls a barge.
+  const geometries = [mergeParts(hull), mergeParts(lamps)];
+  group.add(new THREE.Mesh(geometries[0], dark), new THREE.Mesh(geometries[1], lamp));
   return {
     group,
     dispose() {
-      hull.dispose();
-      cabin.dispose();
-      rack.dispose();
-      light.dispose();
+      for (const geometry of geometries) geometry.dispose();
       dark.dispose();
       lamp.dispose();
     },

@@ -95,6 +95,7 @@ export const config = {
     duration: 9, // seconds each fountain runs
     height: 42, // metres
     nozzles: 9, // along the barge (fewer on phones)
+    sideBarges: true, // two small barges either side, four tubes each, almost always playing the main barge's style
     color: 'gold', // fountains: 'gold' or 'silver'; the other effects use the palette
     style: 'mixed', // 'mixed' rotates through the five below; 'halloween' through the four spooky ones
     // Single styles: 'fountains', 'shooters', 'candles', 'mines', 'fans', 'cauldron', 'wisps', 'lightning', 'lanterns'
@@ -103,7 +104,7 @@ export const config = {
   // Smoke left by the bursts and the ground show, lit by later bursts.
   smoke: {
     enabled: true,
-    amount: 1, // how thick
+    amount: 0.4, // how thick (Customize's Smoke slider at 20%)
     linger: 30, // seconds a puff takes to drift away and fade
   },
 
@@ -115,12 +116,12 @@ export const config = {
     text: 'SUNSET COVE', // what text shells spell; a client's name is the point
     textWidth: 230, // metres across
     particles: 420, // sparks per shell (about half on phones)
-    burstSize: 62, // metres a spark coasts before drag holds it
+    burstSize: 79, // metres a spark coasts before drag holds it (Customize's Size at 70%)
     lifetime: 2.6, // seconds
     sparkSize: 1,
     trailLength: 1,
     glitter: 1,
-    brightness: 1.6,
+    brightness: 2.56, // Customize's Sparkle at 80%
     sceneLight: 1, // how strongly bursts light the water and sand
   },
 

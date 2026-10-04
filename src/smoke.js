@@ -19,7 +19,7 @@ const PUFFS = { desktop: 176, phone: 64 };
 const GROUND_EVERY = { desktop: 1.1, phone: 2 }; // seconds between puffs from each burning tube
 const PER_SHELL = { desktop: 7, phone: 4 };
 const SHELL_RECORDS = 64; // fireworks.js keeps this many burst records
-const FOUNTAIN_RECORDS = 14;
+const FOUNTAIN_RECORDS = 22; // the main barge's tubes and the two side barges' (fountains.js)
 const HANGING = { willow: true, palm: true }; // sparks that fall a long way, leaving curtains
 // Colour of smoke lit only by the sky: dusk-grey at dusk, near black at night.
 const DUSK = new THREE.Color(0.15, 0.125, 0.14);

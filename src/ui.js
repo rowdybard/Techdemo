@@ -88,6 +88,7 @@ export function create(ctx) {
   ground.add(config.fountains, 'duration', 3, 20, 0.5).name('Run time (s)');
   ground.add(config.fountains, 'height', 8, 50, 1).name('Height (m)');
   ground.add(config.fountains, 'nozzles', 2, 14, 1).name('Tubes');
+  ground.add(config.fountains, 'sideBarges').name('Side barges');
   ground.add(config.fountains, 'color', { Gold: 'gold', Silver: 'silver' }).name('Fountain colour');
 
   const mix = gui.addFolder('Shell mix').close();

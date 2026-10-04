@@ -162,6 +162,7 @@ export function create(ctx) {
   const switches = el('div', 'studio-switches');
   switches.append(
     toggle('Sound', () => config.sound.enabled && config.sound.volume > 0, (on) => { config.sound.enabled = true; config.sound.volume = on ? 0.6 : 0; }),
+    toggle('Side barges', () => config.fountains.sideBarges, (on) => { config.fountains.sideBarges = on; }),
     toggle('Pier & lighthouse', () => config.landmarks.pier, (on) => { config.landmarks.pier = on; }),
     toggle('Dune grass', () => config.landmarks.grass, (on) => { config.landmarks.grass = on; }),
   );
