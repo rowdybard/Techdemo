@@ -37,6 +37,8 @@ Daniel wants the SkyGreeting fireworks engine streaming on TikTok LIVE, ideally 
 - Chat commands are free. **Words in the sky (dedications and `!sky` messages) cost a 99💎+ gift** within 10 minutes. He said "yes" to that.
 - "Yes to social plugs, jokes, personality, and some edge. Keep the engine, use the queue for context, and moderate harmful behavior, not whether someone's message is tasteful." So: `!sky` exists, the feed has some personality, the queue shows what each viewer typed, and only the harm filter applies.
 - Show the chat commands on screen at all times.
+ - Paid words must launch completely alone with a clear sky (ground shows allowed), so they can be read. `src/live.js` holds aerial shells and the random show while words are queued or up (`hold()` / `release()` and `stepWords()`). It no longer uses `director.js` for dedications: it launches the occasion's message and name itself, then plays the occasion's shells afterwards.
+- No "SkyGreeting LIVE" title. The overlay sits on the water and sand below the ground show, and the "For X from Y" banner sits at the top, off the ground show.
 - He wants a "zip for dummies" with a GUI to start, stop and moderate, run from his PC. That's the zip plus the control panel.
 
 ## Defaults I picked

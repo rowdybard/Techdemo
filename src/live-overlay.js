@@ -1,11 +1,12 @@
 // The TikTok LIVE overlay: plain DOM over the scene, sized for a 9:16 frame and kept in
 // the top half, clear of TikTok's own chat and gift buttons at the bottom and right.
-// A title (and the streamer's plug), the chat commands always on screen, a feed of who
+// Everything sits low, over the water and sand, so the sky stays clear: the chat
+// commands always on screen, the streamer's plug line, a feed of who
 // launched what, the top gifters, a like goal bar, the queue, and a banner for
 // countdowns and big moments.
 // Every text goes in with textContent: viewers' names are untrusted.
 
-const FEED = 3; // lines in the feed
+const FEED = 2; // lines in the feed
 const FEED_SECONDS = 9;
 export function createOverlay(container, signal, plug = '') {
   const style = document.createElement('link');
@@ -16,13 +17,6 @@ export function createOverlay(container, signal, plug = '') {
   const root = el('div', 'live-overlay');
   root.innerHTML = `
     <div class="live-top">
-    <header class="live-title"><b>🎆 SkyGreeting LIVE</b><span class="live-plug"></span></header>
-    <dl class="live-commands">
-      <dt>FREE</dt><dd><code>!heart</code> <code>!star</code> <code>!boom</code> <code>!chaos</code> <code>!ghost</code></dd>
-      <dt>+ colour</dt><dd><code>!pink heart</code> · <code>!blue ring</code></dd>
-      <dt>🫶 99💎+</dt><dd><code>!birthday NAME</code> · <code>!sky WORDS</code></dd>
-      <dt>GIFTS</dt><dd>🌹 bloom · 🫶 your name · 🌌 finale</dd>
-    </dl>
     <div class="live-row">
     <ol class="live-feed"></ol>
     <aside class="live-side">
@@ -31,6 +25,13 @@ export function createOverlay(container, signal, plug = '') {
       <section class="live-queue" hidden></section>
     </aside>
     </div>
+    <dl class="live-commands">
+      <dt>FREE</dt><dd><code>!heart</code> <code>!star</code> <code>!boom</code> <code>!chaos</code> <code>!ghost</code></dd>
+      <dt>+ colour</dt><dd><code>!pink heart</code> · <code>!blue ring</code></dd>
+      <dt>🫶 99💎+</dt><dd><code>!birthday NAME</code> · <code>!sky WORDS</code></dd>
+      <dt>GIFTS</dt><dd>🌹 bloom · 🫶 your name · 🌌 finale</dd>
+    </dl>
+    <span class="live-plug"></span>
     </div>
     <div class="live-banner" hidden><b></b><span></span></div>
     <div class="live-offline" hidden>Waiting for the live bridge…</div>`;
@@ -88,14 +89,14 @@ export function createOverlay(container, signal, plug = '') {
     },
 
     likes(total, goal, step) {
-      likesText.textContent = `❤️ ${total.toLocaleString('en-US')} / ${goal.toLocaleString('en-US')} likes → FINALE`;
+      likesText.textContent = `❤️ ${total.toLocaleString('en-US')} / ${goal.toLocaleString('en-US')} → finale`;
       // The bar fills over the current step toward the goal.
       likesBar.style.width = `${Math.min(100, Math.max(0, ((total - (goal - step)) / step) * 100))}%`;
     },
 
     queue(count) {
       queueBox.hidden = count === 0;
-      queueBox.textContent = `🎂 ${count} dedication${count === 1 ? '' : 's'} up next`;
+      queueBox.textContent = `✨ ${count} in the sky queue`;
     },
 
     banner(text, seconds) {

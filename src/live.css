@@ -9,27 +9,27 @@ body:has(#app.live-mode) { background: #000; }
 .live-overlay h2 { margin: 0 0 calc(var(--u) * 0.8); font-size: calc(var(--u) * 3); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
 .live-overlay ol { margin: 0; padding: 0; list-style: none; }
 
-/* TikTok's own bar covers the top 10% or so, and its chat the bottom left from about 60%.
-   Bursts fill roughly 22% to 45% down, and dedication words 30% to 50%. */
-.live-top { position: absolute; top: 11%; left: calc(var(--u) * 4); right: calc(var(--u) * 4); display: grid; gap: calc(var(--u) * 2); }
-.live-title { display: grid; gap: calc(var(--u) * 0.6); }
-.live-row { display: flex; justify-content: space-between; align-items: start; gap: calc(var(--u) * 3); }
-.live-title b { font-size: calc(var(--u) * 5); letter-spacing: 0.02em; }
-.live-plug { font-size: calc(var(--u) * 3.8); color: #ffd98a; }
+/* The sky and the ground show (down to about 65%) are the show's: bursts fill roughly 15% to
+   50% and dedication words 30% to 50%. The overlay sits on the water and sand below,
+   above TikTok's own comment box at the very bottom. */
+.live-top { position: absolute; bottom: 8%; left: calc(var(--u) * 4); right: calc(var(--u) * 4); display: grid; gap: calc(var(--u) * 1.4); }
+.live-row { display: flex; justify-content: space-between; align-items: end; gap: calc(var(--u) * 3); }
+.live-plug { font-size: calc(var(--u) * 3.2); color: #ffd98a; text-align: center; }
+.live-plug:empty { display: none; }
 
 /* The chat commands, always on screen. */
-.live-commands { margin: 0; padding: calc(var(--u) * 1.4) calc(var(--u) * 2); display: grid; grid-template-columns: auto 1fr; gap: calc(var(--u) * 0.7) calc(var(--u) * 2); align-items: baseline; border-radius: calc(var(--u) * 2.4); background: rgb(10 14 30 / 0.5); font-size: calc(var(--u) * 3.2); }
-.live-commands dt { font-size: calc(var(--u) * 2.4); letter-spacing: 0.06em; color: #ffd98a; white-space: nowrap; }
+.live-commands { margin: 0; padding: calc(var(--u) * 1) calc(var(--u) * 2); display: grid; grid-template-columns: auto 1fr; gap: calc(var(--u) * 0.7) calc(var(--u) * 2); align-items: baseline; border-radius: calc(var(--u) * 2.4); background: rgb(10 14 30 / 0.5); font-size: calc(var(--u) * 2.7); }
+.live-commands dt { font-size: calc(var(--u) * 2.1); letter-spacing: 0.06em; color: #ffd98a; white-space: nowrap; }
 .live-commands dd { margin: 0; }
 .live-commands code { font: inherit; white-space: nowrap; }
-.live-commands dd { line-height: 1.45; }
+.live-commands dd { line-height: 1.35; }
 
-.live-feed { width: 56%; display: grid; gap: calc(var(--u) * 0.8); font-size: calc(var(--u) * 2.9); }
+.live-feed { width: 56%; display: grid; gap: calc(var(--u) * 0.6); font-size: calc(var(--u) * 2.6); }
 .live-feed li { padding: calc(var(--u) * 0.7) calc(var(--u) * 1.8); border-radius: calc(var(--u) * 2); background: rgb(10 14 30 / 0.45); animation: live-feed linear forwards; overflow-wrap: anywhere; }
 .live-feed li.live-special { background: rgb(160 60 255 / 0.5); }
 @keyframes live-feed { 0% { opacity: 0; translate: -8% 0; } 4% { opacity: 1; translate: 0 0; } 85% { opacity: 1; } 100% { opacity: 0; } }
 
-.live-side { width: 38%; display: grid; gap: calc(var(--u) * 1.8); text-align: right; font-size: calc(var(--u) * 3); }
+.live-side { width: 40%; display: grid; gap: calc(var(--u) * 0.8); text-align: right; font-size: calc(var(--u) * 2.5); }
 .live-side > * { min-width: 0; }
 .live-leaders li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live-likes { width: 100%; }
@@ -37,7 +37,7 @@ body:has(#app.live-mode) { background: #000; }
 .live-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff4f8b, #ffb347); transition: width 0.6s; }
 .live-queue { color: #ffd98a; }
 
-.live-banner { position: absolute; top: 52%; left: 6%; right: 6%; display: grid; gap: calc(var(--u) * 0.6); padding: calc(var(--u) * 2) calc(var(--u) * 3); border-radius: calc(var(--u) * 3); background: rgb(10 14 30 / 0.55); text-align: center; animation: live-pop 0.4s ease-out; }
+.live-banner { position: absolute; top: 10%; left: 6%; right: 6%; display: grid; gap: calc(var(--u) * 0.6); padding: calc(var(--u) * 2) calc(var(--u) * 3); border-radius: calc(var(--u) * 3); background: rgb(10 14 30 / 0.55); text-align: center; animation: live-pop 0.4s ease-out; }
 .live-banner b { font-size: calc(var(--u) * 5.6); line-height: 1.15; }
 .live-banner span { font-size: calc(var(--u) * 4); color: #ffd98a; }
 .live-banner span:empty { display: none; }
@@ -45,3 +45,5 @@ body:has(#app.live-mode) { background: #000; }
 
 .live-offline { position: absolute; bottom: 40%; left: 0; right: 0; text-align: center; font-size: calc(var(--u) * 3.2); opacity: 0.7; }
 .live-overlay [hidden] { display: none; }
+.live-leaders h2 { display: none; }
+.live-bar { margin-top: calc(var(--u) * 0.5); height: calc(var(--u) * 1); }

@@ -33,7 +33,9 @@ The panel's choices are saved in `live/config.json`, which isn't in git.
 
 ## What viewers can do
 
-The commands are always on screen.
+The commands are always on screen. The overlay sits low on the water and sand, so the sky and the ground show stay clear.
+
+Words in the sky are paid for, so they always go up alone. When one is next, the random show stops and viewers' shells wait. The words launch once every shell already up has faded, after a 3-2-1 countdown, with a ground show allowed underneath. When they've faded, the occasion's shells (or rings and willows) go up, then the waiting shells. A gifter's name (Hand Hearts, Galaxy) goes through the same queue without needing approval.
 
 | Viewers do | Costs | The sky does |
 |---|---|---|
