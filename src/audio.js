@@ -58,6 +58,8 @@ export function create(ctx) {
   let groundVoices = 0;
 
   function start() {
+    // A context made before any gesture (the live page starts one itself) waits for the first.
+    if (audio && audio.state === 'suspended') audio.resume();
     if (audio || !settings.enabled) return;
     page = sharedAudio();
     if (!page) return;

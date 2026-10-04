@@ -1,0 +1,15 @@
+{
+  "name": "skygreeting-live",
+  "private": true,
+  "description": "TikTok LIVE bridge for the SkyGreeting show: chat, gifts and likes launch fireworks. See README.md.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.mjs",
+    "sim": "node server.mjs --sim",
+    "test": "node --test rules.test.mjs"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "2.5.0"
+  }
+}

@@ -25,6 +25,10 @@ Opening a link (`?o=halloween&msg=HAPPY%20HALLOWEEN&to=SAM&from=Max`) sets the s
 
 Anyone can tap or click the sky to launch a shell, except on an embedded header.
 
+## TikTok LIVE
+
+`/?live=1` is the show for a vertical TikTok LIVE: viewers launch shells from chat (`!heart`, `!purple`, `!chaos`), gifts set off bigger effects and spell the gifter's name, `!birthday NAME` queues a dedication, and likes build to a grand finale. A local bridge in `live/` connects it to your LIVE. Run steps and settings are in [`live/README.md`](live/README.md).
+
 ## Client mockups and embeds
 
 In the panel's **Client mockup** folder, type a prospect's business name, headline, tagline and button text. **Copy client link** gives a link that opens straight into their header with the whole current look; **Copy embed code** gives the snippet for their site:

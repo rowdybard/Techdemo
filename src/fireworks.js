@@ -58,7 +58,7 @@ export function create(ctx) {
     return false;
   }
 
-  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false) {
+  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false, palette = null) {
     plan.launch = time;
     planShell(plan, config, phone, aimX, aimY, type);
     if (random && plan.type !== 'text' && wordsUp(time)) {
@@ -70,7 +70,7 @@ export function create(ctx) {
     }
     const record = bursts[next];
     next = (next + 1) % SHELLS;
-    fireShell(pool, plan, config, config.palettes[config.look.palette], record);
+    fireShell(pool, plan, config, palette || config.palettes[config.look.palette], record);
     record.end = record.time + config.look.lifetime * 1.2;
     record.launch = time;
   }
@@ -168,9 +168,9 @@ export function create(ctx) {
       launch(uniforms.uTime.value, NaN, NaN, type);
     },
 
-    /** Fires one shell of `type` from the barge to burst at (x, height). */
-    launchAt(type, x, height) {
-      launch(uniforms.uTime.value, x, height, type);
+    /** Fires one shell of `type` from the barge to burst at (x, height), optionally in its own colours. */
+    launchAt(type, x, height, palette = null) {
+      launch(uniforms.uTime.value, x, height, type, false, palette);
     },
 
     /** A few seconds of shells as fast as the pool allows. */

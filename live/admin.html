@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyGreeting LIVE control</title>
+<style>
+  :root { color-scheme: dark; --bg: #0d1020; --card: #171b30; --ink: #e9edf5; --dim: #9aa3bd; --accent: #ffb347; --ok: #4ade80; --bad: #f87171; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  h1 { grid-column: 1 / -1; margin: 0; font-size: 22px; }
+  section { background: var(--card); border-radius: 10px; padding: 14px; min-width: 0; }
+  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  button { font: inherit; padding: 6px 12px; border: 0; border-radius: 6px; background: #2a3152; color: var(--ink); cursor: pointer; }
+  button:hover { background: #38406a; }
+  button.go { background: #1f6f43; } button.no { background: #6b2430; }
+  input, select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid #333b5c; background: #0b0e1c; color: var(--ink); min-width: 0; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .status b { color: var(--accent); }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--bad); margin-right: 6px; }
+  .dot.on { background: var(--ok); }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  li.request { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px; border-radius: 8px; background: #0f1328; }
+  .log { grid-column: 1 / -1; }
+  pre { margin: 0; max-height: 320px; overflow: auto; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); white-space: pre-wrap; }
+  .muted { color: var(--dim); }
+</style>
+</head>
+<body>
+<main>
+  <h1>🎆 SkyGreeting LIVE control</h1>
+
+  <section class="status">
+    <h2>Status</h2>
+    <div class="row"><span class="dot" id="dot"></span><span id="state">…</span></div>
+    <div class="muted" id="details"></div>
+    <div class="row" style="margin-top:10px">
+      <a href="/?live=1" target="_blank" style="color:var(--accent)">Open the stream page</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Dedications</h2>
+    <div class="row">
+      <label>Mode <select id="mode"><option value="manual">Approve each one</option><option value="auto">Auto (word filter only)</option></select></label>
+    </div>
+    <ul id="queue"><li class="muted">None waiting.</li></ul>
+  </section>
+
+  <section>
+    <h2>Test the show</h2>
+    <div class="row"><input id="chat" placeholder="!pink heart  or  !birthday Maya" style="flex:1"><button id="send">Send as chat</button></div>
+    <div class="row">
+      <button data-gift="Rose,1,5">🌹 Rose ×5</button>
+      <button data-gift="Finger Heart,5,3">🫰 Finger Heart ×3</button>
+      <button data-gift="Doughnut,30,1">🍩 Doughnut</button>
+      <button data-gift="Hand Hearts,100,1">🫶 Hand Hearts</button>
+      <button data-gift="Money Gun,500,1">🔫 Money Gun</button>
+      <button data-gift="Galaxy,1000,1">🌌 Galaxy</button>
+    </div>
+    <div class="row"><button id="like">❤️ +200 likes</button><button id="follow">Follow</button><button id="finale">Grand finale now</button></div>
+    <div class="muted">Test events go to the live stream too, as a viewer named “tester”.</div>
+  </section>
+
+  <section class="log">
+    <h2>Log</h2>
+    <pre id="log"></pre>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const post = (path, data) => fetch(`/live/api/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data || {}) }).then(refresh);
+  const event = (data) => post('event', { userId: 'tester', name: 'tester', ...data });
+  let likes = 0;
+
+  $('send').onclick = () => { if ($('chat').value.trim()) event({ kind: 'chat', text: $('chat').value.trim() }); $('chat').value = ''; };
+  $('chat').onkeydown = (e) => { if (e.key === 'Enter') $('send').click(); };
+  for (const button of document.querySelectorAll('[data-gift]')) {
+    const [gift, diamonds, count] = button.dataset.gift.split(',');
+    button.onclick = () => event({ kind: 'gift', gift, diamonds: Number(diamonds), count: Number(count) });
+  }
+  $('like').onclick = () => event({ kind: 'like', count: 200, total: (likes += 200) });
+  $('follow').onclick = () => event({ kind: 'follow' });
+  $('finale').onclick = () => post('finale');
+  $('mode').onchange = () => post('mode', { mode: $('mode').value });
+
+  async function refresh() {
+    let state;
+    try {
+      state = await (await fetch('/live/api/state')).json();
+    } catch {
+      $('state').textContent = 'The bridge server is not running.';
+      $('dot').className = 'dot';
+      return;
+    }
+    const { status } = state;
+    likes = Math.max(likes, state.likes);
+    $('dot').className = `dot${status.state === 'connected' ? ' on' : ''}`;
+    $('state').textContent = `${status.source}: ${status.state}`;
+    $('details').textContent = [status.message, status.viewers ? `${status.viewers} watching` : '', `${state.pages} stream page${state.pages === 1 ? '' : 's'} open`, `${state.likes} likes`].filter(Boolean).join(' · ');
+    if (document.activeElement !== $('mode')) $('mode').value = state.dedications;
+
+    const queue = $('queue');
+    queue.replaceChildren();
+    if (!state.pending.length) {
+      const empty = document.createElement('li');
+      empty.className = 'muted';
+      empty.textContent = 'None waiting.';
+      queue.append(empty);
+    }
+    for (const request of state.pending) {
+      const item = document.createElement('li');
+      item.className = 'request';
+      const text = document.createElement('span');
+      text.textContent = `${request.occasion} for ${request.to} · from ${request.by}${request.gifted ? ` (${request.gifted}💎)` : ''}`;
+      const yes = document.createElement('button');
+      yes.className = 'go';
+      yes.textContent = 'Play';
+      yes.onclick = () => post('approve', { id: request.id });
+      const no = document.createElement('button');
+      no.className = 'no';
+      no.textContent = 'Skip';
+      no.onclick = () => post('reject', { id: request.id });
+      const buttons = document.createElement('span');
+      buttons.append(yes, ' ', no);
+      item.append(text, buttons);
+      queue.append(item);
+    }
+    const log = $('log');
+    const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+    log.textContent = state.log.join('\n');
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+  refresh();
+  setInterval(refresh, 1000);
+</script>
+</body>
+</html>
