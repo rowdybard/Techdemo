@@ -22,6 +22,8 @@ export function createRules(settings, now = Date.now) {
   const recent = []; // ms of chat launches in the last second, for the global cap
   const fans = new Map(); // userId → { name, diamonds }
   const pending = []; // dedications waiting for approval
+  const credit = new Map(); // userId → { diamonds, at }: gifts not yet spent on words in the sky
+  const unpaid = new Map(); // userId → their latest request still waiting on a gift
   let likes = 0;
   let goal = settings.likeGoal;
   let nextId = 1;
@@ -78,15 +80,30 @@ export function createRules(settings, now = Date.now) {
 
   // Moderation stops harm (slurs, hate, sexual terms, threats), not taste: jokes, plugs,
   // edge and mild swearing all go up.
-  function queue(request, t, note) {
+  function queue(request, t, note, free = false) {
     if (pending.length >= settings.maxPending) return [{ do: 'callout', text: 'The sky queue is full. Try again soon!' }];
+    if (!free && settings.skyMinDiamonds > 0 && !spend(request.userId, t)) {
+      unpaid.set(request.userId, { request, note });
+      return [{ do: 'callout', text: `${request.by}: send a Hand Hearts 🫶 to put that in the sky` }];
+    }
+    unpaid.delete(request.userId);
     lastAsk.set(request.userId, t);
     if (settings.dedications === 'auto') return [play(request)];
     pending.push(request);
     return [{ do: 'callout', text: note }];
   }
 
+  // Uses up one request's worth of recent gifts, if there is enough.
+  function spend(userId, t) {
+    const held = credit.get(userId);
+    if (!held || t - held.at > settings.skyWindowMinutes * 60000 || held.diamonds < settings.skyMinDiamonds) return false;
+    held.diamonds -= settings.skyMinDiamonds;
+    return true;
+  }
+
+  // Paid requests have no cooldown: each one costs a gift.
   function cooling(userId, t) {
+    if (settings.skyMinDiamonds > 0) return false;
     return t - (lastAsk.get(userId) || -Infinity) < settings.dedicationCooldownSeconds * 1000;
   }
 
@@ -94,14 +111,14 @@ export function createRules(settings, now = Date.now) {
     const words = raw.replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, MESSAGE_LIMIT);
     if (!words) return [{ do: 'callout', text: `${by}: try !sky YOUR MESSAGE` }];
     if (isBlocked(words) || cooling(event.userId, t)) return [];
-    return queue({ id: nextId++, kind: 'message', text: words, by, userId: event.userId, at: t, said }, t, `${by}'s message is in the sky queue`);
+    return queue({ id: nextId++, kind: 'message', text: words, by, userId: event.userId, at: t, said }, t, `${by}'s message is in the sky queue`, event.admin);
   }
 
   function ask(event, by, occasion, rawName, t, said) {
     const to = rawName.replace(/[^\p{L}\p{N} '.-]/gu, '').trim().slice(0, NAME_LIMIT).toUpperCase();
     if (!to) return [{ do: 'callout', text: `${by}: try !${occasion} NAME` }];
     if (isBlocked(to) || cooling(event.userId, t)) return [];
-    return queue({ id: nextId++, kind: 'dedication', occasion, to, by, userId: event.userId, at: t, said }, t, `${by}'s dedication for ${to} is in the queue`);
+    return queue({ id: nextId++, kind: 'dedication', occasion, to, by, userId: event.userId, at: t, said }, t, `${by}'s dedication for ${to} is in the queue`, event.admin);
   }
 
   function play({ id, kind, occasion, to, text, by }) {
@@ -115,10 +132,20 @@ export function createRules(settings, now = Date.now) {
     fan.name = by;
     fan.diamonds += each * count;
     fans.set(event.userId, fan);
+    const t = now();
+    const held = credit.get(event.userId);
+    const fresh = held && t - held.at <= settings.skyWindowMinutes * 60000 ? held.diamonds : 0;
+    credit.set(event.userId, { diamonds: fresh + each * count, at: t });
     const named = settings.gifts.byName[String(event.gift || '').toLowerCase()];
     let effect = named;
     if (!effect) for (const [min, tier] of settings.gifts.tiers) if (each >= min) effect = tier;
-    return [{ do: 'gift', effect: effect || 'sparkle', count, by, gift: String(event.gift || 'gift').slice(0, 30) }, leaders()];
+    const out = [{ do: 'gift', effect: effect || 'sparkle', count, by, gift: String(event.gift || 'gift').slice(0, 30) }, leaders()];
+    // A request they made before gifting goes in now, if this covers it.
+    const waiting = unpaid.get(event.userId);
+    if (waiting && t - waiting.request.at <= settings.skyWindowMinutes * 60000 && settings.skyMinDiamonds <= credit.get(event.userId).diamonds) {
+      out.push(...queue(waiting.request, t, waiting.note));
+    }
+    return out;
   }
 
   function like(event) {

@@ -3,26 +3,26 @@
 //   - serves the site, so the stream page is http://localhost:8787/?live=1
 //   - listens to TikTok LIVE (or the simulator) and runs the events through rules.mjs
 //   - sends the resulting show actions to every open stream page (Server-Sent Events)
-//   - serves the admin page at /live/admin: approve dedications, fire test events
+//   - serves the control panel at /live/admin: connect, pause, moderate, settings, quit
 //
-//   TIKTOK_USERNAME=yourname node live/server.mjs     real chat, gifts and likes
+//   node live/server.mjs                              control panel decides (saved username)
+//   TIKTOK_USERNAME=yourname node live/server.mjs     connect to that LIVE at once
 //   node live/server.mjs --sim                        a pretend audience
 //
-// Listens on 127.0.0.1 only unless HOST is set: the admin routes have no login.
+// What the control panel changes is saved in live/config.json (not in git).
+// Listens on 127.0.0.1 only unless HOST is set: the control panel has no login.
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { extname, resolve } from 'node:path';
+import { readFile, writeFile } from 'node:fs/promises';
+import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRules } from './rules.mjs';
 import { settings } from './settings.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const ADMIN = fileURLToPath(new URL('./admin.html', import.meta.url));
+const SAVED = fileURLToPath(new URL('./config.json', import.meta.url));
 const PORT = Number(process.env.PORT) || 8787;
 const HOST = process.env.HOST || '127.0.0.1';
-const username = (process.env.TIKTOK_USERNAME || '').replace(/^@/, '').trim();
-const simulate = process.argv.includes('--sim') || !username;
-if (process.env.DEDICATIONS === 'auto' || process.env.DEDICATIONS === 'manual') settings.dedications = process.env.DEDICATIONS;
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -30,10 +30,32 @@ const TYPES = {
   '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain',
 };
 
+// The control panel's choices. Settings it can change are copied onto `settings`.
+const TUNABLE = ['dedications', 'skyMinDiamonds', 'cooldownSeconds', 'likeGoal'];
+const config = { username: '', autoConnect: true, banned: [], preset: '', plug: '', ...pick(settings, TUNABLE) };
+try {
+  Object.assign(config, JSON.parse(await readFile(SAVED, 'utf8')));
+} catch {
+  // first run: nothing saved yet
+}
+Object.assign(settings, pick(config, TUNABLE));
+if (process.env.DEDICATIONS === 'auto' || process.env.DEDICATIONS === 'manual') settings.dedications = process.env.DEDICATIONS;
+
 const rules = createRules(settings);
 const pages = new Set(); // open stream pages (SSE responses)
 const log = [];
-const status = { source: '', state: 'starting', room: '', viewers: 0, message: '' };
+const viewers = []; // recent viewer events, for moderating from the control panel
+let status = { source: 'none', state: 'stopped', room: '', viewers: 0, message: '' };
+let source = null;
+let paused = false;
+
+function pick(from, keys) {
+  return Object.fromEntries(keys.filter((key) => key in from).map((key) => [key, from[key]]));
+}
+
+async function save() {
+  await writeFile(SAVED, JSON.stringify(config, null, 2)).catch((error) => note(`couldn't save settings: ${error.message}`));
+}
 
 function note(line) {
   const stamped = `${new Date().toLocaleTimeString()}  ${line}`;
@@ -56,8 +78,14 @@ function describe(action) {
 }
 
 function onEvent(event) {
-  if (event.kind === 'chat' && process.env.LIVE_DEBUG) note(`chat ${event.name}: ${event.text}`);
+  if (event.kind !== 'like' && event.userId) {
+    const what = event.kind === 'chat' ? event.text : event.kind === 'gift' ? `🎁 ${event.gift} ×${event.count}` : event.kind;
+    viewers.push({ userId: event.userId, name: event.name, what: String(what).slice(0, 120), at: Date.now() });
+    if (viewers.length > 40) viewers.shift();
+  }
   if (event.kind === 'gift') note(`gift ${event.name}: ${event.gift} ×${event.count} (${event.diamonds}💎 each)`);
+  // Gifts always count (people paid); chat and the rest wait while paused or banned.
+  if (event.kind !== 'gift' && (paused || config.banned.includes(event.userId))) return;
   try {
     broadcast(rules.handle(event));
   } catch (error) {
@@ -69,12 +97,24 @@ function onStatus(change) {
   Object.assign(status, change);
 }
 
-const source = simulate
-  ? (await import('./sources/sim.mjs')).createSource({ rate: Number(process.env.SIM_RATE) || 1 }, onEvent, onStatus)
-  : (await import('./sources/tiktok.mjs')).createSource(
-    { username, signApiKey: process.env.EULER_API_KEY || undefined, debug: Boolean(process.env.LIVE_DEBUG), log: note },
-    onEvent, onStatus);
-status.source = source.name;
+async function stopSource() {
+  if (source) await source.stop();
+  source = null;
+  status = { source: 'none', state: 'stopped', room: '', viewers: 0, message: '' };
+}
+
+async function startSource(kind, username = '') {
+  await stopSource();
+  if (kind === 'sim') {
+    source = (await import('./sources/sim.mjs')).createSource({ rate: Number(process.env.SIM_RATE) || 1 }, onEvent, onStatus);
+  } else {
+    source = (await import('./sources/tiktok.mjs')).createSource(
+      { username, signApiKey: process.env.EULER_API_KEY || undefined, debug: Boolean(process.env.LIVE_DEBUG), log: note },
+      onEvent, onStatus);
+  }
+  status.source = source.name;
+  note(`source: ${source.name}`);
+}
 
 async function body(request) {
   let text = '';
@@ -89,6 +129,52 @@ function json(response, code, data) {
   response.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(data));
 }
 
+const handlers = {
+  approve: (data) => broadcast(rules.approve(Number(data.id))),
+  reject: (data) => rules.reject(Number(data.id)),
+  // Test events from the control panel skip the gift needed for words in the sky.
+  event: (data) => onEvent({ userId: 'tester', name: 'tester', ...data, admin: data.kind === 'chat' }),
+  finale: () => broadcast([{ do: 'finale', reason: 'Grand finale!' }]),
+  connect: async (data) => {
+    config.username = String(data.username || '').replace(/^@/, '').trim().slice(0, 40);
+    if (!config.username) throw new Error('username needed');
+    await save();
+    await startSource('tiktok', config.username);
+  },
+  simulate: () => startSource('sim'),
+  disconnect: () => stopSource(),
+  pause: (data) => {
+    paused = Boolean(data.paused);
+    note(paused ? 'paused: chat no longer launches anything (gifts still do)' : 'resumed');
+  },
+  ban: async (data) => {
+    const id = String(data.userId || '');
+    if (id && !config.banned.includes(id)) config.banned.push(id);
+    note(`banned ${id}`);
+    await save();
+  },
+  unban: async (data) => {
+    config.banned = config.banned.filter((id) => id !== String(data.userId));
+    await save();
+  },
+  settings: async (data) => {
+    if (data.dedications === 'auto' || data.dedications === 'manual') config.dedications = data.dedications;
+    for (const key of ['skyMinDiamonds', 'cooldownSeconds', 'likeGoal']) {
+      const value = Number(data[key]);
+      if (key in data && Number.isFinite(value) && value >= 0) config[key] = Math.round(value);
+    }
+    if (typeof data.preset === 'string') config.preset = data.preset.slice(0, 30);
+    if (typeof data.plug === 'string') config.plug = data.plug.slice(0, 40);
+    if (typeof data.autoConnect === 'boolean') config.autoConnect = data.autoConnect;
+    Object.assign(settings, pick(config, TUNABLE));
+    await save();
+  },
+  quit: () => {
+    note('shutting down');
+    setTimeout(shutdown, 200);
+  },
+};
+
 const server = createServer(async (request, response) => {
   const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
   try {
@@ -100,29 +186,32 @@ const server = createServer(async (request, response) => {
       request.on('close', () => pages.delete(response));
       return;
     }
+    if (path === '/' && !request.url.includes('?')) return void response.writeHead(302, { location: '/live/admin' }).end();
     if (path === '/live/admin') {
       return void response.writeHead(200, { 'content-type': TYPES['.html'], 'cache-control': 'no-store' }).end(await readFile(ADMIN));
     }
     if (path === '/live/api/state') {
-      return json(response, 200, { status, pages: pages.size, dedications: settings.dedications, ...rules.state(), log: log.slice(-40) });
+      return json(response, 200, {
+        status, paused, pages: pages.size, config, ...rules.state(), viewers: viewers.slice(-20).reverse(), log: log.slice(-40),
+      });
     }
     if (request.method === 'POST' && path.startsWith('/live/api/')) {
-      const data = await body(request);
-      const id = Number(data.id);
-      if (path === '/live/api/approve') broadcast(rules.approve(id));
-      else if (path === '/live/api/reject') rules.reject(id);
-      else if (path === '/live/api/event') onEvent({ userId: 'admin', name: 'admin', ...data });
-      else if (path === '/live/api/finale') broadcast([{ do: 'finale', reason: 'Grand finale!' }]);
-      else if (path === '/live/api/mode') settings.dedications = data.mode === 'auto' ? 'auto' : 'manual';
-      else return json(response, 404, { error: 'no such action' });
+      const handler = handlers[path.slice('/live/api/'.length)];
+      if (!handler) return json(response, 404, { error: 'no such action' });
+      try {
+        await handler(await body(request));
+      } catch (error) {
+        return json(response, 400, { error: error.message });
+      }
       return json(response, 200, { ok: true });
     }
     // The one server route the page calls on load (worker/index.js answers it on the site).
     if (path === '/api/config') return json(response, 200, { priceCents: 499 });
 
     const file = resolve(ROOT, `.${path.endsWith('/') ? `${path}index.html` : path}`);
-    // The site only: nothing outside the repo, no dot-files (.git, .env) and no node_modules.
-    if (!file.startsWith(ROOT) || /(^|\/)(\.|node_modules)/.test(file.slice(ROOT.length))) {
+    // The site only: nothing outside the folder, no dot-files (.git, .env), node_modules or config.
+    const inside = file.slice(ROOT.length).split(sep);
+    if (!file.startsWith(ROOT) || inside.some((part) => part.startsWith('.') || part === 'node_modules' || part === 'node') || file === SAVED) {
       return void response.writeHead(403).end();
     }
     const content = await readFile(file);
@@ -137,15 +226,25 @@ setInterval(() => {
   for (const page of pages) page.write(': ping\n\n');
 }, 15000).unref();
 
-server.listen(PORT, HOST, () => {
-  note(`source: ${source.name}${simulate && !username ? ' (set TIKTOK_USERNAME to use your LIVE)' : ''}`);
-  note(`stream page: http://localhost:${PORT}/?live=1`);
-  note(`admin page:  http://localhost:${PORT}/live/admin`);
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') console.log(`Port ${PORT} is busy: SkyGreeting LIVE is probably already running. Open http://localhost:${PORT}/live/admin`);
+  else console.log(error.message);
+  process.exit(1);
 });
 
-for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.on(signal, async () => {
-    await source.stop();
-    process.exit(0);
-  });
+server.listen(PORT, HOST, async () => {
+  note(`control panel: http://localhost:${PORT}/live/admin`);
+  note(`stream page:   http://localhost:${PORT}/?live=1`);
+  const username = (process.env.TIKTOK_USERNAME || '').replace(/^@/, '').trim();
+  if (process.argv.includes('--sim')) await startSource('sim');
+  else if (username) await startSource('tiktok', username);
+  else if (config.username && config.autoConnect) await startSource('tiktok', config.username);
+  else note('not connected: enter your TikTok username on the control panel');
+});
+
+async function shutdown() {
+  await stopSource();
+  for (const page of pages) page.end();
+  process.exit(0);
 }
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, shutdown);

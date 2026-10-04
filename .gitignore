@@ -2,3 +2,5 @@ node_modules/
 .check/
 .deploy/
 .wrangler/
+live/config.json
+dist/

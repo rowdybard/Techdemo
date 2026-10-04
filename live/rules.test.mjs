@@ -59,7 +59,7 @@ test('likes play the finale each time a goal is crossed', () => {
 });
 
 test('dedications queue for approval, gifters first, and play when approved', () => {
-  const { rules, tick } = setup({ dedications: 'manual' });
+  const { rules, tick } = setup({ dedications: 'manual', skyMinDiamonds: 0 });
   const [note] = rules.handle(chat('!birthday maya rose', 'u1', 'Sam'));
   assert.equal(note.do, 'callout');
   tick(1000);
@@ -74,7 +74,7 @@ test('dedications queue for approval, gifters first, and play when approved', ()
 });
 
 test('auto dedications play at once; blocked words and repeat asks are dropped', () => {
-  const { rules } = setup({ dedications: 'auto' });
+  const { rules } = setup({ dedications: 'auto', skyMinDiamonds: 0 });
   assert.equal(rules.handle(chat('!bday Jo'))[0].do, 'dedication');
   assert.deepEqual(rules.handle(chat('!bday Jo')), [], 'cooldown');
   assert.deepEqual(rules.handle(chat('!love nazi', 'u9')), []);
@@ -88,7 +88,7 @@ test('blocked display names fall back to the user id, then "someone"', () => {
 });
 
 test('!sky messages keep jokes, plugs and mild swearing, drop harm, and share the queue', () => {
-  const { rules, tick } = setup({ dedications: 'manual' });
+  const { rules, tick } = setup({ dedications: 'manual', skyMinDiamonds: 0 });
   rules.handle(chat('!sky follow @maya.makes', 'u1', 'Maya'));
   rules.handle(chat('!say damn this is cool', 'u2', 'Bo'));
   assert.deepEqual(rules.handle(chat('!sky kill yourself', 'u3', 'Troll')), []);
@@ -99,4 +99,24 @@ test('!sky messages keep jokes, plugs and mild swearing, drop harm, and share th
   assert.deepEqual(rules.approve(queue[0].id), [{ do: 'message', id: queue[0].id, text: 'follow @maya.makes', by: 'Maya' }]);
   tick(1000);
   assert.deepEqual(rules.handle(chat('!sky again', 'u1', 'Maya')), [], 'one ask per cooldown');
+});
+
+test('words in the sky cost a 99💎 gift, before or after asking, once per gift', () => {
+  const { rules, tick } = setup({ dedications: 'manual', skyMinDiamonds: 99, skyWindowMinutes: 10 });
+  const [ask] = rules.handle(chat('!birthday Maya', 'u1', 'Sam'));
+  assert.match(ask.text, /Hand Hearts/);
+  assert.equal(rules.state().pending.length, 0);
+  tick(60000);
+  const out = rules.handle({ kind: 'gift', userId: 'u1', name: 'Sam', gift: 'Hand Hearts', diamonds: 99, count: 1 });
+  assert.equal(out[2].do, 'callout', 'the waiting request goes in');
+  assert.deepEqual(rules.state().pending.map((r) => r.to), ['MAYA']);
+  assert.match(rules.handle(chat('!sky hi', 'u1', 'Sam'))[0].text, /Hand Hearts/, 'that gift is spent');
+  rules.handle({ kind: 'gift', userId: 'u2', name: 'Kim', gift: 'Rose', diamonds: 1, count: 200 });
+  rules.handle(chat('!sky follow @kim', 'u2', 'Kim'));
+  assert.equal(rules.state().pending.length, 2, 'gifts add up');
+  rules.handle({ kind: 'gift', userId: 'u3', name: 'Old', gift: 'Hand Hearts', diamonds: 99, count: 1 });
+  tick(11 * 60000);
+  assert.match(rules.handle(chat('!sky late', 'u3', 'Old'))[0].text, /Hand Hearts/, 'expired');
+  assert.equal(rules.handle({ kind: 'chat', userId: 'admin', name: 'tester', text: '!sky test', admin: true })[0].do, 'callout');
+  assert.equal(rules.state().pending.length, 3, 'control-page tests are free');
 });

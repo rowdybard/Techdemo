@@ -9,7 +9,12 @@ export const settings = {
   // 'manual': dedications wait for Approve on the admin page. 'auto': they play as soon as
   // they pass the word filter (for unattended 24/7 runs). DEDICATIONS=auto overrides.
   dedications: 'manual',
-  dedicationCooldownSeconds: 300, // per viewer
+  // Words in the sky (dedications and !sky messages) cost a gift of at least this many
+  // diamonds (Hand Hearts is 99) within the window; each one uses up that much. 0 makes
+  // them free, with the cooldown below instead.
+  skyMinDiamonds: 99,
+  skyWindowMinutes: 10,
+  dedicationCooldownSeconds: 300, // per viewer, when free
   maxPending: 30,
 
   gifts: {

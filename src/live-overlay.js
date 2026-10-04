@@ -1,20 +1,13 @@
 // The TikTok LIVE overlay: plain DOM over the scene, sized for a 9:16 frame and kept in
 // the top half, clear of TikTok's own chat and gift buttons at the bottom and right.
-// A title with a rotating how-to line, a feed of who launched what, the top gifters, a
-// like goal bar, the dedication queue, and a banner for countdowns and big moments.
+// A title (and the streamer's plug), the chat commands always on screen, a feed of who
+// launched what, the top gifters, a like goal bar, the queue, and a banner for
+// countdowns and big moments.
 // Every text goes in with textContent: viewers' names are untrusted.
 
-const FEED = 4; // lines in the feed
+const FEED = 3; // lines in the feed
 const FEED_SECONDS = 9;
-const TIPS = [
-  'Type !heart  !purple  !star  !chaos',
-  'Mix them: !pink heart  ·  !ring blue',
-  '!birthday NAME puts their name in the sky',
-  'Gifts launch bigger shows 🌹 🎁 🌌',
-  'Halloween: !pumpkin  !ghost  !bat  !skull',
-];
-
-export function createOverlay(container, signal) {
+export function createOverlay(container, signal, plug = '') {
   const style = document.createElement('link');
   style.rel = 'stylesheet';
   style.href = new URL('./live.css', import.meta.url).href;
@@ -22,18 +15,30 @@ export function createOverlay(container, signal) {
 
   const root = el('div', 'live-overlay');
   root.innerHTML = `
-    <header class="live-title"><b>🎆 SkyGreeting LIVE</b><span class="live-tip"></span></header>
+    <div class="live-top">
+    <header class="live-title"><b>🎆 SkyGreeting LIVE</b><span class="live-plug"></span></header>
+    <dl class="live-commands">
+      <dt>FREE</dt><dd><code>!heart</code> <code>!star</code> <code>!boom</code> <code>!chaos</code> <code>!ghost</code></dd>
+      <dt>+ colour</dt><dd><code>!pink heart</code> · <code>!blue ring</code></dd>
+      <dt>🫶 99💎+</dt><dd><code>!birthday NAME</code> · <code>!sky WORDS</code></dd>
+      <dt>GIFTS</dt><dd>🌹 bloom · 🫶 your name · 🌌 finale</dd>
+    </dl>
+    <div class="live-row">
     <ol class="live-feed"></ol>
     <aside class="live-side">
       <section class="live-leaders" hidden><h2>Top fans</h2><ol></ol></section>
       <section class="live-likes"><div class="live-likes-text"></div><div class="live-bar"><i></i></div></section>
       <section class="live-queue" hidden></section>
     </aside>
+    </div>
+    </div>
     <div class="live-banner" hidden><b></b><span></span></div>
     <div class="live-offline" hidden>Waiting for the live bridge…</div>`;
   container.append(root);
   const $ = (selector) => root.querySelector(selector);
-  const tip = $('.live-tip');
+  const plugLine = $('.live-plug');
+  plugLine.textContent = plug;
+  plugLine.hidden = !plug;
   const feedList = $('.live-feed');
   const leadersBox = $('.live-leaders');
   const likesText = $('.live-likes-text');
@@ -46,16 +51,9 @@ export function createOverlay(container, signal) {
   const resize = new ResizeObserver(() => root.style.setProperty('--u', `${root.clientWidth / 100}px`));
   resize.observe(root);
 
-  let tipIndex = 0;
-  tip.textContent = TIPS[0];
-  const tips = setInterval(() => {
-    tipIndex = (tipIndex + 1) % TIPS.length;
-    tip.textContent = TIPS[tipIndex];
-  }, 7000);
   let bannerTimer = 0;
   let countTimer = 0;
   signal.addEventListener('abort', () => {
-    clearInterval(tips);
     clearTimeout(bannerTimer);
     clearInterval(countTimer);
   });
