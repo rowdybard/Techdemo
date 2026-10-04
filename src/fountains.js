@@ -79,6 +79,12 @@ export function create(ctx) {
   function runShow(start, forced = null) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return;
+    pool.groundShow(true);
+    playMain(pool, start, forced);
+    pool.groundShow(false);
+  }
+
+  function playMain(pool, start, forced) {
     const nozzles = Math.min(MAX_NOZZLES, Math.round(settings.nozzles * (phone ? 0.6 : 1)));
     const [bx, by, bz] = config.show.bargePosition;
     const span = BARGE_LENGTH * 0.85;
@@ -108,6 +114,13 @@ export function create(ctx) {
   function runSides(start) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return start + 2;
+    pool.groundShow(true);
+    const end = playSides(pool, start);
+    pool.groundShow(false);
+    return end;
+  }
+
+  function playSides(pool, start) {
     const style = current || firstStyle();
     const [, by, bz] = config.show.bargePosition;
     let end = start + 2;

@@ -25,6 +25,7 @@ export function create(ctx) {
     uTrailScale: { value: 1 },
     uMinPixels: { value: 1.1 },
     uBrightness: { value: 1 },
+    uGroundBrightness: { value: GROUND_BRIGHTNESS },
     uGlitter: { value: 1 },
   };
   const pool = createPool(phone ? config.fireworks.poolSize.phone : config.fireworks.poolSize.desktop, uniforms);
@@ -199,6 +200,9 @@ export function create(ctx) {
 // one end, and a few dim work lights. Shells launch from along its length. The two side
 // barges are short ones without a cabin, for ground shows.
 export const BARGE_LENGTH = 130;
+// Ground shows' brightness never goes past Customize's Sparkle at 65% (0.8 + 0.65 × 2.2):
+// above that their overlapping sparks bloom into glowing blobs. Not a setting.
+const GROUND_BRIGHTNESS = 2.23;
 export const SIDE_BARGE_LENGTH = 34;
 export const SIDE_BARGE_OFFSET = 108; // metres from the main barge's middle to each side barge's
 

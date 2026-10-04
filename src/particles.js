@@ -48,6 +48,7 @@ export function createPool(size, uniforms) {
   mesh.renderOrder = 2;
 
   let cursor = 0;
+  let ground = 0; // 1 while a ground show writes its sparks (their Sparkle is capped)
   let runStart = 0;
   let runCount = 0;
   const runFirst = new Float64Array(RUNS);
@@ -60,6 +61,11 @@ export function createPool(size, uniforms) {
   return {
     mesh,
     size,
+
+    /** Marks the sparks written from now on as a ground show's (true) or not. */
+    groundShow(on) {
+      ground = on ? 1 : 0;
+    },
 
     /** Claims `count` particles and returns the index of the first. */
     begin(count) {
@@ -85,6 +91,7 @@ export function createPool(size, uniforms) {
       color[o] = r;
       color[o + 1] = g;
       color[o + 2] = b;
+      color[o + 3] = ground;
       color2[o] = r2;
       color2[o + 1] = g2;
       color2[o + 2] = b2;

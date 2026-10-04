@@ -20,7 +20,7 @@ export const fireworksVertex = /* glsl */ `
 
   attribute vec4 aStart;      // p0.xyz, spawn time
   attribute vec4 aMotion;     // v0.xyz, drag k
-  attribute vec4 aColor;      // rgb, unused
+  attribute vec4 aColor;      // rgb, 1 for a ground-show spark
   attribute vec4 aColor2;     // rgb after the color change, time of the change
   attribute vec4 aShape;      // lifetime, radius (m), trail (s), kind
 
@@ -32,6 +32,7 @@ export const fireworksVertex = /* glsl */ `
   varying float vSeconds;     // age in seconds
   varying float vKind;
   varying float vSeed;
+  varying float vGround;
 
   vec3 positionAt(float t) {
     float k = aMotion.w;
@@ -81,6 +82,7 @@ export const fireworksVertex = /* glsl */ `
     vSeconds = age;
     vKind = aShape.w;
     vSeed = fract(aStart.x * 0.1731 + aStart.z * 0.0937 + aStart.w * 7.13 + aMotion.x * 0.37);
+    vGround = aColor.w;
 
     float change = smoothstep(aColor2.w, aColor2.w + 0.25, age);
     vColor = mix(aColor.rgb, aColor2.rgb, change);
@@ -90,6 +92,7 @@ export const fireworksVertex = /* glsl */ `
 export const fireworksFragment = /* glsl */ `
   uniform float uTime;
   uniform float uBrightness;
+  uniform float uGroundBrightness; // ground shows never go brighter than this (Sparkle at 65%)
   uniform float uGlitter;
 
   varying vec3 vColor;
@@ -100,6 +103,7 @@ export const fireworksFragment = /* glsl */ `
   varying float vSeconds;
   varying float vKind;
   varying float vSeed;
+  varying float vGround;
 
   float hash(float n) {
     return fract(sin(n) * 43758.5453);
@@ -136,7 +140,10 @@ export const fireworksFragment = /* glsl */ `
       color = mix(vec3(1.0, 0.95, 0.85), color, 0.3);
     }
 
-    gl_FragColor = vec4(color * intensity * brightness * uBrightness, 1.0);
+    // Hundreds of fountain sparks overlap in one place, so they're capped below where they
+    // would merge into a glowing blob, however high Sparkle goes.
+    float sparkle = vGround > 0.5 ? min(uBrightness, uGroundBrightness) : uBrightness;
+    gl_FragColor = vec4(color * intensity * brightness * sparkle, 1.0);
 
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
