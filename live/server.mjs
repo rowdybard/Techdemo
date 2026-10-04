@@ -77,6 +77,8 @@ function describe(action) {
   return `${kind} ${Object.entries(rest).map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' ')}`;
 }
 
+let roomLikes = 0; // the room's like counter last logged, so the log only notes changes
+
 function onEvent(event) {
   if (event.kind !== 'like' && event.userId) {
     const what = event.kind === 'chat' ? event.text : event.kind === 'gift' ? `🎁 ${event.gift} ×${event.count}` : event.kind;
@@ -84,7 +86,8 @@ function onEvent(event) {
     if (viewers.length > 40) viewers.shift();
   }
   if (event.kind === 'gift') note(`gift ${event.name}: ${event.gift} ×${event.count} (${event.diamonds}💎 each)`);
-  if (event.kind === 'like') note(`❤️ ${event.name || 'someone'} +${event.count} like${event.count === 1 ? '' : 's'}${event.total ? ` (room total ${event.total})` : ''}`);
+  if (event.kind === 'like' && !event.room) note(`❤️ ${event.name || 'someone'} +${event.count} like${event.count === 1 ? '' : 's'}${event.total ? ` (room total ${event.total})` : ''}`);
+  if (event.kind === 'like' && event.room && event.total > roomLikes) note(`❤️ TikTok's like counter: ${(roomLikes = event.total)}`);
   // Gifts and likes always count; chat and the rest wait while paused, and banned viewers only count gifts.
   if (event.kind !== 'gift' && event.kind !== 'like' && paused) return;
   if (event.kind !== 'gift' && config.banned.includes(event.userId)) return;

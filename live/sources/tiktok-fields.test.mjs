@@ -29,3 +29,9 @@ test('the older field names still read', () => {
   assert.equal(read.gift({ user, giftDetails: { giftType: 1, giftName: 'Rose', diamondCount: 1 }, repeatCount: 2, repeatEnd: true }).count, 2);
   assert.equal(read.viewers({ viewerCount: 7 }), 7);
 });
+
+test('the room info like counter', () => {
+  assert.equal(read.roomLikes({ data: { like_count: 25 } }), 25);
+  assert.equal(read.roomLikes({ stats: { like_count: '40' } }), 40);
+  assert.equal(read.roomLikes({ data: { title: 'x' } }), undefined);
+});

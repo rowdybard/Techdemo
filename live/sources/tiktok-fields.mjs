@@ -47,3 +47,10 @@ export function gift(data) {
 export function viewers(data) {
   return positive(data?.viewerCount, data?.total) || 0;
 }
+
+// The room's like total from room info (TikTok's own counter), a backstop for like events
+// TikTok doesn't send. The shape varies, so look in the usual places.
+export function roomLikes(info) {
+  const d = info?.data ?? info;
+  return positive(d?.like_count, d?.stats?.like_count, d?.room?.like_count, d?.stats?.likeCount, d?.likeCount);
+}
