@@ -84,8 +84,10 @@ function onEvent(event) {
     if (viewers.length > 40) viewers.shift();
   }
   if (event.kind === 'gift') note(`gift ${event.name}: ${event.gift} ×${event.count} (${event.diamonds}💎 each)`);
-  // Gifts always count (people paid); chat and the rest wait while paused or banned.
-  if (event.kind !== 'gift' && (paused || config.banned.includes(event.userId))) return;
+  if (event.kind === 'like') note(`❤️ ${event.name || 'someone'} +${event.count} like${event.count === 1 ? '' : 's'}${event.total ? ` (room total ${event.total})` : ''}`);
+  // Gifts and likes always count; chat and the rest wait while paused, and banned viewers only count gifts.
+  if (event.kind !== 'gift' && event.kind !== 'like' && paused) return;
+  if (event.kind !== 'gift' && config.banned.includes(event.userId)) return;
   try {
     broadcast(rules.handle(event));
   } catch (error) {

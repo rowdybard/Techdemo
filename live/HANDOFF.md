@@ -12,6 +12,7 @@ Daniel wants the SkyGreeting fireworks engine streaming on TikTok LIVE, ideally 
 |---|---|
 | `live/server.mjs` | the bridge: serves the site, the SSE feed (`/live/events`), the control panel and its API (`/live/api/*`), and manages the event source |
 | `live/sources/tiktok.mjs` | TikTok-Live-Connector 2.5.0 adapter: waits until live, reconnects with backoff, normalizes chat, gift, like, follow and share events, and counts gift streaks once at the end |
+| `live/sources/tiktok-fields.mjs` | reads the connector's event data. Connector 2.5 emits raw v3 protobuf fields (`content`, `count`/`total`, `gift.name`, `user.displayId`), not the names in its README; this reads both, tested in `tiktok-fields.test.mjs` |
 | `live/sources/sim.mjs` | the pretend audience |
 | `live/rules.mjs` | all game logic, pure and tested: commands, cooldowns, gift tiers, likes goals, leaderboard, the paid sky queue, moderation |
 | `live/settings.mjs` | the numbers, and gift name → effect |
@@ -52,6 +53,7 @@ Daniel wants the SkyGreeting fireworks engine streaming on TikTok LIVE, ideally 
 
 - **Done and tested in simulation:** everything above. The commits are on the branch. The zip is in the project files (`tiktok-live/SkyGreeting-LIVE.zip`) and is rebuilt by `tools/package-live.sh`.
 - **Not verified:** a real TikTok connection (the sandbox can't reach TikTok: "Failed to retrieve Room ID", which the server retries), the `.bat` on real Windows, LIVE Studio or OBS capture, and real-GPU look and frame rate.
+- **Fixed October 4:** the first real connection failed with Euler Stream's "This endpoint requires a Business plan". The adapter had `enableExtendedGiftInfo: true`, whose signed gift-list request is paid-only; it's off now, so connecting uses only the free tier. Separately, Daniel's 25 likes didn't count, and the cause was wider: the adapter read the connector's README field names, which 2.5 no longer sends, so likes, chat text, gift names and streaks, and viewer handles were all misread on a real stream. Likes now also show in the panel's log, and keep counting while chat is paused.
 - **Cloudflare:** the `Workers Builds: techdemo` check fails on this branch's preview builds. The log isn't visible from GitHub, and the same build passes locally with `wrangler deploy --dry-run`. It doesn't affect the site. Daniel can turn off non-production branch builds in Cloudflare.
 
 ## Ideas not built yet

@@ -24,7 +24,7 @@ npm test           # the rules' tests
 - **Put the show on stream:** pick a look (preset) and a line under the title (for example "Follow @you"), then **Open the stream window**. In TikTok LIVE Studio, add a *Window capture* of that window. In OBS, add a *Browser* source with the link shown, at 1080×1920. Click the stream window once to start its sound (OBS plays it without a click).
 - **Sky queue:** Play or Skip each dedication and `!sky` message. Each one shows what the viewer actually typed and how much they've gifted. Gifters are listed first.
 - **Recent viewers:** Ban anyone. A banned viewer's chat does nothing; their gifts still count.
-- **Pause chat:** chat commands stop until you resume. Gifts still work.
+- **Pause chat:** chat commands stop until you resume. Gifts and likes still count.
 - **Settings:** whether words in the sky wait for you or play by themselves, the gift they need, the cooldown between a viewer's launches, and likes per finale.
 - **Test the show:** send chat as a tester (it skips the gift needed for words) and fire any gift, likes or the finale.
 - **Stop SkyGreeting LIVE** shuts the server down.
@@ -66,9 +66,9 @@ All the numbers live in `live/settings.mjs`. Gift names are matched in lower cas
 |---|---|
 | `TIKTOK_USERNAME` | connect to this account at start, instead of the saved one |
 | `DEDICATIONS=auto` | words in the sky play by themselves |
-| `EULER_API_KEY` | key from eulerstream.com; the connector signs its connection through Euler Stream's free tier, and a key raises its rate limits |
+| `EULER_API_KEY` | key from eulerstream.com; the connector signs its connection through Euler Stream's free tier, and a key raises its rate limits. The bridge only uses the free tier's calls; "requires a Business plan" means something asked for a paid one |
 | `PORT` | default 8787 |
-| `LIVE_DEBUG=1` | prints the first few raw gift events, to check TikTok's gift names and prices |
+| `LIVE_DEBUG=1` | prints the first few raw chat, gift and like events, to check TikTok's field names, gift names and prices |
 | `SIM_RATE` | how busy the pretend audience is (default 1) |
 
 Stream page link options: `preset=Halloween`, `plug=Follow @you`, `volume=0.5` (default 0.7), `sound=0`, `sides=1` (the site's side barges, off on stream), `smoke=0.12` (the site's smoke; the stream uses 0.05).
@@ -79,5 +79,6 @@ The server only listens on this computer (127.0.0.1), because the control panel 
 
 - **Tested** (headless Chromium with software rendering, Linux): the rules (10 tests), the server and control panel in simulator mode, the packaged folder starting and serving everything, the stream page showing names, dedications, `!sky` messages, hearts and the overlay with a clean console, and the site's own leak check (`npm run check`).
 - **Not tested here:** a real TikTok LIVE connection (the build machine can't reach TikTok), the `.bat` file on real Windows, capture in LIVE Studio or OBS, and frame rate on a real GPU. Software rendering also exaggerates the fountains' glow and haze.
+- **Event fields:** TikTok-Live-Connector 2.5 sends TikTok's raw messages, whose field names differ from its own README (chat `content`, like `count`/`total`, `gift.name`, `user.displayId`). `live/sources/tiktok-fields.mjs` reads both and has its own tests. Each like batch shows in the control panel's log with the room total.
 - **Gift fields:** TikTok has changed its gift fields before. If a gift sets off the wrong effect, run with `LIVE_DEBUG=1` and fix the name in `live/settings.mjs`. Gifts not named there fall back to their diamond value.
 - TikTok's rules on unattended or looping LIVE content apply to a 24/7 stream.

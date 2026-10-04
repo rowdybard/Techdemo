@@ -56,6 +56,7 @@ test('likes play the finale each time a goal is crossed', () => {
   assert.equal(crossed[0].do, 'finale');
   assert.deepEqual(crossed[1], { do: 'likes', total: 120, goal: 200, step: 100 });
   assert.equal(rules.handle({ kind: 'like', userId: 'a', count: 10 }).length, 1, 'no total: counts up');
+  assert.equal(rules.handle({ kind: 'like', userId: 'a', count: 5, total: 100 }).at(-1).total, 130, 'a stale total adds nothing');
 });
 
 test('dedications queue for approval, gifters first, and play when approved', () => {

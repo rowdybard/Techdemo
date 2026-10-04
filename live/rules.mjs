@@ -150,7 +150,9 @@ export function createRules(settings, now = Date.now) {
 
   function like(event) {
     const before = likes;
-    likes = Number.isFinite(event.total) && event.total > likes ? event.total : likes + Math.max(1, Number(event.count) || 1);
+    // TikTok sends likes in batches with the room's running total; trust the total when it
+    // comes, and add up the batches when it doesn't.
+    likes = Number.isFinite(event.total) ? Math.max(likes, event.total) : likes + Math.max(1, Number(event.count) || 1);
     const out = [];
     if (before < goal && likes >= goal) {
       out.push({ do: 'finale', reason: `${goal.toLocaleString('en-US')} likes!` });

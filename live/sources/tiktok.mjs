@@ -3,6 +3,7 @@
 // rules.mjs reads, and reconnects with backoff when the connection drops. Swapping in
 // another event source means writing another file with the same createSource shape.
 import { ControlEvent, TikTokLiveConnection, UserOfflineError, WebcastEvent } from 'tiktok-live-connector';
+import * as read from './tiktok-fields.mjs';
 
 const RETRY_MIN_MS = 5000;
 const RETRY_MAX_MS = 60000;
@@ -13,9 +14,11 @@ export function createSource({ username, signApiKey, debug, log }, emit, status)
   let stopped = false;
   let retry = RETRY_MIN_MS;
   let timer = null;
-  let debugGifts = 3; // with LIVE_DEBUG, the first few raw gift events are printed whole
+  const raw = { chat: 2, gift: 3, like: 3 }; // with LIVE_DEBUG, the first few raw events of each are printed
 
-  const user = (data) => ({ userId: data.user?.uniqueId || data.user?.userId || '', name: data.user?.nickname || data.user?.uniqueId || '' });
+  function debugRaw(kind, data) {
+    if (debug && raw[kind]-- > 0) log(`raw ${kind}: ${JSON.stringify(data, (k, v) => (k === 'common' || /image|icon/i.test(k) ? undefined : v)).slice(0, 1500)}`);
+  }
 
   function later(ms) {
     clearTimeout(timer);
@@ -23,7 +26,9 @@ export function createSource({ username, signApiKey, debug, log }, emit, status)
   }
 
   function build() {
-    connection = new TikTokLiveConnection(username, { signApiKey, processInitialData: false, enableExtendedGiftInfo: true });
+    // enableExtendedGiftInfo stays off: its gift list needs a paid Euler Stream plan and fails the
+    // whole connect on the free tier. Gift events carry their own name and price anyway.
+    connection = new TikTokLiveConnection(username, { signApiKey, processInitialData: false, enableExtendedGiftInfo: false });
     connection.on(ControlEvent.CONNECTED, (state) => {
       retry = RETRY_MIN_MS;
       status({ state: 'connected', room: state.roomId });
@@ -42,25 +47,22 @@ export function createSource({ username, signApiKey, debug, log }, emit, status)
       later(OFFLINE_POLL_MS);
     });
 
-    connection.on(WebcastEvent.CHAT, (data) => emit({ kind: 'chat', ...user(data), text: data.comment || '' }));
-    connection.on(WebcastEvent.GIFT, (data) => {
-      if (debug && debugGifts-- > 0) log(`raw gift: ${JSON.stringify(data).slice(0, 1500)}`);
-      const details = data.giftDetails || {};
-      const extended = data.extendedGiftInfo || {};
-      // A streakable gift (type 1) fires on every repeat; count it once, when the streak ends.
-      if (details.giftType === 1 && !data.repeatEnd) return;
-      emit({
-        kind: 'gift',
-        ...user(data),
-        gift: details.giftName || extended.name || data.giftName || `gift ${data.giftId}`,
-        diamonds: Number(details.diamondCount ?? extended.diamond_count ?? data.diamondCount ?? 0),
-        count: Number(data.repeatCount) || 1,
-      });
+    connection.on(WebcastEvent.CHAT, (data) => {
+      debugRaw('chat', data);
+      emit(read.chat(data));
     });
-    connection.on(WebcastEvent.LIKE, (data) => emit({ kind: 'like', ...user(data), count: Number(data.likeCount) || 1, total: Number(data.totalLikeCount) || undefined }));
-    connection.on(WebcastEvent.FOLLOW, (data) => emit({ kind: 'follow', ...user(data) }));
-    connection.on(WebcastEvent.SHARE, (data) => emit({ kind: 'share', ...user(data) }));
-    connection.on(WebcastEvent.ROOM_USER, (data) => status({ viewers: Number(data.viewerCount) || 0 }));
+    connection.on(WebcastEvent.GIFT, (data) => {
+      debugRaw('gift', data);
+      const event = read.gift(data);
+      if (event) emit(event);
+    });
+    connection.on(WebcastEvent.LIKE, (data) => {
+      debugRaw('like', data);
+      emit(read.like(data));
+    });
+    connection.on(WebcastEvent.FOLLOW, (data) => emit({ kind: 'follow', ...read.user(data) }));
+    connection.on(WebcastEvent.SHARE, (data) => emit({ kind: 'share', ...read.user(data) }));
+    connection.on(WebcastEvent.ROOM_USER, (data) => status({ viewers: read.viewers(data) }));
   }
 
   async function connect() {

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.mjs",
     "sim": "node server.mjs --sim",
-    "test": "node --test rules.test.mjs"
+    "test": "node --test rules.test.mjs sources/tiktok-fields.test.mjs"
   },
   "dependencies": {
     "tiktok-live-connector": "2.5.0"
