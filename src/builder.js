@@ -7,6 +7,7 @@
 // A Deluxe send goes to Stripe Checkout through the site's server (worker/index.js),
 // which keeps the greeting until payment and returns the buyer to a private ?g= link.
 // The price shown comes from the server. Words only ever reach the page as textContent.
+import { track, rememberPrice } from './track.js';
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, giftLink } from './link.js';
 import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion } from './occasions.js';
 import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
@@ -18,11 +19,13 @@ export function create(ctx) {
   const { config, container, signal } = ctx;
   const state = { occasion: DEFAULT_OCCASION, deluxe: false, typed: false, paying: false };
   let price = PRICE;
+  let priceCents = Math.round(Number(String(PRICE).replace(/[^0-9.]/g, '')) * 100) || 499;
   // The real price, from the server (a test price while trying out checkout).
   if (/^https?:$/.test(location.protocol)) {
     fetch('/api/config', { signal }).then((response) => (response.ok ? response.json() : null)).then((data) => {
       if (data && data.priceCents >= 50) {
         price = `$${(data.priceCents / 100).toFixed(2)}`;
+        priceCents = data.priceCents;
         refresh();
       }
     }, () => {});
@@ -132,6 +135,7 @@ export function create(ctx) {
   film.addEventListener('click', () => {
     if (!wordsOk() || !ctx.video || !ctx.director) return;
     show('closed');
+    track('save_video', { content_type: state.occasion, method: 'builder' });
     ctx.video.capture({
       watermark: true,
       name: `skygreeting-${state.occasion}`,
@@ -220,6 +224,7 @@ export function create(ctx) {
     }
     show('sheet');
     const url = giftLink({ occasion: state.occasion, ...words(), from: from.input.value, look: lookOf(config) });
+    track('share', { method: 'free_link', content_type: state.occasion });
     linkBox.value = url;
     linkBox.hidden = false;
     linkBox.select();
@@ -238,6 +243,8 @@ export function create(ctx) {
     state.paying = true;
     show('sheet');
     status.textContent = 'Opening secure checkout…';
+    track('begin_checkout', { currency: 'USD', value: priceCents / 100, items: [{ item_name: 'SkyGreeting Deluxe', item_category: state.occasion }] });
+    rememberPrice(priceCents);
     let error = 'Checkout isn’t available right now.';
     try {
       const response = await fetch('/api/checkout', {

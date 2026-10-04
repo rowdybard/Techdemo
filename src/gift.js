@@ -11,6 +11,7 @@
 // three reports from different people take a greeting down for everyone).
 //
 // The words only ever reach the page as textContent and the sky as canvas text.
+import { track, takePrice } from './track.js';
 import { OCCASIONS, applyOccasion } from './occasions.js';
 import { paidLink } from './link.js';
 import { applyLook, keepFree } from './look.js';
@@ -57,6 +58,7 @@ export function create(ctx) {
   film.addEventListener('click', () => {
     if (!occasion || !ctx.video || !ctx.director) return;
     pending = false;
+    track('save_video', { content_type: occasionName, method: deluxe ? 'paid_greeting' : 'greeting' });
     ctx.video.capture({
       watermark: !deluxe,
       name: `skygreeting-${occasionName}`,
@@ -161,6 +163,7 @@ export function create(ctx) {
   // The buyer, back from checkout: their private link, ready to send.
   function showShare() {
     const url = paidLink(gift.id);
+    track('purchase', { currency: 'USD', value: takePrice(499) / 100, items: [{ item_name: 'SkyGreeting Deluxe', item_category: occasionName }] });
     title.textContent = '✓ Paid. Your SkyGreeting is ready to send';
     note.textContent = 'Anyone with this link sees the full Deluxe show.';
     const box = el('input', 'send-link');

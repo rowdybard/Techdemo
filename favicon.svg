@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#161e38"/>
+      <stop offset="0.68" stop-color="#4b3f5d"/>
+      <stop offset="0.84" stop-color="#c9775a"/>
+      <stop offset="0.84" stop-color="#1a1830"/>
+      <stop offset="1" stop-color="#0b1020"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.41" r="0.42">
+      <stop offset="0" stop-color="#ffb45c" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffb45c" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="tile"><rect width="64" height="64" rx="14"/></clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="64" height="64" fill="url(#sky)"/>
+    <rect width="64" height="64" fill="url(#glow)"/>
+    <g stroke="#ffe2b5" stroke-width="1.7" stroke-linecap="round" fill="#fff4e2">
+      <line x1="32.0" y1="20.0" x2="32.0" y2="8.0"/><circle cx="32.0" cy="5.8" r="1.5"/><line x1="34.3" y1="20.5" x2="37.2" y2="13.5"/><circle cx="38.0" cy="11.5" r="1.1"/><line x1="36.2" y1="21.8" x2="44.7" y2="13.3"/><circle cx="46.3" cy="11.7" r="1.5"/><line x1="37.5" y1="23.7" x2="44.5" y2="20.8"/><circle cx="46.5" cy="20.0" r="1.1"/><line x1="38.0" y1="26.0" x2="50.0" y2="26.0"/><circle cx="52.2" cy="26.0" r="1.5"/><line x1="37.5" y1="28.3" x2="44.5" y2="31.2"/><circle cx="46.5" cy="32.0" r="1.1"/><line x1="36.2" y1="30.2" x2="44.7" y2="38.7"/><circle cx="46.3" cy="40.3" r="1.5"/><line x1="34.3" y1="31.5" x2="37.2" y2="38.5"/><circle cx="38.0" cy="40.5" r="1.1"/><line x1="32.0" y1="32.0" x2="32.0" y2="44.0"/><circle cx="32.0" cy="46.2" r="1.5"/><line x1="29.7" y1="31.5" x2="26.8" y2="38.5"/><circle cx="26.0" cy="40.5" r="1.1"/><line x1="27.8" y1="30.2" x2="19.3" y2="38.7"/><circle cx="17.7" cy="40.3" r="1.5"/><line x1="26.5" y1="28.3" x2="19.5" y2="31.2"/><circle cx="17.5" cy="32.0" r="1.1"/><line x1="26.0" y1="26.0" x2="14.0" y2="26.0"/><circle cx="11.8" cy="26.0" r="1.5"/><line x1="26.5" y1="23.7" x2="19.5" y2="20.8"/><circle cx="17.5" cy="20.0" r="1.1"/><line x1="27.8" y1="21.8" x2="19.3" y2="13.3"/><circle cx="17.7" cy="11.7" r="1.5"/><line x1="29.7" y1="20.5" x2="26.8" y2="13.5"/><circle cx="26.0" cy="11.5" r="1.1"/>
+    </g>
+    <circle cx="32" cy="26" r="2.4" fill="#fff4e2"/>
+  </g>
+</svg>

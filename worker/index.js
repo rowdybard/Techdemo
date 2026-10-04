@@ -90,6 +90,12 @@ async function checkout(request, env, url) {
     success_url: `${site}/?g=${id}&sent=1`,
     cancel_url: `${site}/?canceled=1`,
   });
+  // A copy of the greeting rides with the payment, so Stripe holds a backup of every paid
+  // greeting: if its record here were ever lost, /api/greeting rebuilds it from Stripe.
+  const backup = { greeting: id, occasion: words.occasion, message: words.message, to: words.to, from: words.from };
+  const packed = look ? JSON.stringify(look) : '';
+  for (let part = 0; part * 480 < packed.length && part < 4; part++) backup[`look${part}`] = packed.slice(part * 480, (part + 1) * 480);
+  for (const key in backup) form.set(`payment_intent_data[metadata][${key}]`, backup[key]);
   const session = await stripe(env, 'POST', '/v1/checkout/sessions', form);
   if (!session.url) {
     // Stripe's own reason (it masks keys), so a setup problem can be read off the page.
@@ -118,6 +124,7 @@ async function webhook(request, env) {
 async function greeting(env, id) {
   if (!id || !/^[A-Za-z0-9]{8}$/.test(id)) return json({ error: 'Not found' }, 404);
   let record = await load(env, id);
+  if (!record) record = await restore(env, id);
   if (!record) return json({ error: 'Not found' }, 404);
   // The buyer may land here before Stripe's webhook does: ask Stripe directly.
   if (record.status !== 'paid' && record.session && env.STRIPE_SECRET_KEY) {
@@ -128,6 +135,29 @@ async function greeting(env, id) {
   if (record.hidden) return json({ status: 'hidden' });
   const { occasion, message, to, from, deluxe, look } = record;
   return json({ status: 'paid', occasion, message, to, from, deluxe, look: look || null });
+}
+
+// Rebuilds a paid greeting whose record is missing from the copy kept with its payment.
+async function restore(env, id) {
+  if (!env.STRIPE_SECRET_KEY) return null;
+  const query = new URLSearchParams({ query: `metadata['greeting']:'${id}'`, limit: '1' });
+  const found = await stripe(env, 'GET', `/v1/payment_intents/search?${query}`);
+  const intent = found && Array.isArray(found.data) ? found.data[0] : null;
+  if (!intent || intent.status !== 'succeeded' || !intent.metadata || intent.metadata.greeting !== id) return null;
+  const m = intent.metadata;
+  let look = null;
+  try {
+    const packed = [0, 1, 2, 3].map((part) => m[`look${part}`] || '').join('');
+    if (packed) look = JSON.parse(packed);
+  } catch {
+    look = null;
+  }
+  const record = { occasion: m.occasion || 'birthday', message: m.message || '', to: m.to || '', from: m.from || '', look, deluxe: true,
+    status: 'paid', paid: intent.created * 1000, restored: Date.now() };
+  if (intent.receipt_email) record.email = String(intent.receipt_email).slice(0, 254);
+  await env.GREETINGS.put(`g:${id}`, JSON.stringify(record));
+  console.log('Restored greeting from Stripe', id);
+  return record;
 }
 
 // Reports. A recipient reports a greeting with a reason; reports are kept 90 days under
