@@ -24,7 +24,7 @@ export function readLink(config) {
   } catch {
     params = new URLSearchParams();
   }
-  // The TikTok LIVE page (live.js) is an embed with sound, an overlay and no greeting.
+  // The live-stream page (live.js) is an embed with sound, an overlay and no greeting.
   const live = params.get('live') === '1';
   const embed = params.get('embed') === '1' || live;
   if (!embed) recall(config);

@@ -1,6 +1,6 @@
-// The TikTok LIVE overlay: plain DOM over the scene, sized for a 9:16 frame and kept in
-// the top half, clear of TikTok's own chat and gift buttons at the bottom and right.
-// Everything sits low, over the water and sand, so the sky stays clear: the chat
+// The live overlay: plain DOM over the scene. In the 9:16 frame it spans the water and sand
+// below the ground show; in the 16:9 frame it sits in the bottom-left corner. Either way
+// the sky stays clear. It shows the chat
 // commands always on screen, the streamer's plug line, a feed of who
 // launched what, the top gifters, a like goal bar, the queue, and a banner for
 // countdowns and big moments.
@@ -8,7 +8,10 @@
 
 const FEED = 2; // lines in the feed
 const FEED_SECONDS = 9;
-export function createOverlay(container, signal, plug = '') {
+const EFFECT_WORDS = { fountain: 'ground show', name: 'your name', barrage: 'barrage', finale: 'finale' };
+const dollars = (cents) => `$${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
+
+export function createOverlay(container, signal, plug = '', tall = false) {
   const style = document.createElement('link');
   style.rel = 'stylesheet';
   style.href = new URL('./live.css', import.meta.url).href;
@@ -28,8 +31,8 @@ export function createOverlay(container, signal, plug = '') {
     <dl class="live-commands">
       <dt>FREE</dt><dd><code>!heart</code> <code>!star</code> <code>!boom</code> <code>!chaos</code> <code>!ghost</code></dd>
       <dt>+ colour</dt><dd><code>!pink heart</code> · <code>!blue ring</code></dd>
-      <dt>🫶 99💎+</dt><dd><code>!birthday NAME</code> · <code>!sky WORDS</code></dd>
-      <dt>GIFTS</dt><dd>🌹 bloom · 🫶 your name · 🌌 finale</dd>
+      <dt class="live-sky-price">💲 $2</dt><dd><code>!birthday NAME</code> · <code>!sky WORDS</code></dd>
+      <dt>SUPER CHAT</dt><dd class="live-tiers">$1 ground show · $2 your name · $5 barrage · $20 finale</dd>
     </dl>
     <span class="live-plug"></span>
     </div>
@@ -48,8 +51,10 @@ export function createOverlay(container, signal, plug = '') {
   const banner = $('.live-banner');
   const offlineBox = $('.live-offline');
 
-  // Sizes are in --u, a hundredth of the frame's width, so the overlay scales with it.
-  const resize = new ResizeObserver(() => root.style.setProperty('--u', `${root.clientWidth / 100}px`));
+  // Sizes are in --u, a hundredth of a 9:16 frame's width (of the same height when wide),
+  // so the overlay scales with the frame and reads the same in either shape.
+  const unit = () => (tall ? root.clientWidth : Math.min(root.clientWidth, (root.clientHeight * 9) / 16)) / 100;
+  const resize = new ResizeObserver(() => root.style.setProperty('--u', `${unit()}px`));
   resize.observe(root);
 
   let bannerTimer = 0;
@@ -82,7 +87,7 @@ export function createOverlay(container, signal, plug = '') {
       const list = leadersBox.querySelector('ol');
       list.replaceChildren(...top.map(({ name, diamonds }, k) => {
         const item = el('li');
-        item.textContent = `${['🥇', '🥈', '🥉'][k]} ${name} · ${diamonds}💎`;
+        item.textContent = `${['🥇', '🥈', '🥉'][k]} ${name} · ${dollars(diamonds)}`;
         return item;
       }));
       leadersBox.hidden = top.length === 0;
@@ -92,6 +97,13 @@ export function createOverlay(container, signal, plug = '') {
       likesText.textContent = `❤️ ${total.toLocaleString('en-US')} / ${goal.toLocaleString('en-US')} → finale`;
       // The bar fills over the current step toward the goal.
       likesBar.style.width = `${Math.min(100, Math.max(0, ((total - (goal - step)) / step) * 100))}%`;
+    },
+
+    // What words in the sky cost, and what each Super Chat amount does (from settings.mjs).
+    prices(sky, tiers) {
+      $('.live-sky-price').textContent = sky > 0 ? `💲 ${dollars(sky)}` : 'ALSO FREE';
+      const line = tiers.filter(([min, effect]) => min > 0 && EFFECT_WORDS[effect]).map(([min, effect]) => `${dollars(min)} ${EFFECT_WORDS[effect]}`).join(' · ');
+      if (line) $('.live-tiers').textContent = line;
     },
 
     queue(count) {

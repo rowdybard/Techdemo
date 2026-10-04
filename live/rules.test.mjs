@@ -38,15 +38,17 @@ test('each viewer has a cooldown, and chat as a whole is capped per second', () 
   assert.equal(rules.handle(chat('!heart')).length, 1);
 });
 
-test('gifts map by name, then by diamond tier, and build the leaderboard', () => {
+test('Super Chats map by price in cents, memberships by name, and build the leaderboard', () => {
   const { rules } = setup();
-  const [rose, board] = rules.handle({ kind: 'gift', userId: 'g1', name: 'Gina', gift: 'Rose', diamonds: 1, count: 5 });
-  assert.deepEqual(rose, { do: 'gift', effect: 'rose', count: 5, by: 'Gina', gift: 'Rose' });
-  assert.deepEqual(board.top, [{ name: 'Gina', diamonds: 5 }]);
-  assert.equal(rules.handle({ kind: 'gift', userId: 'g2', name: 'Hal', gift: 'Mystery', diamonds: 299, count: 1 })[0].effect, 'barrage');
-  assert.equal(rules.handle({ kind: 'gift', userId: 'g2', name: 'Hal', gift: 'Unknown', diamonds: 5000, count: 1 })[0].effect, 'finale');
-  assert.equal(rules.handle({ kind: 'gift', userId: 'g3', name: 'Ivy', gift: 'Cheap', diamonds: 1, count: 1 })[0].effect, 'sparkle');
-  assert.deepEqual(rules.state().leaders.map((fan) => fan.name), ['Hal', 'Gina', 'Ivy']);
+  const [member, board] = rules.handle({ kind: 'gift', userId: 'g1', name: 'Gina', gift: 'New member', diamonds: 200, count: 1 });
+  assert.deepEqual(member, { do: 'gift', effect: 'name', count: 1, by: 'Gina', gift: 'New member' });
+  assert.deepEqual(board.top, [{ name: 'Gina', diamonds: 200 }]);
+  assert.equal(rules.handle({ kind: 'gift', userId: 'g2', name: 'Hal', gift: 'Super Chat', diamonds: 500, count: 1 })[0].effect, 'barrage');
+  assert.equal(rules.handle({ kind: 'gift', userId: 'g2', name: 'Hal', gift: 'Super Chat', diamonds: 5000, count: 1 })[0].effect, 'finale');
+  assert.equal(rules.handle({ kind: 'gift', userId: 'g3', name: 'Ivy', gift: 'Super Chat', diamonds: 100, count: 1 })[0].effect, 'fountain');
+  assert.equal(rules.handle({ kind: 'gift', userId: 'g4', name: 'Jo', gift: 'Super Chat', diamonds: 200, count: 1 })[0].effect, 'name');
+  assert.equal(rules.handle({ kind: 'gift', userId: 'g4', name: 'Jo', gift: 'Super Chat', diamonds: 200, count: 1, said: '!sky hi mom' })[0].effect, 'fountain', 'words pay for the words, not the name too');
+  assert.deepEqual(rules.state().leaders.map((fan) => fan.name), ['Hal', 'Jo', 'Gina']);
 });
 
 test('likes play the finale each time a goal is crossed', () => {
@@ -64,7 +66,7 @@ test('dedications queue for approval, gifters first, and play when approved', ()
   const [note] = rules.handle(chat('!birthday maya rose', 'u1', 'Sam'));
   assert.equal(note.do, 'callout');
   tick(1000);
-  rules.handle({ kind: 'gift', userId: 'u2', name: 'Kim', gift: 'Rose', diamonds: 1, count: 1 });
+  rules.handle({ kind: 'gift', userId: 'u2', name: 'Kim', gift: 'Super Chat', diamonds: 100, count: 1 });
   rules.handle(chat('!love Alex', 'u2', 'Kim'));
   const queue = rules.state().pending;
   assert.deepEqual(queue.map((request) => request.to), ['ALEX', 'MAYA ROSE']);
@@ -102,22 +104,22 @@ test('!sky messages keep jokes, plugs and mild swearing, drop harm, and share th
   assert.deepEqual(rules.handle(chat('!sky again', 'u1', 'Maya')), [], 'one ask per cooldown');
 });
 
-test('words in the sky cost a 99💎 gift, before or after asking, once per gift', () => {
-  const { rules, tick } = setup({ dedications: 'manual', skyMinDiamonds: 99, skyWindowMinutes: 10 });
+test('words in the sky cost a $2 Super Chat, before or after asking, once per gift', () => {
+  const { rules, tick } = setup({ dedications: 'manual', skyMinDiamonds: 200, skyWindowMinutes: 10 });
   const [ask] = rules.handle(chat('!birthday Maya', 'u1', 'Sam'));
-  assert.match(ask.text, /Hand Hearts/);
+  assert.match(ask.text, /\$2 Super Chat/);
   assert.equal(rules.state().pending.length, 0);
   tick(60000);
-  const out = rules.handle({ kind: 'gift', userId: 'u1', name: 'Sam', gift: 'Hand Hearts', diamonds: 99, count: 1 });
+  const out = rules.handle({ kind: 'gift', userId: 'u1', name: 'Sam', gift: 'Super Chat', diamonds: 200, count: 1 });
   assert.equal(out[2].do, 'callout', 'the waiting request goes in');
   assert.deepEqual(rules.state().pending.map((r) => r.to), ['MAYA']);
-  assert.match(rules.handle(chat('!sky hi', 'u1', 'Sam'))[0].text, /Hand Hearts/, 'that gift is spent');
-  rules.handle({ kind: 'gift', userId: 'u2', name: 'Kim', gift: 'Rose', diamonds: 1, count: 200 });
+  assert.match(rules.handle(chat('!sky hi', 'u1', 'Sam'))[0].text, /\$2 Super Chat/, 'that gift is spent');
+  rules.handle({ kind: 'gift', userId: 'u2', name: 'Kim', gift: 'Super Chat', diamonds: 100, count: 2 });
   rules.handle(chat('!sky follow @kim', 'u2', 'Kim'));
   assert.equal(rules.state().pending.length, 2, 'gifts add up');
-  rules.handle({ kind: 'gift', userId: 'u3', name: 'Old', gift: 'Hand Hearts', diamonds: 99, count: 1 });
+  rules.handle({ kind: 'gift', userId: 'u3', name: 'Old', gift: 'Super Chat', diamonds: 200, count: 1 });
   tick(11 * 60000);
-  assert.match(rules.handle(chat('!sky late', 'u3', 'Old'))[0].text, /Hand Hearts/, 'expired');
+  assert.match(rules.handle(chat('!sky late', 'u3', 'Old'))[0].text, /\$2 Super Chat/, 'expired');
   assert.equal(rules.handle({ kind: 'chat', userId: 'admin', name: 'tester', text: '!sky test', admin: true })[0].do, 'callout');
   assert.equal(rules.state().pending.length, 3, 'control-page tests are free');
 });

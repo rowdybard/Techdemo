@@ -1,4 +1,4 @@
-// The TikTok LIVE vocabulary, shared by the stream page (live.js) and the bridge server
+// The live-stream vocabulary, shared by the stream page (live.js) and the bridge server
 // (live/rules.mjs): the colour and shape words viewers type in chat, the occasions a
 // dedication can ask for, and the gift effects. Plain data, no DOM, so Node can import it.
 

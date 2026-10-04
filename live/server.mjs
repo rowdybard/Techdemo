@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// The TikTok LIVE bridge. One local server that:
+// The YouTube Live bridge. One local server that:
 //   - serves the site, so the stream page is http://localhost:8787/?live=1
-//   - listens to TikTok LIVE (or the simulator) and runs the events through rules.mjs
+//   - reads the stream's YouTube live chat (or the simulator) and runs it through rules.mjs
 //   - sends the resulting show actions to every open stream page (Server-Sent Events)
 //   - serves the control panel at /live/admin: connect, pause, moderate, settings, quit
 //
-//   node live/server.mjs                              control panel decides (saved username)
-//   TIKTOK_USERNAME=yourname node live/server.mjs     connect to that LIVE at once
+//   node live/server.mjs                               control panel decides (saved channel)
+//   YOUTUBE_CHANNEL=@yourname node live/server.mjs     join that channel's live chat at once
 //   node live/server.mjs --sim                        a pretend audience
 //
 // What the control panel changes is saved in live/config.json (not in git).
@@ -15,7 +15,7 @@ import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRules } from './rules.mjs';
+import { createRules, dollars } from './rules.mjs';
 import { settings } from './settings.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -32,7 +32,7 @@ const TYPES = {
 
 // The control panel's choices. Settings it can change are copied onto `settings`.
 const TUNABLE = ['dedications', 'skyMinDiamonds', 'cooldownSeconds', 'likeGoal'];
-const config = { username: '', autoConnect: true, banned: [], preset: '', plug: '', ...pick(settings, TUNABLE) };
+const config = { channel: '', autoConnect: true, banned: [], preset: '', plug: '', shape: 'wide', ...pick(settings, TUNABLE) };
 try {
   Object.assign(config, JSON.parse(await readFile(SAVED, 'utf8')));
 } catch {
@@ -68,7 +68,7 @@ function broadcast(actions) {
   for (const action of actions) {
     const frame = `data: ${JSON.stringify(action)}\n\n`;
     for (const page of pages) page.write(frame);
-    if (action.do !== 'likes' && action.do !== 'leaders') note(`→ ${describe(action)}`);
+    if (!['likes', 'leaders', 'prices'].includes(action.do)) note(`→ ${describe(action)}`);
   }
 }
 
@@ -81,13 +81,13 @@ let roomLikes = 0; // the room's like counter last logged, so the log only notes
 
 function onEvent(event) {
   if (event.kind !== 'like' && event.userId) {
-    const what = event.kind === 'chat' ? event.text : event.kind === 'gift' ? `🎁 ${event.gift} ×${event.count}` : event.kind;
+    const what = event.kind === 'chat' ? event.text : event.kind === 'gift' ? `💲 ${event.gift} ${dollars(event.diamonds * (event.count || 1))}${event.said ? ` “${event.said}”` : ""}` : event.kind;
     viewers.push({ userId: event.userId, name: event.name, what: String(what).slice(0, 120), at: Date.now() });
     if (viewers.length > 40) viewers.shift();
   }
-  if (event.kind === 'gift') note(`gift ${event.name}: ${event.gift} ×${event.count} (${event.diamonds}💎 each)`);
+  if (event.kind === 'gift') note(`${event.gift} from ${event.name}${event.count > 1 ? ` ×${event.count}` : ''}: ${dollars(event.diamonds)}${event.count > 1 ? ' each' : ''}${event.said ? ` “${event.said}”` : ''}`);
   if (event.kind === 'like' && !event.room) note(`❤️ ${event.name || 'someone'} +${event.count} like${event.count === 1 ? '' : 's'}${event.total ? ` (room total ${event.total})` : ''}`);
-  if (event.kind === 'like' && event.room && event.total > roomLikes) note(`❤️ TikTok's like counter: ${(roomLikes = event.total)}`);
+  if (event.kind === 'like' && event.room && event.total > roomLikes) note(`❤️ ${(roomLikes = event.total)} likes on the stream`);
   // Gifts and likes always count; chat and the rest wait while paused, and banned viewers only count gifts.
   if (event.kind !== 'gift' && event.kind !== 'like' && paused) return;
   if (event.kind !== 'gift' && config.banned.includes(event.userId)) return;
@@ -108,13 +108,13 @@ async function stopSource() {
   status = { source: 'none', state: 'stopped', room: '', viewers: 0, message: '' };
 }
 
-async function startSource(kind, username = '') {
+async function startSource(kind, channel = '') {
   await stopSource();
   if (kind === 'sim') {
     source = (await import('./sources/sim.mjs')).createSource({ rate: Number(process.env.SIM_RATE) || 1 }, onEvent, onStatus);
   } else {
-    source = (await import('./sources/tiktok.mjs')).createSource(
-      { username, signApiKey: process.env.EULER_API_KEY || undefined, debug: Boolean(process.env.LIVE_DEBUG), log: note },
+    source = (await import('./sources/youtube.mjs')).createSource(
+      { target: channel, prices: { membership: settings.membershipCents }, debug: Boolean(process.env.LIVE_DEBUG), log: note },
       onEvent, onStatus);
   }
   status.source = source.name;
@@ -141,10 +141,10 @@ const handlers = {
   event: (data) => onEvent({ userId: 'tester', name: 'tester', ...data, admin: data.kind === 'chat' }),
   finale: () => broadcast([{ do: 'finale', reason: 'Grand finale!' }]),
   connect: async (data) => {
-    config.username = String(data.username || '').replace(/^@/, '').trim().slice(0, 40);
-    if (!config.username) throw new Error('username needed');
+    config.channel = String(data.channel || '').trim().slice(0, 200);
+    if (!config.channel) throw new Error('channel needed');
     await save();
-    await startSource('tiktok', config.username);
+    await startSource('youtube', config.channel);
   },
   simulate: () => startSource('sim'),
   disconnect: () => stopSource(),
@@ -170,8 +170,10 @@ const handlers = {
     }
     if (typeof data.preset === 'string') config.preset = data.preset.slice(0, 30);
     if (typeof data.plug === 'string') config.plug = data.plug.slice(0, 40);
+    if (data.shape === 'wide' || data.shape === 'tall') config.shape = data.shape;
     if (typeof data.autoConnect === 'boolean') config.autoConnect = data.autoConnect;
     Object.assign(settings, pick(config, TUNABLE));
+    broadcast(rules.snapshot().filter((action) => action.do === 'prices'));
     await save();
   },
   quit: () => {
@@ -240,11 +242,11 @@ server.on('error', (error) => {
 server.listen(PORT, HOST, async () => {
   note(`control panel: http://localhost:${PORT}/live/admin`);
   note(`stream page:   http://localhost:${PORT}/?live=1`);
-  const username = (process.env.TIKTOK_USERNAME || '').replace(/^@/, '').trim();
+  const channel = (process.env.YOUTUBE_CHANNEL || '').trim();
   if (process.argv.includes('--sim')) await startSource('sim');
-  else if (username) await startSource('tiktok', username);
-  else if (config.username && config.autoConnect) await startSource('tiktok', config.username);
-  else note('not connected: enter your TikTok username on the control panel');
+  else if (channel) await startSource('youtube', channel);
+  else if (config.channel && config.autoConnect) await startSource('youtube', config.channel);
+  else note('not connected: enter your YouTube channel on the control panel');
 });
 
 async function shutdown() {

@@ -1,9 +1,7 @@
 @echo off
 title SkyGreeting LIVE (keep this window open while you stream)
 cd /d "%~dp0"
-rem Optional: paste your Euler Stream API key after the = sign (the key, not the account ID).
-set EULER_API_KEY=
-rem Optional: set to 1 to print the raw TikTok chat, gift and like events in this window.
+rem Optional: set to 1 to print the raw YouTube chat items in this window.
 set LIVE_DEBUG=
 echo.
 echo   SkyGreeting LIVE is starting.

@@ -1,23 +1,23 @@
-// TikTok LIVE mode (?live=1): the show takes orders from the stream's viewers. The local
-// bridge (live/server.mjs) listens to TikTok, applies the rules (cooldowns, gift tiers,
+// Live mode (?live=1): the show takes orders from a YouTube live stream's chat. The local
+// bridge (live/server.mjs) reads the chat, applies the rules (cooldowns, Super Chat tiers,
 // the dedication queue) and sends show actions here as Server-Sent Events; this module
 // turns them into shells, ground shows, names in the sky and occasion endings, and keeps
-// the overlay (live-overlay.js) up to date. The page frames itself 9:16 for the stream.
+// the overlay (live-overlay.js) up to date. The page frames itself 16:9 for the stream, or
+// 9:16 with tall=1 (vertical live).
 //
 // Words in the sky (dedications, !sky messages, gifters' names) are paid for, so each
 // gets the sky to itself: the random show stops, viewers' shells wait, and the words
 // launch only once every shell already up has faded. Ground shows may play under them.
 // When the words have faded, the waiting shells go up and the show carries on.
 //
-// Link options: preset=Halloween (any preset name), plug=Follow @you (a line under the
-// title), volume=0..1 (default 0.7), sound=0, bridge=<events URL> (default /live/events).
+// Link options: preset=Halloween (any preset name), plug=Subscribe! (a plug line),
+// tall=1 (9:16), volume=0..1 (default 0.7), sound=0, bridge=<events URL> (default /live/events).
 import { COLORS, MESSAGE_LIMIT, NAME_LIMIT } from './live-catalog.js';
 import { OCCASIONS } from './occasions.js';
 import { applyPreset } from './presets.js';
 import { createOverlay } from './live-overlay.js';
 
 const CUES = 256; // scheduled launches, a fixed ring
-const SPREAD = 85; // metres either side of the barge's middle that stay in a 9:16 frame
 const RANDOM_TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star'];
 const SHELL = 0;
 const TEXT = 1;
@@ -54,11 +54,17 @@ export function create(ctx) {
   // ?sides=1 and ?smoke=0.12 put the site's look back.
   config.fountains.sideBarges = params.get('sides') === '1';
   config.smoke.amount = clamp(Number(params.get('smoke') ?? 0.05), 0, 1);
+  const tall = params.get('tall') === '1';
+  const SPREAD = tall ? 85 : 150; // metres either side of the barge's middle that stay in frame
+  // The wide frame shows less sky above the barge, so everything bursts lower there.
+  const LIFT = tall ? 1 : 0.72;
+  const TEXT_LIFT = tall ? 1 : 0.85;
   container.classList.add('live-mode');
+  container.classList.toggle('live-wide', !tall);
   // Sound starts by itself where autoplay is allowed (OBS, a kiosk browser); elsewhere at
   // the first click on the page (audio.js resumes it).
   dispatchEvent(new Event('pointerdown'));
-  const overlay = createOverlay(container, signal, String(params.get('plug') || '').slice(0, 40));
+  const overlay = createOverlay(container, signal, String(params.get('plug') || '').slice(0, 40), tall);
 
   const cues = [];
   for (let i = 0; i < CUES; i++) cues.push({ at: Infinity, kind: SHELL, type: '', x: 0, h: 0, palette: null, text: '' });
@@ -87,18 +93,18 @@ export function create(ctx) {
     const fireworks = ctx.fireworks;
     if (!fireworks) return;
     const middle = config.show.bargePosition[0];
-    if (cue.kind === SHELL) fireworks.launchAt(cue.type, middle + cue.x, cue.h, cue.palette);
+    if (cue.kind === SHELL) fireworks.launchAt(cue.type, middle + cue.x, cue.h * LIFT, cue.palette);
     else if (cue.kind === TEXT) {
       config.look.text = cue.text;
       config.look.textWidth = Math.min(250, Math.max(100, 60 + cue.text.length * 10));
-      fireworks.launchAt('text', middle, cue.h || 120);
+      fireworks.launchAt('text', middle, (cue.h || 120) * TEXT_LIFT);
     } else if (cue.kind === GROUND) {
       if (ctx.fountains) ctx.fountains.play(cue.type);
     } else if (cue.kind === FINALE) fireworks.finale();
   }
 
   const x = () => (Math.random() * 2 - 1) * SPREAD;
-  const h = () => 120 + Math.random() * 80; // high, to fill the tall frame's sky
+  const h = () => 120 + Math.random() * 80; // high, to fill the sky above the overlay
   const pick = (list) => list[(Math.random() * list.length) | 0];
   const name = (text) => String(text).replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, NAME_LIMIT).toUpperCase();
   const aerial = (cue) => cue.kind === SHELL || cue.kind === FINALE;
@@ -169,6 +175,9 @@ export function create(ctx) {
         break;
       case 'likes':
         overlay.likes(action.total, action.goal, action.step || action.goal);
+        break;
+      case 'prices':
+        overlay.prices(action.sky, action.tiers || []);
         break;
     }
   }
@@ -302,7 +311,7 @@ export function create(ctx) {
       if (holding) config.show.autoLaunch = autoLaunch;
       events.close();
       overlay.dispose();
-      container.classList.remove('live-mode');
+      container.classList.remove('live-mode', 'live-wide');
     },
   };
 }

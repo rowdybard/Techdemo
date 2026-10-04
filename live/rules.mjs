@@ -1,10 +1,11 @@
-// The rules of the stream: turns viewer events (chat, gifts, likes, follows) into show
-// actions for the stream page. Pure logic with an injectable clock, so it's tested
-// without TikTok (rules.test.mjs). The server broadcasts whatever handle() returns.
+// The rules of the stream: turns viewer events (chat, Super Chats, memberships, likes) into
+// show actions for the stream page. Pure logic with an injectable clock, so it's tested
+// without YouTube (rules.test.mjs). The server broadcasts whatever handle() returns.
+// Money ("diamonds" in the code, from its first platform) is counted in US cents.
 //
 // Events in (from sources/*.mjs):
 //   { kind: 'chat', userId, name, text }
-//   { kind: 'gift', userId, name, gift, diamonds, count }   diamonds per gift; count in the streak
+//   { kind: 'gift', userId, name, gift, diamonds, count, said }   diamonds: US cents each; said: the Super Chat's text
 //   { kind: 'like', userId, name, count, total }            total may be missing
 //   { kind: 'follow' | 'share', userId, name }
 // Actions out (to src/live.js):
@@ -12,9 +13,19 @@
 //   { do: 'gift', effect, count, by, gift }
 //   { do: 'dedication', id, occasion, to, by }   { do: 'message', id, text, by }
 //   { do: 'callout', text }   { do: 'finale', reason }
-//   { do: 'leaders', top }    { do: 'likes', total, goal, step }
+//   { do: 'leaders', top }    { do: 'likes', total, goal, step }    { do: 'prices', sky, tiers }
 import { COLORS, MESSAGE_LIMIT, MESSAGE_WORDS, NAME_LIMIT, OCCASION_WORDS, SHAPES } from '../src/live-catalog.js';
 import { isBlocked } from '../src/moderate.js';
+
+/** 200 → "$2", 250 → "$2.50". */
+export function dollars(cents) {
+  return `$${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
+}
+
+function asksForWords(text) {
+  const command = String(text || '').trim().match(/^!(\S+)/)?.[1]?.toLowerCase();
+  return Boolean(command && (OCCASION_WORDS[command] || MESSAGE_WORDS[command]));
+}
 
 export function createRules(settings, now = Date.now) {
   const lastShell = new Map(); // userId → ms of their last chat launch
@@ -84,7 +95,7 @@ export function createRules(settings, now = Date.now) {
     if (pending.length >= settings.maxPending) return [{ do: 'callout', text: 'The sky queue is full. Try again soon!' }];
     if (!free && settings.skyMinDiamonds > 0 && !spend(request.userId, t)) {
       unpaid.set(request.userId, { request, note });
-      return [{ do: 'callout', text: `${request.by}: send a Hand Hearts 🫶 to put that in the sky` }];
+      return [{ do: 'callout', text: `${request.by}: send a ${dollars(settings.skyMinDiamonds)} Super Chat to put that in the sky` }];
     }
     unpaid.delete(request.userId);
     lastAsk.set(request.userId, t);
@@ -139,6 +150,8 @@ export function createRules(settings, now = Date.now) {
     const named = settings.gifts.byName[String(event.gift || '').toLowerCase()];
     let effect = named;
     if (!effect) for (const [min, tier] of settings.gifts.tiers) if (each >= min) effect = tier;
+    // A Super Chat that asks for words in the sky pays for those words, not for its name too.
+    if (effect === 'name' && asksForWords(event.said)) effect = 'fountain';
     const out = [{ do: 'gift', effect: effect || 'sparkle', count, by, gift: String(event.gift || 'gift').slice(0, 30) }, leaders()];
     // A request they made before gifting goes in now, if this covers it.
     const waiting = unpaid.get(event.userId);
@@ -150,7 +163,7 @@ export function createRules(settings, now = Date.now) {
 
   function like(event) {
     const before = likes;
-    // TikTok sends likes in batches with the room's running total; trust the total when it
+    // Likes arrive as the stream's running total (or in batches); trust the total when it
     // comes, and add up the batches when it doesn't.
     likes = Number.isFinite(event.total) ? Math.max(likes, event.total) : likes + Math.max(1, Number(event.count) || 1);
     const out = [];
@@ -198,7 +211,7 @@ export function createRules(settings, now = Date.now) {
 
     /** What a newly opened stream page needs to draw the overlay. */
     snapshot() {
-      return [leaders(), { do: 'likes', total: likes, goal, step: settings.likeGoal }];
+      return [leaders(), { do: 'likes', total: likes, goal, step: settings.likeGoal }, { do: 'prices', sky: settings.skyMinDiamonds, tiers: settings.gifts.tiers }];
     },
   };
 }

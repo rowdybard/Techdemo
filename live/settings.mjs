@@ -9,34 +9,29 @@ export const settings = {
   // 'manual': dedications wait for Approve on the admin page. 'auto': they play as soon as
   // they pass the word filter (for unattended 24/7 runs). DEDICATIONS=auto overrides.
   dedications: 'manual',
-  // Words in the sky (dedications and !sky messages) cost a gift of at least this many
-  // diamonds (Hand Hearts is 99) within the window; each one uses up that much. 0 makes
-  // them free, with the cooldown below instead.
-  skyMinDiamonds: 99,
+  // Money is in US cents: a $2.00 Super Chat is worth 200. Words in the sky (dedications
+  // and !sky messages) cost Super Chats adding up to at least this much within the window;
+  // each one uses up that much. 0 makes them free, with the cooldown below instead.
+  skyMinDiamonds: 200,
   skyWindowMinutes: 10,
   dedicationCooldownSeconds: 300, // per viewer, when free
   maxPending: 30,
+  membershipCents: 200, // what a new member, milestone or gifted membership counts as
 
   gifts: {
-    // By gift name (lower case), as TikTok names them. Effects are in src/live-catalog.js.
+    // By name (lower case). Effects are in src/live-catalog.js.
     byName: {
-      rose: 'rose',
-      'finger heart': 'heart',
-      'heart me': 'heart',
-      'hand hearts': 'name',
-      confetti: 'barrage',
-      doughnut: 'fountain',
-      perfume: 'fountain',
-      'money gun': 'barrage',
-      galaxy: 'finale',
+      'new member': 'name',
+      'member milestone': 'name',
+      'gifted memberships': 'barrage',
     },
-    // Any other gift, by its diamond value: the last tier it reaches.
+    // Super Chats and Super Stickers, by their price in cents: the last tier reached.
     tiers: [
       [0, 'sparkle'],
-      [10, 'fountain'],
-      [99, 'name'],
-      [299, 'barrage'],
-      [1000, 'finale'],
+      [100, 'fountain'],
+      [200, 'name'],
+      [500, 'barrage'],
+      [2000, 'finale'],
     ],
   },
 };

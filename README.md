@@ -25,9 +25,9 @@ Opening a link (`?o=halloween&msg=HAPPY%20HALLOWEEN&to=SAM&from=Max`) sets the s
 
 Anyone can tap or click the sky to launch a shell, except on an embedded header.
 
-## TikTok LIVE
+## YouTube Live
 
-On the branch `claude/project-thread-z80id2` only, kept off skygreeting.com: `/?live=1` is the show for a vertical TikTok LIVE. Viewers launch shells from chat for free (`!heart`, `!purple`, `!chaos`), gifts set off bigger effects and spell the gifter's name, a 99💎 gift buys words in the sky (`!birthday NAME`, `!sky WORDS`), and likes build to a grand finale. A local bridge and control panel in `live/` connect it to your LIVE, and a Windows zip runs it all with a double-click. See [`live/README.md`](live/README.md) and [`live/HANDOFF.md`](live/HANDOFF.md).
+On the branch `claude/project-thread-z80id2` only, kept off skygreeting.com: `/?live=1` is the show for a YouTube live stream (16:9, or 9:16 with `tall=1`). Viewers launch shells from chat for free (`!heart`, `!purple`, `!chaos`), Super Chats set off bigger effects and spell the sender's name, a $2 Super Chat buys words in the sky (`!birthday NAME`, `!sky WORDS`), and likes build to a grand finale. A local bridge and control panel in `live/` read the live chat, OBS streams the page, and a Windows zip runs it all with a double-click. See [`live/README.md`](live/README.md) and [`live/HANDOFF.md`](live/HANDOFF.md).
 
 ## Client mockups and embeds
 

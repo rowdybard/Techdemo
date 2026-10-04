@@ -1,5 +1,5 @@
-SKYGREETING LIVE: fireworks your TikTok viewers control
-=======================================================
+SKYGREETING LIVE: fireworks your YouTube viewers control
+========================================================
 
 START
   1. Unzip this folder somewhere easy, like your Desktop. (Don't run it from inside the zip.)
@@ -11,31 +11,35 @@ START
 
 PRACTICE FIRST
   On the control panel press "Practice with pretend viewers", then "Open the stream window".
-  Fake viewers will chat and send gifts so you can see everything working.
+  Fake viewers will chat and send Super Chats so you can see everything working.
 
-GO LIVE
-  1. Start your LIVE in TikTok LIVE Studio.
-  2. On the control panel, type your TikTok username and press Connect.
-     The dot turns green when it's connected.
-  3. Press "Open the stream window". In LIVE Studio add a Window capture of that window.
-     Click the stream window once so its sound starts.
-  (OBS: add a Browser source with the link shown, 1080 x 1920.)
+GO LIVE (with OBS, free from obsproject.com)
+  1. In OBS add a Browser source. Paste the link from the control panel
+     ("Copy link"), set 1920 x 1080 (or 1080 x 1920 if you picked Tall),
+     and tick "Control audio via OBS".
+  2. In YouTube Studio click Create > Go live > Stream, copy the stream key,
+     and paste it in OBS: Settings > Stream > Service: YouTube.
+  3. In OBS press Start Streaming.
+  4. On the control panel type your channel's @handle and press Connect.
+     It waits until you're live, then the dot turns green.
+     For a 24/7 stream it finds your next stream by itself if one ends.
 
 WHILE YOU'RE LIVE (all on the control panel)
   - Sky queue: press Play or Skip for each dedication or message. Or set
     "Words in the sky" to play by themselves.
   - Recent viewers: Ban anyone causing trouble.
-  - Pause chat: stops chat commands for a while (gifts still work).
-  - Test the show: fire any gift or chat command yourself.
+  - Pause chat: stops chat commands for a while (Super Chats and likes still work).
+  - Test the show: fire any Super Chat or chat command yourself.
 
 WHAT VIEWERS CAN DO (it's also on screen)
   Free:  !heart !star !boom !chaos !ghost  (add a colour: !pink heart)
-         follows and every 1,000 likes set off fireworks too
-  Gift of 99 diamonds or more (one Hand Hearts):
+         every 1,000 likes sets off the grand finale
+  A $2 Super Chat (or more):
          !birthday NAME, !love NAME, !congrats NAME, !thanks NAME
          !sky ANY WORDS  (their own words in the sky)
-  Gifts: Rose = red bloom, Finger Heart = hearts, Doughnut = ground show,
-         Hand Hearts = their name in the sky, Money Gun = barrage, Galaxy = grand finale
+         Easiest: put the command in the Super Chat message itself.
+  Super Chats on their own: $1 ground show, $2 their name in the sky,
+         $5 barrage, $20 name plus grand finale. New members get their name in the sky.
 
 STOP
   Press "Stop SkyGreeting LIVE" on the control panel, or close the black window.
@@ -45,6 +49,4 @@ says what. More detail is in live\README.md.
 
 OPTIONAL SETTINGS
   Right-click "Start SkyGreeting LIVE.bat" and choose Edit (or open it in Notepad):
-  - EULER_API_KEY=  paste an API key from your Euler Stream dashboard if you hit
-    rate limits. It works without one. Don't share the key with anyone.
-  - LIVE_DEBUG=1    prints TikTok's raw chat, gift and like events in the black window.
+  - LIVE_DEBUG=1    prints the raw YouTube chat items in the black window.
