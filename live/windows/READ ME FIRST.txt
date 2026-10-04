@@ -42,3 +42,9 @@ STOP
 
 If something goes wrong, the "What's happening" box at the bottom of the control panel
 says what. More detail is in live\README.md.
+
+OPTIONAL SETTINGS
+  Right-click "Start SkyGreeting LIVE.bat" and choose Edit (or open it in Notepad):
+  - EULER_API_KEY=  paste an API key from your Euler Stream dashboard if you hit
+    rate limits. It works without one. Don't share the key with anyone.
+  - LIVE_DEBUG=1    prints TikTok's raw chat, gift and like events in the black window.
