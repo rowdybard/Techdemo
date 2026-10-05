@@ -38,7 +38,7 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 ## Open items
 
 **Waiting on the owner (accounts, settings, real devices):**
-1. **Stripe:** finish business verification (the site now has `/about`, Terms, Privacy and a working hello@ address, which is what the reviewer checks); add the bank account; turn on customer receipt emails (the private link is in the receipt description); set the statement descriptor to SKYGREETING. One more live purchase after approval (the $1 test was before the price, email and backup changes).
+1. **Stripe:** the website was verified on October 5, 2026. Still to do: add the bank account (payouts), turn on customer receipt emails (the private link is in the receipt description), set the statement descriptor to SKYGREETING, and make one real $4.99 purchase end to end (the $1 test was before the price, email and backup changes), then refund it.
 2. **hello@skygreeting.com:** Cloudflare Email Routing is on (MX records verified); confirm a test email actually arrives.
 3. **www redirect:** `www.skygreeting.com` redirects, but always to the home page. Change the redirect rule to Dynamic with expression `concat("https://skygreeting.com", http.request.uri.path)`, keep the query string, 301.
 4. **Google Analytics:** in the GA admin turn off Enhanced measurement's "Page changes based on browser history events" and "Site search" (the buyer's return page rewrites its URL to `?g=<id>`, which must not reach Google), set data retention to 14 months (the privacy page says so), mark `purchase` a key event.
