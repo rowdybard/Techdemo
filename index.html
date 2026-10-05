@@ -158,13 +158,20 @@
   .send-row[hidden] { display: none; }
   .gift-links { display: flex; justify-content: space-between; }
   .gift-video[hidden], .builder-film[hidden] { display: none; }
-  .builder-film { flex: none; padding-inline: 16px; }
+  .builder-film { flex: none; padding-inline: 14px; white-space: nowrap; }
   .builder-terms { margin: 0; color: var(--muted); font-size: 11px; }
   .builder-terms a { color: var(--muted); }
   /* Save as video: only the scene shows while it records. */
-  .video-pill { position: absolute; z-index: 4; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); padding: 8px 14px; border: 0; border-radius: 999px; background: rgb(200 30 40 / 0.85); color: #fff; font: 600 13px var(--sans); cursor: pointer; }
-  .video-pill[hidden], .video-ready[hidden] { display: none; }
-  .video-ready { z-index: 4; }
+  .video-pill { position: absolute; z-index: 4; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); overflow: hidden; padding: 10px 18px 12px; border: 0; border-radius: 999px; background: rgb(200 30 40 / 0.9); color: #fff; font: 600 14px var(--sans); white-space: nowrap; font-variant-numeric: tabular-nums; cursor: pointer; box-shadow: 0 4px 18px rgb(0 0 0 / 0.35); }
+  .video-pill-bar { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: #fff; transform-origin: left; transform: scaleX(0); }
+  .video-pill.running .video-pill-bar { animation: video-fill linear forwards; }
+  @keyframes video-fill { to { transform: scaleX(1); } }
+  .video-pill[hidden], .video-ready[hidden], .video-ready [hidden] { display: none; }
+  .video-ready { z-index: 4; width: min(400px, calc(100% - 32px)); border-color: rgb(255 180 92 / 0.55); box-shadow: 0 10px 40px rgb(0 0 0 / 0.45); }
+  .video-preview { display: block; width: 100%; max-height: 42vh; border-radius: 8px; background: #000; object-fit: contain; }
+  .video-info { margin: 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .video-download { display: block; box-sizing: border-box; text-align: center; text-decoration: none; }
+  .video-note { color: var(--ink); line-height: 1.4; }
   .recording :is(.gift-card, .builder-bar, .send-box:not(.video-ready), .send-open, .studio-open, .studio, .walk-hint, .panel, .debug) { display: none !important; }
   .gift-links[hidden], .gift-report-box[hidden] { display: none; }
   .gift-report-box { display: grid; gap: 10px; }

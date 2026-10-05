@@ -127,7 +127,7 @@ export function create(ctx) {
   const barSend = el('button', 'send-primary');
   barSend.type = 'button';
   // Record the preview as a video to post (watermarked: it isn't a paid greeting yet).
-  const film = el('button', 'send-secondary builder-film', '🎬');
+  const film = el('button', 'send-secondary builder-film', '🎬 Video');
   film.type = 'button';
   film.title = 'Save as video';
   film.setAttribute('aria-label', 'Save as video');
