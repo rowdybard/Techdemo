@@ -22,6 +22,7 @@ It was built for TikTok LIVE first. On October 4 TikTok flagged the stream as "u
 | `live/windows/` | the `.bat` launcher and `READ ME FIRST.txt` for the zip |
 | `tools/package-live.sh` | builds `dist/SkyGreeting-LIVE.zip` with Node v22.23.3 for Windows (checksum-verified) |
 | `src/live.js` | the stream page (`?live=1`, `&tall=1` for 9:16): turns actions into shells, text and ground shows from a fixed cue ring |
+| `src/live-director.js` | the auto-director: look rotation, clock shows with countdowns, chat prompts |
 | `src/live-overlay.js`, `src/live.css` | the overlay: plug line, commands and prices always on screen, feed, top spenders, likes bar, queue count, banner |
 | `src/live-catalog.js` | the vocabulary both sides share (colours, shapes, occasion words, `!sky` words) |
 
@@ -42,6 +43,10 @@ It was built for TikTok LIVE first. On October 4 TikTok flagged the stream as "u
 - Paid words launch completely alone with a clear sky (ground shows allowed), so they can be read. `src/live.js` holds aerial shells and the random show while words are queued or up (`hold()` / `release()` and `stepWords()`).
 - No big title on the stream. The overlay sits on the sand; the "For X from Y" banner sits at the top, off the ground show.
 - A "zip for dummies" with a GUI to start, stop and moderate, run from his PC: the zip plus the control panel.
+
+## Auto-director
+
+Daniel's worry: a quiet chat makes a repetitive stream, and YouTube flags repetitive content. `src/live-director.js` (on by default; `director=0` or the panel checkbox turns it off) rotates the look every 15 minutes with a sky ease and banner, plays a 10-second countdown and a mini show at :00/:20/:40 (a grand finale on the hour, waiting for any paid words first), and posts a command prompt in the feed every 2 minutes when chat is quiet. Tested headless with a shifted clock (countdown, mini show, look change, prompt all fired). Royalty-free background music is fine but doesn't address the repetition rule; the variety does.
 
 ## Defaults I picked for YouTube
 

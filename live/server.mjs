@@ -32,7 +32,7 @@ const TYPES = {
 
 // The control panel's choices. Settings it can change are copied onto `settings`.
 const TUNABLE = ['dedications', 'skyMinDiamonds', 'cooldownSeconds', 'likeGoal'];
-const config = { channel: '', autoConnect: true, banned: [], preset: '', plug: '', shape: 'wide', ...pick(settings, TUNABLE) };
+const config = { channel: '', autoConnect: true, banned: [], preset: '', plug: '', shape: 'wide', director: true, ...pick(settings, TUNABLE) };
 try {
   Object.assign(config, JSON.parse(await readFile(SAVED, 'utf8')));
 } catch {
@@ -171,6 +171,7 @@ const handlers = {
     if (typeof data.preset === 'string') config.preset = data.preset.slice(0, 30);
     if (typeof data.plug === 'string') config.plug = data.plug.slice(0, 40);
     if (data.shape === 'wide' || data.shape === 'tall') config.shape = data.shape;
+    if (typeof data.director === 'boolean') config.director = data.director;
     if (typeof data.autoConnect === 'boolean') config.autoConnect = data.autoConnect;
     Object.assign(settings, pick(config, TUNABLE));
     broadcast(rules.snapshot().filter((action) => action.do === 'prices'));

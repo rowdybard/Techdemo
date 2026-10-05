@@ -11,11 +11,13 @@
 // When the words have faded, the waiting shells go up and the show carries on.
 //
 // Link options: preset=Halloween (any preset name), plug=Subscribe! (a plug line),
-// tall=1 (9:16), volume=0..1 (default 0.7), sound=0, bridge=<events URL> (default /live/events).
+// tall=1 (9:16), volume=0..1 (default 0.7), sound=0, bridge=<events URL> (default /live/events),
+// director=0 (no auto-director: look changes, clock shows, chat prompts; see live-director.js).
 import { COLORS, MESSAGE_LIMIT, NAME_LIMIT } from './live-catalog.js';
 import { OCCASIONS } from './occasions.js';
 import { applyPreset } from './presets.js';
 import { createOverlay } from './live-overlay.js';
+import { createDirector } from './live-director.js';
 
 const CUES = 256; // scheduled launches, a fixed ring
 const RANDOM_TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star'];
@@ -46,14 +48,18 @@ export function create(ctx) {
   const { config, container, signal } = ctx;
   const params = new URLSearchParams(location.search);
   if (params.get('preset')) applyPreset(config, params.get('preset'));
-  config.sound.volume = clamp(Number(params.get('volume') ?? 0.7), 0, 1);
-  config.look.text = BRAND;
-  config.look.textWidth = 230;
   // Viewers add ground shows with gifts, so the stream starts calmer than the site: no
   // side barges (they play almost nonstop) and lighter smoke, which the fountains light up.
-  // ?sides=1 and ?smoke=0.12 put the site's look back.
-  config.fountains.sideBarges = params.get('sides') === '1';
-  config.smoke.amount = clamp(Number(params.get('smoke') ?? 0.05), 0, 1);
+  // ?sides=1 and ?smoke=0.12 put the site's look back. A preset resets all of this, so
+  // it's applied again after every look change.
+  function restyle() {
+    config.sound.volume = clamp(Number(params.get('volume') ?? 0.7), 0, 1);
+    config.look.text = BRAND;
+    config.look.textWidth = 230;
+    config.fountains.sideBarges = params.get('sides') === '1';
+    config.smoke.amount = clamp(Number(params.get('smoke') ?? 0.05), 0, 1);
+  }
+  restyle();
   const tall = params.get('tall') === '1';
   const SPREAD = tall ? 85 : 150; // metres either side of the barge's middle that stay in frame
   // The wide frame shows less sky above the barge, so everything bursts lower there.
@@ -65,6 +71,19 @@ export function create(ctx) {
   // the first click on the page (audio.js resumes it).
   dispatchEvent(new Event('pointerdown'));
   const overlay = createOverlay(container, signal, String(params.get('plug') || '').slice(0, 40), tall);
+  const director = createDirector({
+    params, config, overlay,
+    look: (preset) => { applyPreset(config, preset); restyle(); },
+    show: (kind) => {
+      if (kind === 'finale') act({ do: 'finale', reason: 'Top-of-the-hour grand finale!' });
+      else {
+        gift('barrage', 1, '');
+        gift('fountain', 1, '');
+        overlay.banner('🎆 Mini show!', 5);
+      }
+    },
+    busy: () => phase !== 'idle' || words.length > 0,
+  });
 
   const cues = [];
   for (let i = 0; i < CUES; i++) cues.push({ at: Infinity, kind: SHELL, type: '', x: 0, h: 0, palette: null, text: '' });
@@ -144,6 +163,7 @@ export function create(ctx) {
   }
 
   function act(action) {
+    if (action.do !== 'likes' && action.do !== 'leaders' && action.do !== 'prices') director.viewer();
     switch (action.do) {
       case 'shell':
         schedule(0, SHELL, action.shape, x(), h(), PALETTES[action.color] || null);
@@ -305,6 +325,7 @@ export function create(ctx) {
         fire(cue);
       }
       stepWords();
+      director.update(dt);
     },
 
     dispose() {

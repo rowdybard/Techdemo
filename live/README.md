@@ -37,6 +37,14 @@ npm test           # the rules' and the chat reader's tests
 
 The panel's choices are saved in `live/config.json`, which isn't in git.
 
+## The auto-director
+
+With few people chatting, the stream would look like the same loop, so the page directs itself (`src/live-director.js`). It is on by default; untick it in the control panel, or add `director=0` to the link.
+
+- **Looks:** every 15 minutes it eases to another look (Classic sunset, Gold willows, Neon night, Calm evening, plus Red-white-and-blue in June and July and Halloween in September to November), with a banner naming it. `looks=30` changes the gap, `looks=0` never changes.
+- **Clock shows:** at :00, :20 and :40 on the clock a 10-second countdown ("Mini show, starting in 10") plays, then a barrage and ground show, or a grand finale on the hour. It waits for any words in the sky to finish first. `shows=0` turns them off.
+- **Chat prompts:** every 2 minutes, if nobody has chatted for 40 seconds, a line in the feed suggests a command (`!heart`, `!pink heart`, `!sky HELLO`).
+
 ## What viewers can do
 
 The commands are always on screen, in the bottom-left corner on the sand (Wide) or across the water and sand (Tall), so the sky and the ground show stay clear.

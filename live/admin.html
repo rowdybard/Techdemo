@@ -59,6 +59,7 @@
     <div class="stack">
       <label>Look <select id="preset"><option value="">Default</option><option>Halloween</option><option>Neon</option><option>Calm</option><option>Gold Willows</option><option>Fourth of July</option><option>Lake Michigan</option><option>Finale</option></select></label>
       <label>Shape <select id="shape"><option value="wide">Wide 16:9 (normal YouTube live)</option><option value="tall">Tall 9:16 (vertical / Shorts live)</option></select></label>
+      <label class="muted"><span>Auto-director: changes the look, plays a show at :00, :20 and :40, and prompts chat</span><input type="checkbox" id="director"></label>
       <label>Plug line <input id="plug" placeholder="Subscribe for 24/7 fireworks" style="flex:1"></label>
       <div class="row"><button id="open" class="go big">Open the stream window</button><button id="copy">Copy link</button></div>
       <code class="url" id="url"></code>
@@ -124,12 +125,14 @@
     if ($('preset').value) params.set('preset', $('preset').value);
     if ($('plug').value.trim()) params.set('plug', $('plug').value.trim());
     if ($('shape').value === 'tall') params.set('tall', '1');
+    if (!$('director').checked) params.set('director', '0');
     return `${location.origin}/?${params}`;
   }
   const showLink = () => { $('url').textContent = streamLink(); };
-  const saveLook = () => { showLink(); post('settings', { preset: $('preset').value, plug: $('plug').value, shape: $('shape').value }); };
+  const saveLook = () => { showLink(); post('settings', { preset: $('preset').value, plug: $('plug').value, shape: $('shape').value, director: $('director').checked }); };
   $('preset').onchange = saveLook;
   $('shape').onchange = saveLook;
+  $('director').onchange = saveLook;
   $('plug').onchange = saveLook;
   $('open').onclick = () => open(streamLink(), 'skygreeting-stream', $('shape').value === 'tall' ? 'popup,width=540,height=960' : 'popup,width=1280,height=720');
   $('copy').onclick = () => navigator.clipboard.writeText(streamLink()).then(() => { $('copy').textContent = 'Copied'; setTimeout(() => { $('copy').textContent = 'Copy link'; }, 1500); });
@@ -212,6 +215,7 @@
       filled = true;
       $('channel').value = config.channel || '';
       $('shape').value = config.shape || 'wide';
+      $('director').checked = config.director !== false;
       $('autoConnect').checked = config.autoConnect;
       $('preset').value = config.preset || '';
       $('plug').value = config.plug || '';
