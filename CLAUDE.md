@@ -1,6 +1,6 @@
 # Beach Fireworks
 
-Real-time Three.js beach scene with a fully customizable firework show, built as a sales demo. The full spec, architecture and build order are in `HANDOFF.md`. Read it before changing anything.
+Real-time Three.js beach scene with a fully customizable firework show, built as a sales demo. The full spec, architecture and build order are in `HANDOFF.md`. Read it before changing anything. `SESSION-HANDOFF.md` is the short current-state summary (what's live, open items, gotchas): read that first.
 
 ## Working rules
 
