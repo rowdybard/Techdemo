@@ -157,6 +157,24 @@ export function applyOccasion(config, name, deluxe) {
   return occasion;
 }
 
+// Every effect that's Deluxe in an occasion, wherever it's being made: that occasion's
+// own Deluxe list, plus every effect no occasion gives away (the Halloween shells beyond
+// the three free ones, chrysanthemums, strobes, fans...). Without the second part, a
+// Birthday greeting could use Halloween's Deluxe shells for free, and Customize marked only
+// the occasion's own few with ✦.
+const GIVEN_AWAY = new Set(Object.values(OCCASIONS).flatMap((occasion) => occasion.free));
+const EVERY_EFFECT = new Set(Object.values(OCCASIONS).flatMap((occasion) => occasion.free.concat(occasion.deluxe)));
+const paid = new WeakMap();
+export function paidItems(occasion) {
+  let set = paid.get(occasion);
+  if (!set) {
+    set = new Set(occasion.deluxe);
+    for (const item of EVERY_EFFECT) if (!GIVEN_AWAY.has(item)) set.add(item);
+    paid.set(occasion, set);
+  }
+  return set;
+}
+
 export function allowedEffects(occasion, deluxe) {
   return new Set(deluxe ? occasion.free.concat(occasion.deluxe) : occasion.free);
 }

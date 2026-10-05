@@ -47,7 +47,9 @@ export function create(ctx) {
   const reportOpen = el('button', 'send-close gift-report', 'Report');
   reportOpen.type = 'button';
   // Save as video (video.js): the ending, recorded for posting. Clean for a paid greeting.
-  const film = el('button', 'send-secondary gift-video', '🎬 Save as video');
+  const film = el('button', 'send-secondary gift-video');
+  film.append('🎬 Save as video', document.createElement('small'));
+  film.lastChild.textContent = 'a clip to post on TikTok, Instagram or Stories';
   film.type = 'button';
   film.hidden = true;
   const links = el('div', 'gift-links');

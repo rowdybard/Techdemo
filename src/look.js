@@ -3,7 +3,7 @@
 // grass, view),
 // packed small enough to ride in a free link or be stored with a paid greeting. Also
 // what a free send may use: an occasion's Deluxe effects are taken back out.
-import { GROUND } from './occasions.js';
+import { GROUND, paidItems } from './occasions.js';
 import { LIGHT_COLORS } from './lighthouse.js';
 
 const MIXES = {
@@ -82,7 +82,7 @@ export function applyLook(config, look) {
 /** The Deluxe effects of `occasion` this config uses. */
 export function deluxeInUse(config, occasion) {
   const used = [];
-  for (const item of occasion.deluxe) {
+  for (const item of paidItems(occasion)) {
     if (item === 'finale') continue;
     if (GROUND.has(item) ? groundStyles(config).includes(item) : config.look.mix[item] > 0) used.push(item);
   }
@@ -91,12 +91,13 @@ export function deluxeInUse(config, occasion) {
 
 /** Takes an occasion's Deluxe effects back out, for a free send. */
 export function keepFree(config, occasion) {
-  for (const item of occasion.deluxe) if (!GROUND.has(item) && item in config.look.mix) config.look.mix[item] = 0;
+  const paid = paidItems(occasion);
+  for (const item of paid) if (!GROUND.has(item) && item in config.look.mix) config.look.mix[item] = 0;
   let any = false;
   for (const type in config.look.mix) if (type !== 'text' && config.look.mix[type] > 0) any = true;
   if (!any) for (const item of occasion.free) if (item in config.look.mix) config.look.mix[item] = 1;
   if (config.fountains.enabled) {
-    let styles = groundStyles(config).filter((style) => !occasion.deluxe.includes(style));
+    let styles = groundStyles(config).filter((style) => !paid.has(style));
     if (!styles.length) styles = occasion.free.filter((item) => GROUND.has(item));
     if (styles.length) config.fountains.style = styles.join(',');
     else config.fountains.enabled = false;

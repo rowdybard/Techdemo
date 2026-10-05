@@ -9,7 +9,7 @@
 // The price shown comes from the server. Words only ever reach the page as textContent.
 import { track, rememberPrice } from './track.js';
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, giftLink } from './link.js';
-import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion } from './occasions.js';
+import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion, paidItems } from './occasions.js';
 import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
 import { BLOCKED_NOTE, greetingBlocked, isBlocked } from './moderate.js';
 
@@ -127,7 +127,7 @@ export function create(ctx) {
   const barSend = el('button', 'send-primary');
   barSend.type = 'button';
   // Record the preview as a video to post (watermarked: it isn't a paid greeting yet).
-  const film = el('button', 'send-secondary builder-film', '🎬');
+  const film = el('button', 'send-secondary builder-film', '🎬 Save video');
   film.type = 'button';
   film.title = 'Save as video';
   film.setAttribute('aria-label', 'Save as video');
@@ -304,7 +304,7 @@ export function create(ctx) {
     open: () => open.click(),
     refresh: () => refresh(),
     /** While a greeting is being made: its occasion's Deluxe effects, for the ✦ marks. */
-    get deluxe() { return state.view && state.view !== 'closed' ? OCCASIONS[state.occasion].deluxe : null; },
+    get deluxe() { return state.view && state.view !== 'closed' ? [...paidItems(OCCASIONS[state.occasion])] : null; },
     get summary() { return state.view && state.view !== 'closed' ? `${OCCASIONS[state.occasion].label} greeting · ${send.textContent}` : ''; },
   };
   refresh();
