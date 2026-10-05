@@ -33,7 +33,7 @@ export function create(ctx) {
   const readyTitle = el('p', 'send-title', '🎬 Your video is ready');
   // Watch it here first: you see what you're saving, and it proves it recorded.
   const preview = el('video', 'video-preview');
-  preview.controls = true;
+  preview.controls = true; // its ⋮ menu has a Download of its own, a second way to get the file
   preview.loop = true;
   preview.muted = true;
   preview.playsInline = true;
@@ -60,20 +60,26 @@ export function create(ctx) {
       await navigator.share({ files: [file], title: 'SkyGreeting' });
       readyNote.textContent = 'Shared.';
     } catch (error) {
-      // Closing the share sheet isn't a failure; anything else falls back to a download.
-      if (!error || error.name !== 'AbortError') download();
+      // Closing the share sheet isn't a failure. If sharing really failed, the tap that
+      // started it is used up, and browsers silently drop a download that isn't from a
+      // fresh tap, so it asks for another instead of pretending.
+      if (!error || error.name !== 'AbortError') readyNote.textContent = 'Sharing didn’t work on this phone. Tap Download instead.';
     }
   }, { signal });
 
   function download() {
     if (!file) return;
     if (!blobUrl) blobUrl = URL.createObjectURL(file);
+    // Some phone browsers ignore a click on a link that isn't in the page.
     const link = document.createElement('a');
     link.href = blobUrl;
     link.download = file.name;
+    link.style.display = 'none';
+    document.body.append(link);
     link.click();
+    link.remove();
     const odd = file.type === 'video/webm' ? ' Some gallery apps don’t list .webm files, so open it from Files, or use Share to send it straight to TikTok or Instagram.' : '';
-    readyNote.textContent = `Saved as ${file.name}. Find it in your Downloads folder: on a phone, open the Files app, then Downloads.${odd}`;
+    readyNote.textContent = `Download started: ${file.name}. Your phone should show a “Downloaded” notice; the file is in Files › Downloads. Nothing there? Use the ⋮ on the video above and choose Download.${odd}`;
   }
 
   /**
@@ -97,6 +103,8 @@ export function create(ctx) {
       canvas.height = 0;
       const kind = type.split(';')[0];
       file = new File(chunks, `${name}.${kind === 'video/mp4' ? 'mp4' : 'webm'}`, { type: kind });
+      if (file.size < 2000) readyTitle.textContent = 'The recording came out empty. Please try again.';
+      else readyTitle.textContent = '🎬 Your video is ready';
       job = null;
       pill.hidden = true;
       readyNote.textContent = `${Math.max(1, Math.round(file.size / 1048576 * 10) / 10)} MB · ${kind === 'video/mp4' ? 'MP4' : 'WebM'}${watermark ? ' · free greetings carry a small SkyGreeting mark' : ''}`;

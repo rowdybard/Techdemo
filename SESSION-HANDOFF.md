@@ -62,6 +62,7 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 - A ground-show spark's brightness is capped in the fragment shader through a flag in the particle colour attribute's spare channel (`pool.groundShow`); `aColor.w` is therefore not free.
 - The audio context is created once for the page and never closed (Chromium keeps closed ones alive, which leaked on rebuilds); this deliberately departs from no-leak rule 7.
 - Moderation word lists are ROT13'd in `src/moderate.js` and `worker/` imports the same file. Don't paste slurs into chat or tests; decode at runtime and print counts only. A "!" at a word's end was once read as "i".
+- Save as video: sharing consumes the tap, so a download started after a failed `navigator.share` is silently dropped by phone browsers (the likely reason an early version "saved" nothing); it now asks for a fresh tap. The download link is attached to the page before it's clicked, an empty recording says so, and the preview video's own ⋮ → Download is a second way out. Very short recordings can come out empty in the slow headless browser; a 12 s one is fine.
 - Headless Chromium can't decode recorded video (reads black), so Save as video is only proven to record and produce a file, not to look right.
 - Stripe: a publishable key pasted into the secret slot gives "publishable API key" errors; checkout failed once only because the owner's BetBlocker VPN blocked checkout.stripe.com.
 - `/terms.html` redirects to `/terms`; always link the clean paths.
