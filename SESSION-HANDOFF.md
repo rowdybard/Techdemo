@@ -37,14 +37,7 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 
 ## Open items
 
-**Waiting on the owner (accounts, settings, real devices):**
-1. **Stripe:** the website was verified on October 5, 2026. Still to do: add the bank account (payouts), turn on customer receipt emails (the private link is in the receipt description), set the statement descriptor to SKYGREETING, and make one real $4.99 purchase end to end (the $1 test was before the price, email and backup changes), then refund it.
-2. **hello@skygreeting.com:** Cloudflare Email Routing is on (MX records verified); confirm a test email actually arrives.
-3. **www redirect:** `www.skygreeting.com` redirects, but always to the home page. Change the redirect rule to Dynamic with expression `concat("https://skygreeting.com", http.request.uri.path)`, keep the query string, 301.
-4. **Google Analytics:** in the GA admin turn off Enhanced measurement's "Page changes based on browser history events" and "Site search" (the buyer's return page rewrites its URL to `?g=<id>`, which must not reach Google), set data retention to 14 months (the privacy page says so), mark `purchase` a key event.
-5. **Search Console:** add the domain (TXT record in Cloudflare DNS), submit `https://skygreeting.com/sitemap.xml`, request indexing for the home page.
-6. **Cloudflare:** a free rate-limiting rule on `/api/checkout`.
-7. **Real-device tests, none done yet:** Save as video on a phone (is the file MP4 or WebM, does Share appear, does it land in Gallery or Files); sound; frame rate with the lighthouse beam and side barges on a phone and on the old Revvl tablet (the tablet once drew stars as lines; stars default to 0); a paid greeting from checkout to opening on someone else's phone.
+**Owner's list: all done (October 5, 2026).** Stripe verified with bank, receipts, descriptor and a test purchase; hello@ email routing; www redirect; Google Analytics settings; Search Console; checkout rate limit. Real-device checks: Save as video produces an MP4 on the owner's Android phone. Still worth watching: frame rate with the lighthouse beam and side barges on a phone and on the old Revvl tablet, and how Google Search Console reports indexing over the next weeks.
 
 **Possible next work:**
 - Fountains still glow a lot at Sparkle 80% on three barges; the cap is 65% (`GROUND_BRIGHTNESS` in `fireworks.js`). Lower the default Sparkle (about 65%) or thin the fountain sparks if it still looks blown out on a phone.
