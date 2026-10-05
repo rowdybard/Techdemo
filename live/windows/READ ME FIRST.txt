@@ -1,0 +1,52 @@
+SKYGREETING LIVE: fireworks your YouTube viewers control
+========================================================
+
+START
+  1. Unzip this folder somewhere easy, like your Desktop. (Don't run it from inside the zip.)
+  2. Double-click "Start SkyGreeting LIVE.bat".
+     If Windows says "Windows protected your PC", click "More info", then "Run anyway".
+     If the firewall asks, you can click Cancel: it only needs this computer.
+  3. Your browser opens the control panel (http://localhost:8787/live/admin).
+     Keep the black window open the whole time you stream.
+
+PRACTICE FIRST
+  On the control panel press "Practice with pretend viewers", then "Open the stream window".
+  Fake viewers will chat and send Super Chats so you can see everything working.
+
+GO LIVE (with OBS, free from obsproject.com)
+  1. In OBS add a Browser source. Paste the link from the control panel
+     ("Copy link"), set 1920 x 1080 (or 1080 x 1920 if you picked Tall),
+     and tick "Control audio via OBS".
+  2. In YouTube Studio click Create > Go live > Stream, copy the stream key,
+     and paste it in OBS: Settings > Stream > Service: YouTube.
+  3. In OBS press Start Streaming.
+  4. On the control panel type your channel's @handle and press Connect.
+     It waits until you're live, then the dot turns green.
+     For a 24/7 stream it finds your next stream by itself if one ends.
+
+WHILE YOU'RE LIVE (all on the control panel)
+  - Sky queue: press Play or Skip for each dedication or message. Or set
+    "Words in the sky" to play by themselves.
+  - Recent viewers: Ban anyone causing trouble.
+  - Pause chat: stops chat commands for a while (Super Chats and likes still work).
+  - Test the show: fire any Super Chat or chat command yourself.
+
+WHAT VIEWERS CAN DO (it's also on screen)
+  Free:  !heart !star !boom !chaos !ghost  (add a colour: !pink heart)
+         every 1,000 likes sets off the grand finale
+  A $2 Super Chat (or more):
+         !birthday NAME, !love NAME, !congrats NAME, !thanks NAME
+         !sky ANY WORDS  (their own words in the sky)
+         Easiest: put the command in the Super Chat message itself.
+  Super Chats on their own: $1 ground show, $2 their name in the sky,
+         $5 barrage, $20 name plus grand finale. New members get their name in the sky.
+
+STOP
+  Press "Stop SkyGreeting LIVE" on the control panel, or close the black window.
+
+If something goes wrong, the "What's happening" box at the bottom of the control panel
+says what. More detail is in live\README.md.
+
+OPTIONAL SETTINGS
+  Right-click "Start SkyGreeting LIVE.bat" and choose Edit (or open it in Notepad):
+  - LIVE_DEBUG=1    prints the raw YouTube chat items in the black window.

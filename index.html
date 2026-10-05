@@ -51,7 +51,7 @@
   function gtag() { dataLayer.push(arguments); }
   (function () {
     var query = new URLSearchParams(location.search);
-    if (query.get('embed') === '1') return;
+    if (query.get('embed') === '1' || query.get('live') === '1') return;
     gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted' });
     gtag('consent', 'default', { analytics_storage: 'denied', region: ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'] });
     var view = query.get('g') ? 'paid-greeting' : query.get('msg') ? 'greeting' : query.get('hero') === '1' ? 'hero' : '';
@@ -289,6 +289,10 @@
 <link rel="modulepreload" href="./src/terrain.glsl.js">
 <link rel="modulepreload" href="./src/track.js">
 <link rel="modulepreload" href="./src/ui.js">
+<link rel="modulepreload" href="./src/live.js">
+<link rel="modulepreload" href="./src/live-catalog.js">
+<link rel="modulepreload" href="./src/live-overlay.js">
+<link rel="modulepreload" href="./src/live-director.js">
 <link rel="modulepreload" href="./src/video.js">
 <link rel="modulepreload" href="./src/walk.js">
 <link rel="modulepreload" href="./src/wind.js">

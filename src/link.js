@@ -24,7 +24,9 @@ export function readLink(config) {
   } catch {
     params = new URLSearchParams();
   }
-  const embed = params.get('embed') === '1';
+  // The live-stream page (live.js) is an embed with sound, an overlay and no greeting.
+  const live = params.get('live') === '1';
+  const embed = params.get('embed') === '1' || live;
   if (!embed) recall(config);
 
   const packed = params.get('s');
@@ -37,7 +39,8 @@ export function readLink(config) {
     if (value) config.hero[key] = value.slice(0, TEXT_LIMITS[key]);
   }
   // Embedded headers stay quiet unless the link asks for sound.
-  if (embed && params.get('sound') !== '1') config.sound.enabled = false;
+  if (embed && !live && params.get('sound') !== '1') config.sound.enabled = false;
+  if (live && params.get('sound') === '0') config.sound.enabled = false;
   // A SkyGreeting someone sent (see gift.js): an occasion, their words and their name.
   const message = cleanText(params.get('msg'), MESSAGE_LIMIT).toUpperCase();
   const gift = !embed && message ? {
@@ -60,6 +63,7 @@ export function readLink(config) {
   const paid = !embed && id && /^[A-Za-z0-9]{8}$/.test(id) ? { id, sent: params.get('sent') === '1' } : null;
   return {
     embed,
+    live,
     gift: paid || gift,
     hero: !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero'),
   };

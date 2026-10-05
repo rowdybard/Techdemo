@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyGreeting LIVE control panel</title>
+<style>
+  :root { color-scheme: dark; --bg: #0d1020; --card: #171b30; --ink: #e9edf5; --dim: #9aa3bd; --accent: #ffb347; --ok: #4ade80; --bad: #f87171; --warn: #fbbf24; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .top { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 22px; }
+  section { background: var(--card); border-radius: 10px; padding: 14px; min-width: 0; }
+  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  button { font: inherit; padding: 7px 12px; border: 0; border-radius: 6px; background: #2a3152; color: var(--ink); cursor: pointer; }
+  button:hover { filter: brightness(1.25); }
+  button.go { background: #1f6f43; } button.no { background: #6b2430; } button.big { padding: 10px 16px; font-weight: 600; }
+  input, select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid #333b5c; background: #0b0e1c; color: var(--ink); min-width: 0; }
+  input[type=number] { width: 90px; flex-shrink: 0; }
+  label > select { max-width: 55%; }
+  label { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .stack { display: grid; gap: 10px; }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--bad); margin-right: 6px; vertical-align: -1px; }
+  .dot.on { background: var(--ok); } .dot.wait { background: var(--warn); }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  li.item { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px; border-radius: 8px; background: #0f1328; }
+  li.item > span { min-width: 0; overflow-wrap: anywhere; }
+  .wide { grid-column: 1 / -1; }
+  pre { margin: 0; max-height: 260px; overflow: auto; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); white-space: pre-wrap; }
+  .muted { color: var(--dim); font-size: 13px; }
+  .paused { background: #6b2430 !important; }
+  code.url { display: block; padding: 6px 8px; border-radius: 6px; background: #0b0e1c; overflow-wrap: anywhere; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>🎆 SkyGreeting LIVE</h1>
+    <div class="row" style="margin:0">
+      <button id="pause" class="big">⏸ Pause chat</button>
+      <button id="quit" class="no">Stop SkyGreeting LIVE</button>
+    </div>
+  </div>
+
+  <section>
+    <h2>1 · Connect to your YouTube live chat</h2>
+    <div class="row"><span class="dot" id="dot"></span><b id="state">…</b></div>
+    <div class="muted" id="details" style="margin-bottom:10px"></div>
+    <div class="row"><input id="channel" placeholder="your channel @handle, or the live video's link" style="flex:1"><button id="connect" class="go">Connect</button></div>
+    <div class="row"><button id="disconnect">Disconnect</button><button id="simulate">Practice with pretend viewers</button></div>
+    <label class="muted"><span>Reconnect to this channel by itself when I start the app</span><input type="checkbox" id="autoConnect"></label>
+    <p class="muted">With your @handle it waits until you're live, joins the chat, and finds your next stream by itself after one ends. A video link joins that one stream.</p>
+  </section>
+
+  <section>
+    <h2>2 · Put the show on stream</h2>
+    <div class="stack">
+      <label>Look <select id="preset"><option value="">Default</option><option>Halloween</option><option>Neon</option><option>Calm</option><option>Gold Willows</option><option>Fourth of July</option><option>Lake Michigan</option><option>Finale</option></select></label>
+      <label>Shape <select id="shape"><option value="wide">Wide 16:9 (normal YouTube live)</option><option value="tall">Tall 9:16 (vertical / Shorts live)</option></select></label>
+      <label class="muted"><span>Auto-director: changes the look, plays a show at :00, :20 and :40, and prompts chat</span><input type="checkbox" id="director"></label>
+      <label>Plug line <input id="plug" placeholder="Subscribe for 24/7 fireworks" style="flex:1"></label>
+      <div class="row"><button id="open" class="go big">Open the stream window</button><button id="copy">Copy link</button></div>
+      <code class="url" id="url"></code>
+      <p class="muted">In OBS, add a <b>Browser</b> source with this link, sized 1920×1080 for wide or 1080×1920 for tall, and tick <b>Control audio via OBS</b>. Then stream to YouTube from OBS with your stream key (YouTube Studio → Go live → Stream).</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Sky queue · dedications and messages</h2>
+    <ul id="queue"></ul>
+  </section>
+
+  <section>
+    <h2>Recent viewers · ban anyone causing trouble</h2>
+    <ul id="viewers"></ul>
+    <div id="bannedBox" style="margin-top:12px" hidden><h2>Banned</h2><ul id="banned"></ul></div>
+  </section>
+
+  <section>
+    <h2>Settings</h2>
+    <div class="stack">
+      <label>Words in the sky <select id="dedications"><option value="manual">wait for me to press Play</option><option value="auto">play by themselves (word filter only)</option></select></label>
+      <label>Super Chat needed for words in the sky ($, 0 = free) <input type="number" id="skyDollars" min="0" step="0.5"></label>
+      <label>Seconds between a viewer's launches <input type="number" id="cooldownSeconds" min="0"></label>
+      <label>Likes for each grand finale <input type="number" id="likeGoal" min="1"></label>
+      <div class="row"><button id="save" class="go">Save settings</button><span class="muted" id="saved"></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Test the show</h2>
+    <div class="row"><input id="chat" placeholder="!pink heart   or   !sky hello" style="flex:1"><button id="send">Send as chat</button></div>
+    <div class="row">
+      <button data-gift="Super Chat,100,1">$1 Super Chat</button>
+      <button data-gift="Super Chat,200,1">$2 Super Chat</button>
+      <button data-gift="Super Chat,500,1">$5 Super Chat</button>
+      <button data-gift="Super Chat,2000,1">$20 Super Chat</button>
+      <button data-gift="New member,200,1">New member</button>
+    </div>
+    <div class="row"><button id="like">❤️ +200 likes</button><button id="finale">Grand finale now</button></div>
+    <p class="muted">Tests show on the real stream too, from a viewer called “tester”.</p>
+  </section>
+
+  <section class="wide">
+    <h2>What's happening</h2>
+    <pre id="log"></pre>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const post = async (path, data) => {
+    const response = await fetch(`/live/api/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data || {}) });
+    refresh();
+    return response.ok;
+  };
+  const test = (data) => post('event', { userId: 'tester', name: 'tester', ...data });
+  let state = null;
+  let likes = 0;
+  let filled = false;
+
+  function streamLink() {
+    const params = new URLSearchParams({ live: '1' });
+    if ($('preset').value) params.set('preset', $('preset').value);
+    if ($('plug').value.trim()) params.set('plug', $('plug').value.trim());
+    if ($('shape').value === 'tall') params.set('tall', '1');
+    if (!$('director').checked) params.set('director', '0');
+    return `${location.origin}/?${params}`;
+  }
+  const showLink = () => { $('url').textContent = streamLink(); };
+  const saveLook = () => { showLink(); post('settings', { preset: $('preset').value, plug: $('plug').value, shape: $('shape').value, director: $('director').checked }); };
+  $('preset').onchange = saveLook;
+  $('shape').onchange = saveLook;
+  $('director').onchange = saveLook;
+  $('plug').onchange = saveLook;
+  $('open').onclick = () => open(streamLink(), 'skygreeting-stream', $('shape').value === 'tall' ? 'popup,width=540,height=960' : 'popup,width=1280,height=720');
+  $('copy').onclick = () => navigator.clipboard.writeText(streamLink()).then(() => { $('copy').textContent = 'Copied'; setTimeout(() => { $('copy').textContent = 'Copy link'; }, 1500); });
+
+  $('connect').onclick = () => post('connect', { channel: $('channel').value });
+  $('channel').onkeydown = (e) => { if (e.key === 'Enter') $('connect').click(); };
+  $('disconnect').onclick = () => post('disconnect');
+  $('simulate').onclick = () => post('simulate');
+  $('autoConnect').onchange = () => post('settings', { autoConnect: $('autoConnect').checked });
+  $('pause').onclick = () => post('pause', { paused: !state?.paused });
+  $('quit').onclick = () => { if (confirm('Stop SkyGreeting LIVE? The stream page stops reacting until you start it again.')) post('quit'); };
+  $('save').onclick = async () => {
+    const ok = await post('settings', {
+      dedications: $('dedications').value,
+      skyMinDiamonds: Math.round(Number($('skyDollars').value) * 100),
+      cooldownSeconds: Number($('cooldownSeconds').value),
+      likeGoal: Number($('likeGoal').value),
+    });
+    $('saved').textContent = ok ? 'Saved' : 'Couldn’t save';
+    setTimeout(() => { $('saved').textContent = ''; }, 2000);
+  };
+
+  $('send').onclick = () => { if ($('chat').value.trim()) test({ kind: 'chat', text: $('chat').value.trim() }); $('chat').value = ''; };
+  $('chat').onkeydown = (e) => { if (e.key === 'Enter') $('send').click(); };
+  for (const button of document.querySelectorAll('[data-gift]')) {
+    const [gift, diamonds, count] = button.dataset.gift.split(',');
+    button.onclick = () => test({ kind: 'gift', gift, diamonds: Number(diamonds), count: Number(count) });
+  }
+  $('like').onclick = () => test({ kind: 'like', count: 200, total: (likes += 200) });
+  $('finale').onclick = () => post('finale');
+
+  function item(text, buttons, sub) {
+    const li = document.createElement('li');
+    li.className = 'item';
+    const label = document.createElement('span');
+    label.textContent = text;
+    if (sub) {
+      const small = document.createElement('div');
+      small.className = 'muted';
+      small.textContent = sub;
+      label.append(small);
+    }
+    const actions = document.createElement('span');
+    actions.style.whiteSpace = 'nowrap';
+    for (const [title, kind, action] of buttons) {
+      const button = document.createElement('button');
+      button.textContent = title;
+      if (kind) button.className = kind;
+      button.onclick = action;
+      actions.append(button, ' ');
+    }
+    li.append(label, actions);
+    return li;
+  }
+  function empty(text) {
+    const li = document.createElement('li');
+    li.className = 'muted';
+    li.textContent = text;
+    return li;
+  }
+
+  async function refresh() {
+    try {
+      state = await (await fetch('/live/api/state')).json();
+    } catch {
+      $('state').textContent = 'SkyGreeting LIVE isn’t running. Start it again from its folder.';
+      $('dot').className = 'dot';
+      return;
+    }
+    const { status, config } = state;
+    likes = Math.max(likes, state.likes);
+    $('dot').className = `dot${status.state === 'connected' ? ' on' : status.state === 'stopped' ? '' : ' wait'}`;
+    const words = { connected: 'Connected', connecting: 'Connecting…', waiting: 'Waiting for you to go live', reconnecting: 'Reconnecting…', stopped: 'Not connected' };
+    $('state').textContent = `${words[status.state] || status.state}${status.source !== 'none' ? ` · ${status.source}` : ''}`;
+    $('details').textContent = [status.message, status.viewers ? `${status.viewers} watching` : '', `${state.pages} stream window${state.pages === 1 ? '' : 's'} open`, `${state.likes} likes`].filter(Boolean).join(' · ');
+    $('pause').textContent = state.paused ? '▶ Resume chat' : '⏸ Pause chat';
+    $('pause').classList.toggle('paused', state.paused);
+
+    if (!filled) {
+      filled = true;
+      $('channel').value = config.channel || '';
+      $('shape').value = config.shape || 'wide';
+      $('director').checked = config.director !== false;
+      $('autoConnect').checked = config.autoConnect;
+      $('preset').value = config.preset || '';
+      $('plug').value = config.plug || '';
+      for (const key of ['dedications', 'cooldownSeconds', 'likeGoal']) $(key).value = config[key];
+      $('skyDollars').value = config.skyMinDiamonds / 100;
+      showLink();
+    }
+
+    $('queue').replaceChildren(...(state.pending.length ? state.pending.map((request) => item(
+      `${request.kind === 'message' ? `“${request.text}”` : `${request.occasion} for ${request.to}`} · ${request.by}${request.gifted ? ` ($${(request.gifted / 100).toFixed(2)})` : ''}`,
+      [['Play', 'go', () => post('approve', { id: request.id })], ['Skip', 'no', () => post('reject', { id: request.id })]],
+      `they typed: ${request.said || ''}`,
+    )) : [empty('Nothing waiting.')]));
+
+    const seen = new Set();
+    const recent = state.viewers.filter((v) => v.userId !== 'tester' && !seen.has(v.userId) && seen.add(v.userId));
+    $('viewers').replaceChildren(...(recent.length ? recent.slice(0, 10).map((v) => item(
+      `${v.name} (@${v.userId})`, config.banned.includes(v.userId) ? [] : [['Ban', 'no', () => post('ban', { userId: v.userId })]], v.what,
+    )) : [empty('No viewers yet.')]));
+    $('bannedBox').hidden = config.banned.length === 0;
+    $('banned').replaceChildren(...config.banned.map((id) => item(`@${id}`, [['Unban', '', () => post('unban', { userId: id })]])));
+
+    const log = $('log');
+    const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+    log.textContent = state.log.join('\n');
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+  refresh();
+  setInterval(refresh, 1000);
+</script>
+</body>
+</html>
