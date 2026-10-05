@@ -4,3 +4,4 @@ node_modules/
 .wrangler/
 live/config.json
 dist/
+live/crash.log

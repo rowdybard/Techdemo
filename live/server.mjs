@@ -12,7 +12,7 @@
 // What the control panel changes is saved in live/config.json (not in git).
 // Listens on 127.0.0.1 only unless HOST is set: the control panel has no login.
 import { createServer } from 'node:http';
-import { readFile, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRules, dollars } from './rules.mjs';
@@ -256,3 +256,14 @@ async function shutdown() {
   process.exit(0);
 }
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, shutdown);
+
+// An error nobody caught would close this window and end the stream. Log it to
+// live/crash.log (with the time) and the panel's log, and keep running.
+const CRASH_LOG = fileURLToPath(new URL('./crash.log', import.meta.url));
+for (const event of ['uncaughtException', 'unhandledRejection']) {
+  process.on(event, (error) => {
+    const text = error?.stack || String(error);
+    note(`${event}: ${String(error?.message || error).slice(0, 160)} (details in live/crash.log)`);
+    appendFile(CRASH_LOG, `${new Date().toISOString()} ${event} ${text}\n\n`).catch(() => {});
+  });
+}

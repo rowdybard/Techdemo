@@ -48,6 +48,10 @@ It was built for TikTok LIVE first. On October 4 TikTok flagged the stream as "u
 
 Daniel's worry: a quiet chat makes a repetitive stream, and YouTube flags repetitive content. `src/live-director.js` (on by default; `director=0` or the panel checkbox turns it off) rotates the look every 15 minutes with a sky ease and banner, plays a 10-second countdown and a mini show at :00/:20/:40 (a grand finale on the hour, waiting for any paid words first), and posts a command prompt in the feed every 2 minutes when chat is quiet. Tested headless with a shifted clock (countdown, mini show, look change, prompt all fired). Royalty-free background music is fine but doesn't address the repetition rule; the variety does.
 
+## Crash on October 4-5 and hosting
+
+Daniel's stream crashed overnight on his PC (cause unknown; no logs survived). The server had no handler for uncaught errors, so any one would close the black window; it now logs them to `live/crash.log` and carries on. Hosting it 24/7 (so his PC isn't needed) was discussed: it needs a GPU machine, because software WebGL runs about 1 fps here. Not built; waiting on Daniel's go. See the thread for the options and costs.
+
 ## Defaults I picked for YouTube
 
 - **16:9 by default** (normal YouTube live, TVs and desktops), with Tall 9:16 as a panel option for vertical live. In 16:9 the overlay is in the bottom-left corner and shells burst lower (`LIFT` in `live.js`) because the frame shows less sky.
