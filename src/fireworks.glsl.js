@@ -90,7 +90,6 @@ export const fireworksVertex = /* glsl */ `
 `;
 
 export const fireworksFragment = /* glsl */ `
-  uniform float uTime;
   uniform float uBrightness;
   uniform float uGroundBrightness; // ground shows never go brighter than this (Sparkle at 65%)
   uniform float uGlitter;
@@ -126,11 +125,14 @@ export const fireworksFragment = /* glsl */ `
     vec3 color = mix(vColor, vec3(1.0, 0.45, 0.12) * dot(vColor, vec3(0.33)), smoothstep(0.55, 1.0, vAge) * 0.6);
     float brightness = fade;
 
+    // Flicker and blink run on the spark's own age, not the page's clock: after a long
+    // session (the autoshow left up) the clock is large enough that some phone GPUs'
+    // sin() returns NaN, which the safety pass turns into black flashes.
     if (vKind > 0.5 && vKind < 1.5) {        // glitter: random flickers
-      float flick = step(0.45, hash(vSeed * 97.0 + floor(uTime * 24.0)));
+      float flick = step(0.45, hash(vSeed * 97.0 + floor(vSeconds * 24.0)));
       brightness *= mix(1.0, flick * 2.2, uGlitter);
     } else if (vKind > 1.5 && vKind < 2.5) { // strobe: blinks once it has slowed
-      float blink = step(0.55, fract(uTime * (6.0 + 4.0 * vSeed) + vSeed));
+      float blink = step(0.55, fract(vSeconds * (6.0 + 4.0 * vSeed) + vSeed));
       brightness *= mix(1.0, blink * 2.6, smoothstep(0.15, 0.3, vAge));
     } else if (vKind > 2.5 && vKind < 3.5) { // comet: hot white core
       color = mix(color, vec3(1.0, 0.9, 0.75), core * 0.6);

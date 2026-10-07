@@ -3,6 +3,7 @@
 // shaders share. Plain uniforms instead of three.js lights, because changing the number
 // of lights would recompile every shader mid-show.
 import * as THREE from 'three';
+import { STRIKES } from './haunt.js';
 
 export const BURST_LIGHTS = 8;
 
@@ -61,8 +62,18 @@ export function create(ctx) {
 
   // A burst: a bright flash as the shell breaks, then a glow that fades with the sparks.
   // A fountain (a record with a hold time): a steady, flickering light while it runs.
+  // Lightning (a record that sounds as thunder): a hard flash on each stroke.
   function strength(record, time) {
     const age = time - record.time;
+    if (record.sound === 'thunder') {
+      if (age < 0 || age > record.hold) return 0;
+      let flash = 0;
+      for (let s = 0; s < STRIKES.length; s++) {
+        const after = age - STRIKES[s][0];
+        if (after >= 0) flash += 3 * STRIKES[s][1] * Math.exp(-after * 22);
+      }
+      return flash * (record.size / 60);
+    }
     if (record.hold > 0) {
       if (age < 0 || age > record.hold) return 0;
       const ramp = Math.min(1, age / 0.8, (record.hold - age) / 1.0);

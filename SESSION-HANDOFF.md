@@ -25,7 +25,7 @@ Where things stand as of **October 5, 2026**, for whoever picks this up next (a 
 
 - `npm run check` (needs `npm install` once for Playwright): loads the page headless on desktop and phone sizes, fails on any console warning or error, prints `renderer.info` counts, and runs 20 Shift+R rebuilds to catch leaks. Latest: clean, 26 draw calls, 12 geometries, 16 programs, no leaks. **Run it before every commit.** It also fails if a module isn't preloaded in `index.html` or a preloaded file is missing.
 - Local server: `python3 -m http.server` (or `npx serve .`). `/api/*` won't exist locally; tests stub it.
-- **Preview artifact** (claude.ai can't open localhost): `python3 tools/make-preview.py` writes `.preview/index.html` and prints the supporting-files map; publish both with the Artifact tool to https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j (currently Version 29). The preview loads three.js from jsDelivr and has no Analytics, by necessity.
+- **Preview artifact** (claude.ai can't open localhost): `python3 tools/make-preview.py` writes `.preview/index.html` and prints the supporting-files map; publish both with the Artifact tool to https://claude.ai/artifact/8ZMbARoMcnBrAmYGb5tQ1j (currently Version 37). The preview loads three.js from jsDelivr and has no Analytics, by necessity.
 - A change is done when: checked, committed, pushed, docs updated (`HANDOFF.md` Status), preview republished.
 - Rendering is only verifiable here with software WebGL (slow, no real frame rates). Visual checks are screenshots from headless Chromium via Playwright.
 
@@ -58,6 +58,7 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 - Save as video: sharing consumes the tap, so a download started after a failed `navigator.share` is silently dropped by phone browsers (the likely reason an early version "saved" nothing); it now asks for a fresh tap. The download link is attached to the page before it's clicked, an empty recording says so, and the preview video's own ⋮ → Download is a second way out. Very short recordings can come out empty in the slow headless browser; a 12 s one is fine.
 - Headless Chromium can't decode recorded video (reads black), so Save as video is only proven to record and produce a file, not to look right.
 - Stripe: a publishable key pasted into the secret slot gives "publishable API key" errors; checkout failed once only because the owner's BetBlocker VPN blocked checkout.stripe.com.
+- Keep large numbers out of fragment-shader maths: anything driven by total running time (`uTime`) breaks on some phone GPUs after a long session. Use a spark's or puff's own age.
 - `/terms.html` redirects to `/terms`; always link the clean paths.
 
 ## How the owner likes to work

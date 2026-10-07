@@ -19,8 +19,8 @@ const LANTERN = [1, 0.45, 0.06];
 const FLAME = [1, 0.8, 0.3];
 
 const p = [0, 0, 0];
-const path = []; // lightning bolt corners, reused
-for (let i = 0; i < 24; i++) path.push([0, 0, 0]);
+const path = []; // lightning corners, reused: the channel's, then each fork's
+for (let i = 0; i < 32; i++) path.push([0, 0, 0]);
 
 // smoke: how much smoke the effect gives off (smoke.js), 0 for none. sound: what it
 // sounds like (audio.js): 'hiss', 'whoosh', 'pops', 'boom', 'bubble', 'thunder' or 'none'.
@@ -105,60 +105,91 @@ export function wisps(pool, config, phone, start, tubes, y, z, palette, lights) 
   pool.end();
 }
 
+// Lightning, as a real strike goes: a faint leader steps down from high in the sky to a
+// tube, the channel blazes, and it re-strikes along the same path, with forks off it.
+// Each segment of the path is one spark that runs from corner to corner under heavy drag
+// and keeps its tail at the start, so the channel is an unbroken jagged line, not dots;
+// a second spark runs each segment the other way, evening out the trail's fade. They're
+// pops, which flash on at once (other sparks ease in). STRIKES is when the channel blazes
+// after the leader starts, and how brightly; burstlights.js flashes the scene to match.
+export const STRIKES = [[0.1, 1], [0.19, 0.6], [0.32, 0.4]];
+const LEADER = 0.1; // seconds the leader takes to come down
+const FORKS = 2;
+const FORK_CORNERS = 5;
+
 export function lightning(pool, config, phone, start, tubes, y, z, palette, lights) {
-  const { look } = config;
+  const { physics, look } = config;
+  const g = 9.81 * physics.gravity;
   const bolts = phone ? 7 : 11;
   const every = 0.65;
-  const corners = 14;
-  const perMetre = phone ? 0.5 : 0.8;
-  const top = y + config.fountains.height * 3;
-  // Count first: each bolt is drawn twice (strike and re-strike), with one branch.
-  const length = (top - y) * 1.35;
-  const sparksPerBolt = Math.ceil(length * perMetre) + Math.ceil(length * 0.35 * perMetre);
-  let i = pool.begin(bolts * sparksPerBolt * 2);
+  const corners = phone ? 12 : 16;
+  const segments = corners + FORKS * FORK_CORNERS;
+  let i = pool.begin(bolts * (1 + STRIKES.length) * segments * 2);
   for (let b = 0; b < bolts; b++) {
     const t = (Math.random() * tubes.length) | 0;
     const born = start + b * every + Math.random() * 0.3;
-    // A jagged path from the sky down to the tube, wandering less as it nears the ground.
-    const x0 = tubes[t] + (Math.random() - 0.5) * 60;
+    // A random walk from high up down to the tube: tortuous, settling as it nears it.
+    const top = y + 110 + Math.random() * 70;
+    const x0 = tubes[t] + (Math.random() - 0.5) * 70;
+    let walk = 0;
     for (let c = 0; c <= corners; c++) {
       const f = c / corners;
+      walk = walk * 0.8 + (Math.random() - 0.5) * 16;
       const corner = path[c];
-      corner[0] = x0 + (tubes[t] - x0) * f + (c === corners ? 0 : (Math.random() - 0.5) * 18 * (1 - f * 0.7));
-      corner[1] = top + (y - top) * f;
-      corner[2] = z + (Math.random() - 0.5) * 6;
+      corner[0] = x0 + (tubes[t] - x0) * f + (c === corners ? 0 : walk * (1 - f * 0.6));
+      corner[1] = top + (y - top) * (f + (c === 0 || c === corners ? 0 : (Math.random() - 0.5) * 0.5 / corners));
+      corner[2] = z + (c === corners ? 0 : (Math.random() - 0.5) * 5);
     }
-    const sparks = Math.ceil(length * perMetre); // exactly what the count above reserved
-    const branch = sparksPerBolt - sparks;
-    const forkAt = 4 + ((Math.random() * 5) | 0);
-    for (let pass = 0; pass < 2; pass++) {
-      const flash = born + pass * 0.13;
-      const life = pass === 0 ? 0.16 : 0.24;
-      for (let s = 0; s < sparks; s++) {
-        const f = (s / sparks) * corners;
-        const c = Math.min(corners - 1, f | 0);
-        const u = f - c;
-        const a = path[c];
-        const e = path[c + 1];
-        // The bolt runs down from the sky in a few hundredths of a second.
-        pool.set(i++, a[0] + (e[0] - a[0]) * u, a[1] + (e[1] - a[1]) * u, a[2] + (e[2] - a[2]) * u, flash + (s / sparks) * 0.05,
-          0, 0, 0, 8, BOLT[0] * 2.2, BOLT[1] * 2.2, BOLT[2] * 2.2, VIOLET[0], VIOLET[1], VIOLET[2], 0.08,
-          life, 0.55 * look.sparkSize, 0.02, KIND.spark);
+    // The leader: dim, each segment a moment after the one above.
+    for (let c = 0; c < corners; c++) {
+      i = segment(pool, i, path[c], path[c + 1], born + (c / corners) * LEADER, 0.12, 0.5 * look.sparkSize, 0.9, 60, physics, g);
+    }
+    // Two forks off the middle of the channel, angling down and away, the same every stroke.
+    for (let k = 0; k < FORKS; k++) {
+      const from = path[Math.round(corners * (0.25 + Math.random() * 0.35))];
+      const side = k === 0 ? -1 : 1;
+      const base = corners + 1 + k * (FORK_CORNERS + 1);
+      for (let c = 0; c <= FORK_CORNERS; c++) {
+        const corner = path[base + c];
+        corner[0] = c === 0 ? from[0] : path[base + c - 1][0] + side * (1.5 + Math.random() * 4.5);
+        corner[1] = c === 0 ? from[1] : path[base + c - 1][1] - 6 - Math.random() * 7;
+        corner[2] = from[2] + (c === 0 ? 0 : (Math.random() - 0.5) * 3);
       }
-      // A thinner fork off one corner, angling away.
-      const from = path[forkAt];
-      const side = Math.random() < 0.5 ? -1 : 1;
-      for (let s = 0; s < branch; s++) {
-        const f = s / branch;
-        const jag = (Math.random() - 0.5) * 3;
-        pool.set(i++, from[0] + side * f * 26 + jag, from[1] - f * 30, from[2], flash + 0.02 + f * 0.03,
-          0, 0, 0, 8, BOLT[0] * 1.4, BOLT[1] * 1.4, BOLT[2] * 1.4, VIOLET[0], VIOLET[1], VIOLET[2], 0.06,
-          life * 0.8, 0.35 * look.sparkSize, 0.02, KIND.spark);
+      const reached = born + ((top - from[1]) / (top - y)) * LEADER; // when the leader gets there
+      for (let c = 0; c < FORK_CORNERS; c++) {
+        i = segment(pool, i, path[base + c], path[base + c + 1], reached + c * 0.008, 0.12, 0.4 * look.sparkSize, 0.8, 60, physics, g);
       }
     }
-    light(lights[t], born, 0.45, tubes[t], y + 30, z, BOLT, 60, 0, 'thunder');
+    // The strokes: the whole channel at once, forks a little dimmer.
+    for (let s = 0; s < STRIKES.length; s++) {
+      const [at, bright] = STRIKES[s];
+      for (let c = 0; c < corners; c++) {
+        i = segment(pool, i, path[c], path[c + 1], born + at, 0.14, 0.9 * look.sparkSize, 2.6 * bright, 250, physics, g);
+      }
+      for (let k = 0; k < FORKS; k++) {
+        const base = corners + 1 + k * (FORK_CORNERS + 1);
+        for (let c = 0; c < FORK_CORNERS; c++) {
+          i = segment(pool, i, path[base + c], path[base + c + 1], born + at + 0.01, 0.12, 0.5 * look.sparkSize, 1.5 * bright, 250, physics, g);
+        }
+      }
+    }
+    light(lights[t], born, STRIKES[STRIKES.length - 1][0] + 0.4, tubes[t], y + 60, z, BOLT, 80, 0, 'thunder');
   }
   pool.end();
+}
+
+// One straight stretch of a bolt: a spark each way between corners a and e, born at
+// `born`, flying under drag `stop` so it halts at the far corner with its tail at the near.
+function segment(pool, i, a, e, born, life, radius, bright, stop, physics, g) {
+  for (let way = 0; way < 2; way++) {
+    const from = way ? e : a;
+    const to = way ? a : e;
+    pool.set(i++, from[0], from[1], from[2], born,
+      (to[0] - from[0]) * stop + physics.windX, (to[1] - from[1]) * stop - g / stop, (to[2] - from[2]) * stop + physics.windZ, stop,
+      BOLT[0] * bright, BOLT[1] * bright, BOLT[2] * bright, BOLT[0] * bright, BOLT[1] * bright, BOLT[2] * bright, 99,
+      life, radius, 50, KIND.pop);
+  }
+  return i;
 }
 
 export function lanterns(pool, config, phone, start, tubes, y, z, palette, lights) {
