@@ -1,8 +1,9 @@
 // Autoshow (skygreeting.com/autoshow, or ?autoshow=1): an endless, text-less fireworks
 // show that is never the same twice, made to leave on a screen. It runs in acts of about
 // half a minute to a minute, and inside each act something happens every 5 to 12 seconds
-// (a volley, a sweep across the sky, a pause before a big volley, a burst of pace, a
-// new kind of shell, new colours, the ground show). Each act draws its own design at random: which shells and how many kinds, the colours (a preset
+// (a volley, a sweep, mirrored pairs, a climbing tower, a zigzag, a rainbow arc, a rapid
+// barrage, shells answered across the sky, a crown; a pause before a big volley, a burst
+// of pace, a new kind of shell, new colours, the ground show). Each act draws its own design at random: which shells and how many kinds, the colours (a preset
 // palette or freshly mixed hues), size, sparkle, trails, pace, the ground show and its
 // style, side barges, smoke, the pier and lighthouse, the sky, the wind and sometimes the
 // view. Within an act the pace swells toward the end, some acts close on a grand finale,
@@ -19,8 +20,10 @@ const SPOOKY_GROUND = ['cauldron', 'wisps', 'lightning', 'lanterns', 'halloween'
 const LIGHT_COLORS = ['warm', 'white', 'red', 'green'];
 const CAMERAS = ['sand', 'sand', 'sand', 'drone', 'water'];
 const EASE = 1 / 25; // eased values move about 1/25 of their full range a second
-const MOMENTS = ['volley', 'sweep', 'hush', 'rush', 'swap', 'recolour', 'ground', 'volley', 'sweep'];
-const QUEUE = 24; // shells waiting to launch at set times (volleys, sweeps)
+// What happens next, picked at random (repeats weigh it): launch patterns, and changes.
+const MOMENTS = ['volley', 'sweep', 'hush', 'rush', 'swap', 'recolour', 'ground', 'volley', 'sweep',
+  'mirror', 'tower', 'zigzag', 'arc', 'barrage', 'echo', 'crown', 'mirror', 'arc', 'zigzag'];
+const QUEUE = 48; // shells waiting to launch at set times (the launch patterns)
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const chance = (p) => Math.random() < p;
@@ -120,6 +123,7 @@ export function create(ctx) {
     const kind = pickOne(MOMENTS);
     const low = physics.heightMin;
     const span = physics.heightMax - physics.heightMin;
+    const wide = ctx.camera && ctx.camera.aspect < 1 ? 150 : 220; // metres across the sky in view
     if (kind === 'volley' || kind === 'hush') {
       // Several at once (after a short hush, a bigger one), fanned across the sky.
       const count = kind === 'hush' ? 6 + ((Math.random() * 4) | 0) : 3 + ((Math.random() * 4) | 0);
@@ -127,7 +131,7 @@ export function create(ctx) {
       if (kind === 'hush') rushUntil = -start; // negative: hold the random show until `start`
       const type = chance(0.5) ? mixed() : '';
       for (let k = 0; k < count; k++) {
-        later(start + k * rand(0.05, 0.25), type || mixed(), middle + (k / Math.max(1, count - 1) - 0.5) * rand(120, 220), low + Math.random() * span);
+        later(start + k * rand(0.05, 0.25), type || mixed(), middle + (k / Math.max(1, count - 1) - 0.5) * rand(0.55, 1) * wide, low + Math.random() * span);
       }
     } else if (kind === 'sweep') {
       // One after another across the sky, left to right or back, rising or falling.
@@ -137,7 +141,67 @@ export function create(ctx) {
       const type = mixed();
       for (let k = 0; k < count; k++) {
         const share = k / (count - 1);
-        later(time + 0.2 + k * rand(0.25, 0.45), type, middle + way * (share - 0.5) * 220, low + span * (0.5 + climb * (share - 0.5)));
+        later(time + 0.2 + k * rand(0.25, 0.45), type, middle + way * (share - 0.5) * wide, low + span * (0.5 + climb * (share - 0.5)));
+      }
+    } else if (kind === 'mirror') {
+      // Pairs at once from both sides, walking in to the middle or out from it.
+      const pairs = 3 + ((Math.random() * 3) | 0);
+      const inward = chance(0.5);
+      const type = mixed();
+      const h = low + span * rand(0.3, 0.8);
+      for (let k = 0; k < pairs; k++) {
+        const out = (inward ? pairs - k : k + 1) / pairs;
+        const at = time + 0.2 + k * rand(0.35, 0.55);
+        later(at, type, middle - out * wide * 0.5, h);
+        later(at, type, middle + out * wide * 0.5, h);
+      }
+    } else if (kind === 'tower') {
+      // A column climbing the sky: one spot, each break higher than the last.
+      const count = 4 + ((Math.random() * 3) | 0);
+      const x = middle + rand(-0.35, 0.35) * wide;
+      const type = chance(0.5) ? mixed() : '';
+      for (let k = 0; k < count; k++) later(time + 0.2 + k * rand(0.3, 0.5), type || mixed(), x + rand(-6, 6), low + span * (k / (count - 1)));
+    } else if (kind === 'zigzag') {
+      // Left, right, left, right, closing in or opening out.
+      const count = 6 + ((Math.random() * 5) | 0);
+      const closing = chance(0.5);
+      const type = mixed();
+      for (let k = 0; k < count; k++) {
+        const reach = closing ? 1 - k / count : (k + 1) / count;
+        later(time + 0.2 + k * rand(0.22, 0.38), type, middle + (k % 2 ? 1 : -1) * reach * wide * 0.5, low + span * rand(0.2, 0.9));
+      }
+    } else if (kind === 'arc') {
+      // A rainbow across the sky: low at the ends, high in the middle, drawn either way.
+      const count = 5 + ((Math.random() * 4) | 0);
+      const way = chance(0.5) ? 1 : -1;
+      const type = mixed();
+      for (let k = 0; k < count; k++) {
+        const share = k / (count - 1);
+        later(time + 0.2 + k * rand(0.18, 0.3), type, middle + way * (share - 0.5) * wide, low + span * Math.sin(share * Math.PI));
+      }
+    } else if (kind === 'barrage') {
+      // A rapid burst of small shells all over, like a mid-show salute.
+      const count = (ctx.phone ? 6 : 8) + ((Math.random() * 5) | 0); // phones have a smaller particle pool
+      for (let k = 0; k < count; k++) later(time + 0.2 + k * rand(0.08, 0.16), mixed(), middle + rand(-0.5, 0.5) * wide, low + span * Math.random());
+    } else if (kind === 'echo') {
+      // A shell, answered by the same kind on the other side, three or four times over.
+      const rounds = 3 + ((Math.random() * 2) | 0);
+      let at = time + 0.2;
+      for (let k = 0; k < rounds; k++) {
+        const type = mixed();
+        const x = rand(0.2, 0.5) * wide;
+        const h = low + span * Math.random();
+        later(at, type, middle - x, h);
+        later(at + rand(0.5, 0.8), type, middle + x, h);
+        at += rand(1.2, 1.8);
+      }
+    } else if (kind === 'crown') {
+      // A crown or a W: tall at both ends and the middle, low in between, all at once.
+      const type = mixed();
+      const up = chance(0.5);
+      for (let k = 0; k < 5; k++) {
+        const high = k % 2 === 0 ? up : !up;
+        later(time + 0.2 + rand(0, 0.12), type, middle + (k / 4 - 0.5) * wide, low + span * (high ? rand(0.75, 1) : rand(0, 0.25)));
       }
     } else if (kind === 'rush') {
       rushUntil = time + rand(5, 9);
