@@ -350,8 +350,9 @@ export function create(ctx) {
       state.baseline = lookJson();
       state.guessed = false;
     },
-    /** While a greeting is being made: its occasion's Deluxe effects, for the ✦ marks. */
-    get deluxe() { return state.view && state.view !== 'closed' ? [...paidItems(OCCASIONS[state.occasion])] : null; },
+    /** The Deluxe effects, for Customize's ✦ marks: always, so playing with the show first shows what's paid too. */
+    get deluxe() { return [...paidItems(OCCASIONS[state.occasion])]; },
+    get price() { return price; },
     get summary() { return state.view && state.view !== 'closed' ? `${OCCASIONS[state.occasion].label} greeting · ${send.textContent}` : ''; },
   };
   refresh();
