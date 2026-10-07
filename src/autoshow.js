@@ -187,8 +187,8 @@ export function create(ctx) {
     basePace = rand(12, 42);
     show.shellsPerMinute = basePace;
     show.maxShells = shellCap(basePace);
-    physics.heightMin = rand(70, 100);
-    physics.heightMax = physics.heightMin + rand(25, 60);
+    physics.heightMin = rand(75, 105);
+    physics.heightMax = physics.heightMin + rand(60, 110);
 
     fountains.enabled = chance(0.75);
     fountains.style = spooky ? pickOne(SPOOKY_GROUND) : pickOne(GROUND);

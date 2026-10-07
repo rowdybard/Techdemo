@@ -8,6 +8,8 @@ import { config as defaults } from './config.js';
 // camera geometry) belongs to the app.
 const SAVED = ['sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'smoke', 'look', 'physics', 'bloom', 'sound', 'hero'];
 const STORAGE_KEY = 'beach-fireworks-settings';
+// [section, key, the old default] for defaults changed since launch (see recall).
+const UPGRADES = [['physics', 'heightMin', 85], ['physics', 'heightMax', 135]];
 const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text',
   'pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'];
 
@@ -116,6 +118,11 @@ export function recall(config) {
     if (text) loadSettings(config, text);
   } catch {
     // Start from the defaults.
+  }
+  // Defaults that changed after a visitor's settings were saved: an old default they never
+  // touched moves to the new one, while a value they chose stays.
+  for (const [section, key, before] of UPGRADES) {
+    if (config[section][key] === before) config[section][key] = DEFAULTS[section][key];
   }
 }
 

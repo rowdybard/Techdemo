@@ -133,8 +133,8 @@ export const config = {
     gustiness: 1, // gusts, lulls and a wandering direction around that average; 0 is steady
     windX: 0, // worked out each frame by wind.js
     windZ: 0,
-    heightMin: 85, // burst height range, metres
-    heightMax: 135,
+    heightMin: 90, // burst height range, metres: up into the top of the screen, not just its middle
+    heightMax: 200,
     launchSpread: 58, // metres either side of the barge's middle (it's 130 m long)
     angleVariance: 6, // degrees a rocket may lean
   },

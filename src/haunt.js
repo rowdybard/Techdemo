@@ -17,6 +17,9 @@ const ECTO = [0.55, 0.95, 0.7];
 const BOLT = [0.85, 0.8, 1];
 const LANTERN = [1, 0.45, 0.06];
 const FLAME = [1, 0.8, 0.3];
+// Cauldron spray: hundreds of green sparks overlap over each tube, so each is dimmer than
+// its colour (like silver fountains), or they bloom into one green blob.
+const SPRAY = 0.72;
 
 const p = [0, 0, 0];
 const path = []; // lightning corners, reused: the channel's, then each fork's
@@ -55,8 +58,8 @@ export function cauldron(pool, config, phone, start, tubes, y, z, palette, light
       const around = Math.random() * Math.PI * 2;
       pool.set(i++, x, y, z, born,
         Math.sin(spread) * Math.cos(around) * speed, Math.cos(spread) * speed, Math.sin(spread) * Math.sin(around) * speed, 0.5,
-        SLIME[0], SLIME[1], SLIME[2], SLIME[0] * 0.5, SLIME[1] * 0.5, SLIME[2] * 0.5, 1.2,
-        2 + Math.random() * 0.7, 0.36 * look.sparkSize, 0.25, KIND.glitter);
+        SLIME[0] * SPRAY, SLIME[1] * SPRAY, SLIME[2] * SPRAY, SLIME[0] * 0.4, SLIME[1] * 0.4, SLIME[2] * 0.4, 1.2,
+        2 + Math.random() * 0.7, 0.27 * look.sparkSize, 0.25, KIND.glitter);
     }
     // Bubbles swell and pop in a dome over the brew.
     for (let k = 0; k < bubbles; k++) {
@@ -65,7 +68,7 @@ export function cauldron(pool, config, phone, start, tubes, y, z, palette, light
       const r = Math.random() * 9;
       const c = k % 2 === 0 ? VIOLET : SLIME;
       pool.set(i++, x + Math.cos(a) * r, y + 3 + Math.random() * config.fountains.height * 0.7, z + Math.sin(a) * r, born,
-        0, 1, 0, 3, c[0] * 1.6, c[1] * 1.6, c[2] * 1.6, c[0], c[1], c[2], 99, 0.32, 2 * look.sparkSize, 0, KIND.pop);
+        0, 1, 0, 3, c[0] * 1.15, c[1] * 1.15, c[2] * 1.15, c[0], c[1], c[2], 99, 0.32, 1.7 * look.sparkSize, 0, KIND.pop);
     }
     light(lights[t], start, duration, x, y + 18, z, SLIME, 24, 0.7, 'bubble');
   }

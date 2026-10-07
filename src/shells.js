@@ -51,7 +51,10 @@ export function planShell(shell, config, phone, aimX = NaN, aimY = NaN, type = n
   }
   shell.y = by + 2;
   // Shells from the shore are nearer, so they break lower to stay in view.
-  const height = aimed ? aimY : (physics.heightMin + Math.random() * (physics.heightMax - physics.heightMin)) * (shore ? 0.6 : 1);
+  // An upright phone shows far more sky above the barge, so the top of the range reaches
+  // higher there (up to where a tap can send one), or the top of the screen stays empty.
+  const top = phone ? Math.min(260, Math.max(physics.heightMax, physics.heightMax * 1.3)) : physics.heightMax;
+  const height = aimed ? aimY : (physics.heightMin + Math.random() * (top - physics.heightMin)) * (shore ? 0.6 : 1);
   const climb = Math.sqrt(2 * g * Math.max(height - shell.y, 10)) * 1.12; // a little extra to overcome drag
   // Time until the climb slows almost to a stop.
   shell.fuse = 0.95 * Math.log(1 + (climb * ROCKET_DRAG) / g) / ROCKET_DRAG;
