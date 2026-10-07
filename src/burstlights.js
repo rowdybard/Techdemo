@@ -70,7 +70,7 @@ export function create(ctx) {
       let flash = 0;
       for (let s = 0; s < STRIKES.length; s++) {
         const after = age - STRIKES[s][0];
-        if (after >= 0) flash += 3 * STRIKES[s][1] * Math.exp(-after * 22);
+        if (after >= 0) flash += 2 * STRIKES[s][1] * Math.exp(-after * 22);
       }
       return flash * (record.size / 60);
     }

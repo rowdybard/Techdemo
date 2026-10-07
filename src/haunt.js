@@ -142,7 +142,7 @@ export function lightning(pool, config, phone, start, tubes, y, z, palette, ligh
     }
     // The leader: dim, each segment a moment after the one above.
     for (let c = 0; c < corners; c++) {
-      i = segment(pool, i, path[c], path[c + 1], born + (c / corners) * LEADER, 0.12, 0.5 * look.sparkSize, 0.9, 60, physics, g);
+      i = segment(pool, i, path[c], path[c + 1], born + (c / corners) * LEADER, 0.12, 0.5 * look.sparkSize, 0.6, 60, physics, g);
     }
     // Two forks off the middle of the channel, angling down and away, the same every stroke.
     for (let k = 0; k < FORKS; k++) {
@@ -157,23 +157,23 @@ export function lightning(pool, config, phone, start, tubes, y, z, palette, ligh
       }
       const reached = born + ((top - from[1]) / (top - y)) * LEADER; // when the leader gets there
       for (let c = 0; c < FORK_CORNERS; c++) {
-        i = segment(pool, i, path[base + c], path[base + c + 1], reached + c * 0.008, 0.12, 0.4 * look.sparkSize, 0.8, 60, physics, g);
+        i = segment(pool, i, path[base + c], path[base + c + 1], reached + c * 0.008, 0.12, 0.4 * look.sparkSize, 0.5, 60, physics, g);
       }
     }
     // The strokes: the whole channel at once, forks a little dimmer.
     for (let s = 0; s < STRIKES.length; s++) {
       const [at, bright] = STRIKES[s];
       for (let c = 0; c < corners; c++) {
-        i = segment(pool, i, path[c], path[c + 1], born + at, 0.14, 0.9 * look.sparkSize, 2.6 * bright, 250, physics, g);
+        i = segment(pool, i, path[c], path[c + 1], born + at, 0.14, 0.7 * look.sparkSize, 1.5 * bright, 250, physics, g);
       }
       for (let k = 0; k < FORKS; k++) {
         const base = corners + 1 + k * (FORK_CORNERS + 1);
         for (let c = 0; c < FORK_CORNERS; c++) {
-          i = segment(pool, i, path[base + c], path[base + c + 1], born + at + 0.01, 0.12, 0.5 * look.sparkSize, 1.5 * bright, 250, physics, g);
+          i = segment(pool, i, path[base + c], path[base + c + 1], born + at + 0.01, 0.12, 0.5 * look.sparkSize, 0.9 * bright, 250, physics, g);
         }
       }
     }
-    light(lights[t], born, STRIKES[STRIKES.length - 1][0] + 0.4, tubes[t], y + 60, z, BOLT, 80, 0, 'thunder');
+    light(lights[t], born, STRIKES[STRIKES.length - 1][0] + 0.4, tubes[t], y + 60, z, BOLT, 55, 0, 'thunder');
   }
   pool.end();
 }
