@@ -19,7 +19,7 @@
 import { greetingBlocked } from '../src/moderate.js';
 
 const OCCASIONS = new Set(['halloween', 'birthday', 'love', 'congrats', 'thanks']);
-const LIMITS = { message: 24, to: 16, from: 24 };
+const LIMITS = { message: 24, message2: 24, to: 16, from: 24 };
 const PENDING_SECONDS = 2 * 24 * 3600; // unpaid greetings are forgotten after two days
 const WEBHOOK_TOLERANCE = 300; // seconds a Stripe signature stays valid
 
@@ -64,6 +64,7 @@ async function checkout(request, env, url) {
   const words = {
     occasion: OCCASIONS.has(body.occasion) ? body.occasion : 'birthday',
     message: clean(body.message, LIMITS.message).toUpperCase(),
+    message2: clean(body.message2, LIMITS.message2).toUpperCase(),
     to: clean(body.to, LIMITS.to).toUpperCase(),
     from: clean(body.from, LIMITS.from),
   };
@@ -92,7 +93,7 @@ async function checkout(request, env, url) {
   });
   // A copy of the greeting rides with the payment, so Stripe holds a backup of every paid
   // greeting: if its record here were ever lost, /api/greeting rebuilds it from Stripe.
-  const backup = { greeting: id, occasion: words.occasion, message: words.message, to: words.to, from: words.from };
+  const backup = { greeting: id, occasion: words.occasion, message: words.message, message2: words.message2, to: words.to, from: words.from };
   const packed = look ? JSON.stringify(look) : '';
   for (let part = 0; part * 480 < packed.length && part < 4; part++) backup[`look${part}`] = packed.slice(part * 480, (part + 1) * 480);
   for (const key in backup) form.set(`payment_intent_data[metadata][${key}]`, backup[key]);
@@ -133,8 +134,8 @@ async function greeting(env, id) {
   }
   if (record.status !== 'paid') return json({ status: 'pending' });
   if (record.hidden) return json({ status: 'hidden' });
-  const { occasion, message, to, from, deluxe, look } = record;
-  return json({ status: 'paid', occasion, message, to, from, deluxe, look: look || null });
+  const { occasion, message, message2, to, from, deluxe, look } = record;
+  return json({ status: 'paid', occasion, message, message2: message2 || '', to, from, deluxe, look: look || null });
 }
 
 // Rebuilds a paid greeting whose record is missing from the copy kept with its payment.
@@ -152,7 +153,7 @@ async function restore(env, id) {
   } catch {
     look = null;
   }
-  const record = { occasion: m.occasion || 'birthday', message: m.message || '', to: m.to || '', from: m.from || '', look, deluxe: true,
+  const record = { occasion: m.occasion || 'birthday', message: m.message || '', message2: m.message2 || '', to: m.to || '', from: m.from || '', look, deluxe: true,
     status: 'paid', paid: intent.created * 1000, restored: Date.now() };
   if (intent.receipt_email) record.email = String(intent.receipt_email).slice(0, 254);
   await env.GREETINGS.put(`g:${id}`, JSON.stringify(record));
@@ -182,6 +183,7 @@ async function report(request, env) {
   const words = {
     occasion: clean(body.occasion, 20),
     message: clean(body.message, LIMITS.message).toUpperCase(),
+    message2: clean(body.message2, LIMITS.message2).toUpperCase(),
     to: clean(body.to, LIMITS.to).toUpperCase(),
     from: clean(body.from, LIMITS.from),
   };
@@ -225,6 +227,7 @@ async function takenDown(env, params) {
   const words = {
     occasion: clean(params.get('o'), 20),
     message: clean(params.get('msg'), LIMITS.message).toUpperCase(),
+    message2: clean(params.get('msg2'), LIMITS.message2).toUpperCase(),
     to: clean(params.get('to'), LIMITS.to).toUpperCase(),
     from: clean(params.get('from'), LIMITS.from),
   };
@@ -232,9 +235,12 @@ async function takenDown(env, params) {
   return json({ hidden: Boolean(await env.GREETINGS.get(`h:t:${await textKey(words)}`)) });
 }
 
-// A free greeting is known by its words (the same words make the same key).
-async function textKey({ occasion, message, to, from }) {
-  return (await sha256([occasion, message, to, from].join('\u0001'))).slice(0, 24);
+// A free greeting is known by its words (the same words make the same key). The second
+// line joins the key only when there is one, so older greetings keep their keys.
+async function textKey({ occasion, message, message2, to, from }) {
+  const parts = [occasion, message, to, from];
+  if (message2) parts.push(message2);
+  return (await sha256(parts.join('\u0001'))).slice(0, 24);
 }
 
 async function sha256(text) {
