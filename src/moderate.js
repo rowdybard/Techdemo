@@ -58,8 +58,10 @@ export function isBlocked(text) {
 }
 
 /** True if any of a greeting's words are blocked. */
-export function greetingBlocked({ message, to, from }) {
-  return isBlocked(message) || isBlocked(to) || isBlocked(from);
+export function greetingBlocked({ message, message2, to, from }) {
+  // The two lines are also read as one, so a word can't be split across them.
+  return isBlocked(message) || isBlocked(message2) || isBlocked(`${message || ''} ${message2 || ''}`)
+    || isBlocked(to) || isBlocked(from);
 }
 
 export const BLOCKED_NOTE = 'That can’t go in the sky. Please keep it kind.';

@@ -43,6 +43,7 @@ export function readLink(config) {
   const gift = !embed && message ? {
     occasion: cleanText(params.get('o'), 20),
     message,
+    message2: cleanText(params.get('msg2'), MESSAGE_LIMIT).toUpperCase(),
     to: cleanText(params.get('to'), NAME_LIMIT).toUpperCase(),
     from: cleanText(params.get('from'), MESSAGE_LIMIT),
     look: readLook(params.get('l')),
@@ -50,7 +51,7 @@ export function readLink(config) {
   // A hand-made link can't put blocked words in the sky: it opens as a refusal instead.
   if (gift && greetingBlocked(gift)) {
     gift.blocked = true;
-    gift.message = gift.to = gift.from = '';
+    gift.message = gift.message2 = gift.to = gift.from = '';
   }
   // Set before the first shells are planned, so any text shell spells the message.
   if (gift && !gift.blocked) config.look.text = message;
@@ -71,10 +72,12 @@ export function paidLink(id) {
 }
 
 /** A link that plays a SkyGreeting for whoever opens it. */
-export function giftLink({ occasion, message, to, from, look }) {
+export function giftLink({ occasion, message, message2, to, from, look }) {
   const params = new URLSearchParams();
   params.set('o', occasion);
   params.set('msg', cleanText(message, MESSAGE_LIMIT));
+  const second = cleanText(message2, MESSAGE_LIMIT);
+  if (second) params.set('msg2', second);
   const name = cleanText(to, NAME_LIMIT);
   if (name) params.set('to', name);
   const sender = cleanText(from, MESSAGE_LIMIT);
