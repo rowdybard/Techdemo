@@ -25,7 +25,9 @@ export function readLink(config) {
     params = new URLSearchParams();
   }
   const embed = params.get('embed') === '1';
-  if (!embed) recall(config);
+  // The endless random show (autoshow.js): its own design every act, never a saved one.
+  const autoshow = !embed && (/^\/autoshow\/?$/.test(location.pathname) || params.get('autoshow') === '1');
+  if (!embed && !autoshow) recall(config);
 
   const packed = params.get('s');
   if (packed) {
@@ -61,8 +63,9 @@ export function readLink(config) {
   const paid = !embed && id && /^[A-Za-z0-9]{8}$/.test(id) ? { id, sent: params.get('sent') === '1' } : null;
   return {
     embed,
-    gift: paid || gift,
-    hero: !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero'),
+    autoshow,
+    gift: autoshow ? null : paid || gift,
+    hero: !autoshow && !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero'),
   };
 }
 

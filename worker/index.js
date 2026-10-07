@@ -38,6 +38,8 @@ export default {
       if (url.pathname === '/api/report' && request.method === 'POST') return await report(request, env);
       if (url.pathname === '/api/taken-down' && request.method === 'GET') return await takenDown(env, url.searchParams);
       if (url.pathname.startsWith('/api/')) return json({ error: 'Not found' }, 404);
+      if (url.pathname === '/autoshow/') return Response.redirect(`${url.origin}/autoshow${url.search}`, 301); // its files are found from /autoshow
+      if (url.pathname === '/autoshow' && request.method === 'GET') return await autoshowPage(request, env, url);
       if (url.pathname === '/' && request.method === 'GET' && (url.searchParams.has('g') || url.searchParams.has('msg'))) {
         return await preview(request, env, url);
       }
@@ -318,6 +320,22 @@ async function preview(request, env, url) {
   const response = new Response(rewritten.body, rewritten);
   response.headers.set('X-Robots-Tag', 'noindex, nofollow');
   return response;
+}
+
+// The endless random show is the home page with its own title, description and address
+// (the page itself switches to autoshow mode from the path).
+async function autoshowPage(request, env, url) {
+  const page = await env.ASSETS.fetch(new Request(new URL('/', url), request));
+  const title = 'SkyGreeting Autoshow: an endless fireworks show, never the same twice';
+  const description = 'A live fireworks show over a beach at dusk that designs itself as it goes. Leave it running.';
+  const set = (value) => ({ element(element) { element.setAttribute('content', value); } });
+  return new HTMLRewriter()
+    .on('title', { element(element) { element.setInnerContent(title); } })
+    .on('meta[property="og:title"], meta[name="twitter:title"]', set(title))
+    .on('meta[property="og:description"], meta[name="description"], meta[name="twitter:description"]', set(description))
+    .on('meta[property="og:url"]', set(`${url.origin}/autoshow`))
+    .on('link[rel="canonical"]', { element(element) { element.setAttribute('href', `${url.origin}/autoshow`); } })
+    .transform(page);
 }
 
 async function load(env, id) {
