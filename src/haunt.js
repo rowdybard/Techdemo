@@ -44,7 +44,7 @@ export function cauldron(pool, config, phone, start, tubes, y, z, palette, light
   const duration = 8;
   const spray = Math.round(duration * (phone ? 22 : 40));
   const bubbles = phone ? 40 : 70;
-  const top = Math.sqrt(2 * g * config.fountains.height * 0.45) * 1.15;
+  const top = Math.sqrt(2 * g * config.fountains.height * 0.85) * 1.15;
   let i = pool.begin(tubes.length * (spray + bubbles));
   for (let t = 0; t < tubes.length; t++) {
     const x = tubes[t];
@@ -56,18 +56,18 @@ export function cauldron(pool, config, phone, start, tubes, y, z, palette, light
       pool.set(i++, x, y, z, born,
         Math.sin(spread) * Math.cos(around) * speed, Math.cos(spread) * speed, Math.sin(spread) * Math.sin(around) * speed, 0.5,
         SLIME[0], SLIME[1], SLIME[2], SLIME[0] * 0.5, SLIME[1] * 0.5, SLIME[2] * 0.5, 1.2,
-        1.8 + Math.random() * 0.6, 0.24 * look.sparkSize, 0.2, KIND.glitter);
+        2 + Math.random() * 0.7, 0.36 * look.sparkSize, 0.25, KIND.glitter);
     }
     // Bubbles swell and pop in a dome over the brew.
     for (let k = 0; k < bubbles; k++) {
       const born = start + 0.6 + Math.random() * (duration - 0.6);
       const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * 5;
+      const r = Math.random() * 9;
       const c = k % 2 === 0 ? VIOLET : SLIME;
-      pool.set(i++, x + Math.cos(a) * r, y + 2 + Math.random() * config.fountains.height * 0.35, z + Math.sin(a) * r, born,
-        0, 1, 0, 3, c[0] * 1.6, c[1] * 1.6, c[2] * 1.6, c[0], c[1], c[2], 99, 0.28, 1.3 * look.sparkSize, 0, KIND.pop);
+      pool.set(i++, x + Math.cos(a) * r, y + 3 + Math.random() * config.fountains.height * 0.7, z + Math.sin(a) * r, born,
+        0, 1, 0, 3, c[0] * 1.6, c[1] * 1.6, c[2] * 1.6, c[0], c[1], c[2], 99, 0.32, 2 * look.sparkSize, 0, KIND.pop);
     }
-    light(lights[t], start, duration, x, y + 10, z, SLIME, 20, 1, 'bubble');
+    light(lights[t], start, duration, x, y + 18, z, SLIME, 24, 0.7, 'bubble');
   }
   pool.end();
 }
@@ -83,7 +83,7 @@ export function wisps(pool, config, phone, start, tubes, y, z, palette, lights) 
   for (let t = 0; t < tubes.length; t++) {
     for (let w = 0; w < perTube; w++) {
       const delay = Math.random() * 1.5 + w * 0.8;
-      const sway = 4 + Math.random() * 6;
+      const sway = 7 + Math.random() * 9;
       const wobble = 0.6 + Math.random() * 0.8;
       const phase = Math.random() * 6.28;
       const c = w === 0 ? ECTO : VIOLET;
@@ -97,7 +97,7 @@ export function wisps(pool, config, phone, start, tubes, y, z, palette, lights) 
         const fade = Math.min(1, (1 - along) * 3);
         pool.set(i++, hx, hy, hz, start + delay + age, 0, 0.6, 0, 4,
           c[0] * fade, c[1] * fade, c[2] * fade, c[0] * 0.2, c[1] * 0.2, c[2] * 0.2, 0.25,
-          0.75, 0.75 * look.sparkSize, 0.12, KIND.spark);
+          0.85, 1.2 * look.sparkSize, 0.14, KIND.spark);
       }
     }
     light(lights[t], start, duration, tubes[t], y + rise * 0.5, z, ECTO, 14, 0, 'none');
@@ -178,10 +178,10 @@ export function lanterns(pool, config, phone, start, tubes, y, z, palette, light
       const fade = Math.min(1, age / 0.8, (duration - age) / 2.5);
       const flicker = 0.75 + Math.random() * 0.25;
       const c = s % 3 === 0 ? FLAME : LANTERN;
-      pool.set(i++, p[0] + Math.sin(age * 1.7 + t) * 1.2 + (Math.random() - 0.5) * 1.6, p[1] + (Math.random() - 0.5) * 1.8,
-        p[2] + (Math.random() - 0.5) * 1.2, start + delay + age, 0, 0.8, 0, 5,
+      pool.set(i++, p[0] + Math.sin(age * 1.7 + t) * 1.6 + (Math.random() - 0.5) * 2.4, p[1] + (Math.random() - 0.5) * 2.6,
+        p[2] + (Math.random() - 0.5) * 1.8, start + delay + age, 0, 0.8, 0, 5,
         c[0] * fade * flicker, c[1] * fade * flicker, c[2] * fade * flicker, c[0] * fade * 0.3, c[1] * fade * 0.3, c[2] * fade * 0.3,
-        0.3, 0.55, 0.8 * look.sparkSize, 0.05, KIND.spark);
+        0.3, 0.6, 1.3 * look.sparkSize, 0.05, KIND.spark);
     }
     light(lights[t], start + delay, duration, tubes[t], y + 15, z, LANTERN, 16, 0, 'none');
   }

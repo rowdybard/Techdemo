@@ -21,7 +21,7 @@ const EFFECTS = { shooters, candles, mines, fans, cauldron, wisps, lightning, la
 const MAX_NOZZLES = 14;
 const SIDE_TUBES = 4; // on each side barge
 const SIDE_GAP = 1.2; // seconds between side shows
-const SIDE_SCALE = 0.62; // side effects reach this much of the main barge's height
+const SIDE_SCALE = 0.72; // side effects reach this much of the main barge's height
 const PATTERNS = ['together', 'sweep', 'alternate', 'sweep-back'];
 // Dimmer than shell colours: hundreds of sparks overlap in a fountain.
 const COLORS = {
@@ -138,7 +138,10 @@ export function create(ctx) {
       }
       for (let i = 0; i < SIDE_TUBES; i++) {
         const record = sideLights[s][i];
-        if (record.time >= start - 0.01) end = Math.max(end, record.time + record.hold);
+        if (record.time >= start - 0.01) {
+          end = Math.max(end, record.time + record.hold);
+          record.smoke *= 0.5; // small barges, small tubes: half the smoke
+        }
       }
     }
     return end;

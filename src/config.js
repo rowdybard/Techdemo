@@ -105,7 +105,7 @@ export const config = {
   smoke: {
     enabled: true,
     amount: 0.12, // how thick: a light haze (Customize's Smoke slider at 6%)
-    linger: 30, // seconds a puff takes to drift away and fade
+    linger: 24, // seconds a puff takes to drift away and fade
   },
 
   look: {

@@ -41,14 +41,17 @@ export const smokeVertex = /* glsl */ `
     // minus where the air had got to at its birth), a slow drift of its own, and a gentle
     // rise as the warm smoke floats up.
     vec3 drift = vec3(sin(seed * 41.0), 0.0, cos(seed * 23.0)) * 0.6;
-    vec3 center = aOrigin.xyz + uWindOffset * 0.85 + drift * age;
-    // Warm smoke from a ground effect rises as a plume, slowing as it cools.
-    center.y += 0.3 * age + aExtra.x * 4.0 * (1.0 - exp(-age / 4.0));
+    // Carried by the air, which moves faster higher up (the same power law as smoke.js).
+    float carry = clamp(pow(max(aOrigin.y, 2.0) / 10.0, 0.16), 0.75, 1.8);
+    vec3 center = aOrigin.xyz + uWindOffset * carry + drift * age;
+    // Cooled smoke hardly rises; a ground effect's warm smoke lifts a little, then levels.
+    center.y += 0.1 * age + aExtra.x * 2.5 * (1.0 - exp(-age / 3.0));
     float radius = aShape.x + aShape.y * sqrt(age);
 
     float fadeIn = smoothstep(0.0, 1.2, age);
     float fadeOut = 1.0 - smoothstep(life * 0.55, life, age);
-    vAlpha = uAmount * aExtra.z * fadeIn * fadeOut * pow(aShape.x / radius, 0.6);
+    // The same smoke spread over a bigger puff is thinner, so it clears as it spreads.
+    vAlpha = uAmount * aExtra.z * fadeIn * fadeOut * pow(aShape.x / radius, 1.0);
     vTear = smoothstep(0.15, 1.0, age / life); // how far it has broken up
 
     // Lit at its middle: the sky's glow, plus every firework light nearby. Light falls
@@ -110,7 +113,8 @@ export const smokeFragment = /* glsl */ `
 
   void main() {
     float r = length(vUv);
-    if (r > 1.0) discard;
+    // Nearly cleared, or outside the puff: skip the noise entirely (most of the fill cost).
+    if (r > 1.0 || vAlpha < 0.003) discard;
     vec2 p = vUv * vScale + vNoise;
     float t = vAge * 0.05;
     // Warp the noise by more noise, so lobes curl into each other instead of sitting in a grid.
