@@ -157,6 +157,7 @@ export const config = {
   sound: {
     enabled: true, // starts after the first tap or key press, as browsers require
     volume: 0, // muted by default; the panel's Sound folder turns it up
+    idleSeconds: 300, // the sound stops after this long with no touch, key or click (it also stops whenever the page isn't on screen)
   },
 
   bloom: {

@@ -23,6 +23,7 @@ const SHAPES = new Set(['heart', 'star', 'text', 'pumpkin', 'skull', 'bat', 'gho
 const HISSERS = new Set(['willow', 'palm', 'wisp', 'chrysanthemum']);
 
 let shared = null; // { audio, brown, white, crackle, room } for the page's lifetime
+let lastInput = 0; // when the person last touched the page (ms), for the idle sleep
 
 function sharedAudio() {
   if (shared) return shared;
@@ -37,7 +38,23 @@ function sharedAudio() {
     room: makeRoom(audio, 2.8),
   };
   addEventListener('pagehide', () => audio.close(), { once: true });
+  // A page that isn't on screen makes no sound: a tab left open in the background, a
+  // phone locked or switched to another app. Without this the sea kept playing under
+  // whatever else was open. Coming back (or any tap) wakes it.
+  const sleep = () => { if (audio.state === 'running') audio.suspend().catch(() => {}); };
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) sleep();
+    else wake();
+  });
+  addEventListener('pagehide', sleep);
+  document.addEventListener('freeze', sleep); // Chrome puts idle background tabs to sleep
   return shared;
+}
+
+/** Marks the page as looked at, and lets the sound play again if it was put to sleep. */
+function wake() {
+  lastInput = performance.now();
+  if (shared && !document.hidden && shared.audio.state === 'suspended') shared.audio.resume().catch(() => {});
 }
 
 export function create(ctx) {
@@ -83,9 +100,14 @@ export function create(ctx) {
     heardLaunch = latest(bursts, 'launch', Infinity);
     heardGround = ctx.fountains ? latest(ctx.fountains.lights, 'time', Infinity) : heardGround;
   }
-  // Browsers only allow audio after a gesture.
-  addEventListener('pointerdown', start, { signal });
-  addEventListener('keydown', start, { signal });
+  // Browsers only allow audio after a gesture; any touch also counts as being looked at.
+  const touched = () => {
+    wake();
+    start();
+  };
+  for (const type of ['pointerdown', 'keydown', 'wheel', 'touchstart']) addEventListener(type, touched, { signal, passive: true });
+  lastInput = performance.now();
+  ctx.audioState = () => (audio ? audio.state : 'none');
 
   // The sea: low surf washing in sets (two slow swells beating), and a fizz of foam.
   function startSea() {
@@ -274,6 +296,9 @@ export function create(ctx) {
   return {
     update(dt, time) {
       if (!audio) return;
+      // Nobody has touched the page for a while (open, on screen, but left alone): stop the
+      // sound until they do. The show keeps playing silently.
+      if (audio.state === 'running' && performance.now() - lastInput > settings.idleSeconds * 1000) audio.suspend().catch(() => {});
       master.gain.value = settings.enabled ? settings.volume : 0;
       const bursts = ctx.fireworks ? ctx.fireworks.bursts : null;
       const ground = ctx.fountains ? ctx.fountains.lights : null;
