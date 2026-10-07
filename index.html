@@ -137,6 +137,8 @@
   .send-open[hidden] { display: none; }
   .send-box, .gift-card { position: absolute; z-index: 2; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(360px, calc(100% - 32px)); box-sizing: border-box; display: grid; gap: 10px; padding: 16px; border: 1px solid var(--rule); border-radius: 12px; background: var(--glass); color: var(--ink); font: 14px var(--sans); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .send-box[hidden], .gift-card[hidden] { display: none; }
+  .gift-card { transition: opacity 0.8s, visibility 0.8s; }
+  .gift-card.gift-watching { opacity: 0; visibility: hidden; }
   .send-title, .gift-from { margin: 0; font-weight: 600; font-size: 16px; }
   .send-field { display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
   .send-field input, .send-link { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--rule); border-radius: 6px; background: rgb(0 0 0 / 0.35); color: var(--ink); font: 16px var(--sans); }

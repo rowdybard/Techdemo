@@ -32,6 +32,7 @@ export function create(ctx) {
   let pending = false; // the ending is due to play
   let playAt = 0;
   let now = 0;
+  let watching = false; // the card steps aside while the ending plays
 
   const card = el('div', 'gift-card');
   const title = el('p', 'gift-from');
@@ -95,9 +96,7 @@ export function create(ctx) {
     if (!deluxe) keepFree(config, occasion);
     if (ctx.setCameraPreset) ctx.setCameraPreset(config.camera.preset);
     words = { message: data.message, message2: data.message2 || '', to: data.to };
-    // After the ending, the show keeps spelling the message now and then.
     config.look.text = data.message;
-    config.look.mix.text = 0.5;
     title.textContent = `✨ ${data.from ? `${data.from} made you a SkyGreeting` : 'Someone made you a SkyGreeting'}`;
     pending = true;
     playAt = now + FIRST_PLAY;
@@ -270,6 +269,17 @@ export function create(ctx) {
   return {
     update(dt, time) {
       now = time;
+      // Out of the way while the show plays (on a phone it covers half the screen), and
+      // back with its buttons once it's over.
+      const playing = Boolean(occasion) && (pending || Boolean(ctx.director && ctx.director.active));
+      if (playing !== watching) {
+        watching = playing;
+        card.classList.toggle('gift-watching', playing);
+        // After the ending, the show keeps spelling the message now and then (but not
+        // during a replay, where it would spoil the reveal).
+        config.look.mix.text = playing ? 0 : 0.5;
+        if (!playing && words) config.look.text = words.message;
+      }
       if (!pending || !occasion || time < playAt) return;
       pending = false;
       if (ctx.director) ctx.director.play(occasion, words, deluxe);

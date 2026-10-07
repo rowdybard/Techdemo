@@ -61,6 +61,10 @@ export function readLink(config) {
   // `sent` marks the buyer arriving back from checkout.
   const id = params.get('g');
   const paid = !embed && id && /^[A-Za-z0-9]{8}$/.test(id) ? { id, sent: params.get('sent') === '1' } : null;
+  // A greeting's words wait for its ending: no text shells before then (gift.js lets the
+  // show spell them again once it's over), so the opening shells can't spoil the reveal or
+  // spell the demo's own text while a short link's words are still loading.
+  if (!autoshow && (paid || gift)) config.look.mix.text = 0;
   return {
     embed,
     autoshow,
