@@ -90,7 +90,7 @@ export function create(ctx) {
     uniforms.uSizeScale.value = look.sparkSize;
     uniforms.uTrailScale.value = look.trailLength;
     uniforms.uBrightness.value = look.brightness;
-    uniforms.uGlitter.value = look.glitter;
+    uniforms.uGlitter.value = Math.min(1, Math.max(0, look.glitter)); // above 1 a twinkle's off beat goes negative: black flashes
   }
 
   // Shells already in flight when the page opens, so the first burst comes within a second.

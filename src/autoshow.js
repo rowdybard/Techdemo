@@ -181,7 +181,7 @@ export function create(ctx) {
     look.brightness = rand(1.6, 2.6);
     look.lifetime = rand(2.2, 3.4);
     look.trailLength = rand(0.7, 1.6);
-    look.glitter = rand(0.3, 1.5);
+    look.glitter = rand(0.3, 1);
     look.sparkSize = rand(0.85, 1.3);
 
     basePace = rand(12, 42);

@@ -58,7 +58,7 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 - Save as video: sharing consumes the tap, so a download started after a failed `navigator.share` is silently dropped by phone browsers (the likely reason an early version "saved" nothing); it now asks for a fresh tap. The download link is attached to the page before it's clicked, an empty recording says so, and the preview video's own ⋮ → Download is a second way out. Very short recordings can come out empty in the slow headless browser; a 12 s one is fine.
 - Headless Chromium can't decode recorded video (reads black), so Save as video is only proven to record and produce a file, not to look right.
 - Stripe: a publishable key pasted into the secret slot gives "publishable API key" errors; checkout failed once only because the owner's BetBlocker VPN blocked checkout.stripe.com.
-- Keep large numbers out of fragment-shader maths: anything driven by total running time (`uTime`) breaks on some phone GPUs after a long session. Use a spark's or puff's own age.
+- Anything that randomises or loads settings must stay inside the panel's ranges (the autoshow once set Glitter to 1.5 and twinkling sparks flashed black). Keep large numbers out of fragment-shader maths too: anything driven by total running time (`uTime`) breaks on some phone GPUs after a long session. Use a spark's or puff's own age.
 - `/terms.html` redirects to `/terms`; always link the clean paths.
 
 ## How the owner likes to work
