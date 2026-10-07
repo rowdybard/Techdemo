@@ -55,6 +55,7 @@ export function create(ctx) {
     chips.append(chip);
   }
   const message = field('Message', MESSAGE_LIMIT, 'builder-loud');
+  const message2 = field('Second line (optional)', MESSAGE_LIMIT, 'builder-loud');
   const to = field('Their name (optional)', NAME_LIMIT, 'builder-loud');
   const from = field('From (optional)', MESSAGE_LIMIT, '');
   // The words go up in the live show: the sky text follows the message, and a moment
@@ -117,7 +118,7 @@ export function create(ctx) {
   privacyLink.target = '_blank';
   privacyLink.rel = 'noopener';
   terms.append('By sending, you agree to SkyGreeting’s ', termsLink, '. ', privacyLink, '.');
-  sheet.append(head, chips, message.label, to.label, from.label, customize, included, deluxeBox, row, linkBox, status, terms);
+  sheet.append(head, chips, message.label, message2.label, to.label, from.label, customize, included, deluxeBox, row, linkBox, status, terms);
 
   // While a preview plays: a slim bar instead of the sheet.
   const bar = el('div', 'builder-bar');
@@ -198,13 +199,15 @@ export function create(ctx) {
   function words() {
     return {
       message: cleanText(message.input.value, MESSAGE_LIMIT).toUpperCase() || OCCASIONS[state.occasion].message,
+      message2: cleanText(message2.input.value, MESSAGE_LIMIT).toUpperCase(),
       to: cleanText(to.input.value, NAME_LIMIT).toUpperCase(),
+      from: cleanText(from.input.value, MESSAGE_LIMIT),
     };
   }
 
   // The message, their name and the sender's name, checked before anything is shown or sent.
   function wordsOk() {
-    if (!greetingBlocked({ ...words(), from: from.input.value })) return true;
+    if (!greetingBlocked(words())) return true;
     show('sheet');
     status.textContent = BLOCKED_NOTE;
     return false;
@@ -223,7 +226,7 @@ export function create(ctx) {
       return;
     }
     show('sheet');
-    const url = giftLink({ occasion: state.occasion, ...words(), from: from.input.value, look: lookOf(config) });
+    const url = giftLink({ occasion: state.occasion, ...words(), look: lookOf(config) });
     track('share', { method: 'free_link', content_type: state.occasion });
     linkBox.value = url;
     linkBox.hidden = false;
@@ -250,7 +253,7 @@ export function create(ctx) {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ occasion: state.occasion, ...words(), from: from.input.value, look: lookOf(config) }),
+        body: JSON.stringify({ occasion: state.occasion, ...words(), look: lookOf(config) }),
       });
       const data = await response.json();
       if (response.ok && data.url) {

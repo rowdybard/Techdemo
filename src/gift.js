@@ -2,7 +2,7 @@
 // plays with the sender's words, and a card says who made it, with "Watch again" and
 // "Make one for someone else", so every recipient can become the next sender.
 //
-// Two kinds of link: a free one carries its words (?o=&msg=&to=&from=); a paid Deluxe one
+// Two kinds of link: a free one carries its words (?o=&msg=&msg2=&to=&from=); a paid Deluxe one
 // is private (?g=id) and its words come from the server once Stripe has confirmed the
 // payment. A buyer coming back from checkout (&sent=1) gets their link to share.
 // Older links with only a message play as a birthday-style greeting.
@@ -94,7 +94,7 @@ export function create(ctx) {
     applyLook(config, data.look);
     if (!deluxe) keepFree(config, occasion);
     if (ctx.setCameraPreset) ctx.setCameraPreset(config.camera.preset);
-    words = { message: data.message, to: data.to };
+    words = { message: data.message, message2: data.message2 || '', to: data.to };
     // After the ending, the show keeps spelling the message now and then.
     config.look.text = data.message;
     config.look.mix.text = 0.5;
@@ -122,7 +122,7 @@ export function create(ctx) {
     // A free greeting carries its words, so ask whether it has been taken down (if the
     // server can't be reached, it plays).
     if (!gift.blocked && /^https?:$/.test(location.protocol)) {
-      const query = new URLSearchParams({ o: gift.occasion || '', msg: gift.message, to: gift.to || '', from: gift.from || '' });
+      const query = new URLSearchParams({ o: gift.occasion || '', msg: gift.message, msg2: gift.message2 || '', to: gift.to || '', from: gift.from || '' });
       fetch(`/api/taken-down?${query}`, { signal }).then((response) => (response.ok ? response.json() : null)).then((data) => {
         if (data && data.hidden) {
           if (ctx.director) ctx.director.stop();
@@ -230,7 +230,7 @@ export function create(ctx) {
       }
       send.disabled = true;
       status.textContent = 'Sending…';
-      const body = gift.id ? { id: gift.id } : { occasion: gift.occasion || '', message: gift.message, to: gift.to || '', from: gift.from || '' };
+      const body = gift.id ? { id: gift.id } : { occasion: gift.occasion || '', message: gift.message, message2: gift.message2 || '', to: gift.to || '', from: gift.from || '' };
       try {
         const response = await fetch('/api/report', {
           method: 'POST',
