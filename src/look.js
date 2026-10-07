@@ -79,14 +79,24 @@ export function applyLook(config, look) {
   if (CAMERAS.has(look.c)) config.camera.preset = look.c;
 }
 
-/** The Deluxe effects of `occasion` this config uses. */
+/**
+ * The Deluxe effects of `occasion` this config uses. The "A bit of everything" mix doesn't
+ * count: it's the default, and a free send quietly uses only its free effects.
+ */
 export function deluxeInUse(config, occasion) {
   const used = [];
+  const ground = chosenGround(config);
   for (const item of paidItems(occasion)) {
     if (item === 'finale') continue;
-    if (GROUND.has(item) ? groundStyles(config).includes(item) : config.look.mix[item] > 0) used.push(item);
+    if (GROUND.has(item) ? ground.includes(item) : config.look.mix[item] > 0) used.push(item);
   }
   return used;
+}
+
+// The ground effects someone picked by name (a single style, a list, or the Halloween mix).
+function chosenGround(config) {
+  if (!config.fountains.enabled) return [];
+  return config.fountains.style.split(',').flatMap((style) => (style === 'mixed' ? [] : MIXES[style] || [style]));
 }
 
 /** Takes an occasion's Deluxe effects back out, for a free send. */

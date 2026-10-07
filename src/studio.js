@@ -117,6 +117,7 @@ export function create(ctx) {
         } else {
           mix[type] = kept[type] || 1;
         }
+        if (ctx.builder) ctx.builder.picked(type, mix[type] > 0); // a Deluxe shell switched on makes the send Deluxe
         changed();
       });
       refreshers.push(() => {
@@ -139,8 +140,9 @@ export function create(ctx) {
     });
     refreshers.push(() => {
       chip.setAttribute('aria-pressed', String(style === 'off' ? !config.fountains.enabled : config.fountains.enabled && config.fountains.style === style));
-      // The two mixes include paid effects, so they're marked too.
-      chip.classList.toggle('is-deluxe', deluxeItem(style) || ((style === 'halloween' || style === 'mixed') && Boolean(ctx.builder)));
+      // The Halloween mix holds paid effects, so it's marked too ("A bit of everything" is the
+      // free default: a free send uses only its free effects).
+      chip.classList.toggle('is-deluxe', deluxeItem(style) || (style === 'halloween' && Boolean(ctx.builder)));
     });
     ground.append(chip);
   }

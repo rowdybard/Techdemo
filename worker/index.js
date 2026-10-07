@@ -33,6 +33,7 @@ export default {
       }
       if (url.pathname === '/api/checkout' && request.method === 'POST') return await checkout(request, env, url);
       if (url.pathname === '/api/stripe-webhook' && request.method === 'POST') return await webhook(request, env);
+      if (url.pathname === '/api/share' && request.method === 'POST') return await share(request, env);
       if (url.pathname === '/api/greeting' && request.method === 'GET') return await greeting(env, url.searchParams.get('id'));
       if (url.pathname === '/api/report' && request.method === 'POST') return await report(request, env);
       if (url.pathname === '/api/taken-down' && request.method === 'GET') return await takenDown(env, url.searchParams);
@@ -109,6 +110,40 @@ async function checkout(request, env, url) {
   return json({ url: session.url });
 }
 
+// A free greeting gets a short link too (?g=<id>), so its words stay out of the address:
+// they're kept here, a year, and shown only when the link is opened. Same checks as a
+// paid one (the moderation list, a capped design); no payment, no Deluxe.
+const SHARES_PER_HOUR = 40;
+const SHARE_SECONDS = 365 * 24 * 3600;
+
+async function share(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Bad request' }, 400);
+  }
+  const words = {
+    occasion: OCCASIONS.has(body.occasion) ? body.occasion : 'birthday',
+    message: clean(body.message, LIMITS.message).toUpperCase(),
+    message2: clean(body.message2, LIMITS.message2).toUpperCase(),
+    to: clean(body.to, LIMITS.to).toUpperCase(),
+    from: clean(body.from, LIMITS.from),
+  };
+  if (!words.message) return json({ error: 'Type a message first.' }, 400);
+  if (greetingBlocked(words)) return json({ error: 'That can’t go in the sky. Please keep it kind.' }, 400);
+  const look = body.look && typeof body.look === 'object' && !Array.isArray(body.look) && JSON.stringify(body.look).length < 1500 ? body.look : null;
+  // A person may make this many links an hour (a salted hash of their address, never the address).
+  const who = (await sha256(`skygreeting:share:${request.headers.get('cf-connecting-ip') || 'unknown'}`)).slice(0, 16);
+  const limitKey = `l:s:${who}:${Math.floor(Date.now() / 3600000)}`;
+  const made = Number((await env.GREETINGS.get(limitKey)) || 0);
+  if (made >= SHARES_PER_HOUR) return json({ error: 'That’s a lot of greetings. Try again in an hour.' }, 429);
+  await env.GREETINGS.put(limitKey, String(made + 1), { expirationTtl: 3700 });
+  const id = newId();
+  await env.GREETINGS.put(`g:${id}`, JSON.stringify({ ...words, look, deluxe: false, status: 'free', created: Date.now() }), { expirationTtl: SHARE_SECONDS });
+  return json({ id });
+}
+
 async function webhook(request, env) {
   const body = await request.text();
   if (!env.STRIPE_WEBHOOK_SECRET || !(await verify(body, request.headers.get('stripe-signature'), env.STRIPE_WEBHOOK_SECRET))) {
@@ -132,10 +167,10 @@ async function greeting(env, id) {
     const session = await stripe(env, 'GET', `/v1/checkout/sessions/${encodeURIComponent(record.session)}`);
     if (session.payment_status === 'paid') record = await markPaid(env, id, session);
   }
-  if (record.status !== 'paid') return json({ status: 'pending' });
+  if (record.status !== 'paid' && record.status !== 'free') return json({ status: 'pending' });
   if (record.hidden) return json({ status: 'hidden' });
   const { occasion, message, message2, to, from, deluxe, look } = record;
-  return json({ status: 'paid', occasion, message, message2: message2 || '', to, from, deluxe, look: look || null });
+  return json({ status: record.status, occasion, message, message2: message2 || '', to, from, deluxe: Boolean(deluxe), look: look || null });
 }
 
 // Rebuilds a paid greeting whose record is missing from the copy kept with its payment.
@@ -261,7 +296,7 @@ async function preview(request, env, url) {
   const id = url.searchParams.get('g');
   if (id && /^[A-Za-z0-9]{8}$/.test(id)) {
     const record = await load(env, id);
-    if (record && record.status === 'paid' && !record.hidden) ({ occasion, from } = record);
+    if (record && (record.status === 'paid' || record.status === 'free') && !record.hidden) ({ occasion, from } = record);
   } else {
     occasion = clean(url.searchParams.get('o'), 20);
     from = clean(url.searchParams.get('from'), LIMITS.from);

@@ -150,7 +150,7 @@ export function create(ctx) {
       takenDown();
       return;
     }
-    if (!data || data.status !== 'paid') {
+    if (!data || (data.status !== 'paid' && data.status !== 'free')) {
       title.textContent = data ? 'This payment hasn’t gone through yet.' : 'This SkyGreeting couldn’t be found.';
       note.textContent = data ? 'If you just paid, wait a minute and reload this page.' : 'Check the link, or make a new one.';
       buttons.hidden = false;

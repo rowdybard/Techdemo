@@ -86,6 +86,29 @@ export function giftLink({ occasion, message, message2, to, from, look }) {
   return `${siteBase()}?${params}`;
 }
 
+/**
+ * The link to send for a free greeting: a short one (?g=<id>) with the words kept by the
+ * server, so they don't spoil it in the address. Falls back to a long link that carries
+ * the words when the server can't be reached or says no (a blocked word comes back as
+ * an error, which is shown).
+ */
+export async function shortLink(greeting) {
+  if (/^https?:$/.test(location.protocol) && !/claude|usercontent/.test(location.hostname)) {
+    try {
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(greeting),
+      });
+      const data = await response.json();
+      if (response.ok && /^[A-Za-z0-9]{8}$/.test(data.id)) return paidLink(data.id);
+    } catch {
+      // Offline or no server: the long link below still works.
+    }
+  }
+  return giftLink(greeting);
+}
+
 /** Plain text for the sky: no control characters, trimmed and capped. */
 export function cleanText(value, limit) {
   return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, limit);

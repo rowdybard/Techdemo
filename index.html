@@ -54,7 +54,7 @@
     if (query.get('embed') === '1') return;
     gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted' });
     gtag('consent', 'default', { analytics_storage: 'denied', region: ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'] });
-    var view = query.get('g') ? 'paid-greeting' : query.get('msg') ? 'greeting' : query.get('hero') === '1' ? 'hero' : '';
+    var view = query.get('g') || query.get('msg') ? 'greeting' : query.get('hero') === '1' ? 'hero' : '';
     gtag('js', new Date());
     gtag('config', 'G-BTBT8MCNPJ', {
       page_location: location.origin + location.pathname + (view ? '?view=' + view : ''),

@@ -10,7 +10,7 @@
 // which keeps the greeting until payment and returns the buyer to a private ?g= link.
 // The price shown comes from the server. Words only ever reach the page as textContent.
 import { track, rememberPrice } from './track.js';
-import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, giftLink } from './link.js';
+import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, shortLink } from './link.js';
 import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion, paidItems } from './occasions.js';
 import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
 import { applyPreset } from './presets.js';
@@ -29,6 +29,11 @@ export function create(ctx) {
   applyPreset(fresh, 'Default');
   state.baseline = JSON.stringify(lookOf(fresh));
   const designIsMine = () => lookJson() !== state.baseline;
+  // The app's own untouched show already holds a few Deluxe effects (chrysanthemums,
+  // strobes, crackle, double breaks). Those only make a send Deluxe if the person switched
+  // them on in Customize (`picked`), never just by being there.
+  const baseUse = new Set(deluxeInUse(fresh, OCCASIONS[DEFAULT_OCCASION]));
+  const picked = new Set();
   let price = PRICE;
   let priceCents = Math.round(Number(String(PRICE).replace(/[^0-9.]/g, '')) * 100) || 499;
   // The real price, from the server (a test price while trying out checkout).
@@ -200,7 +205,7 @@ export function create(ctx) {
   function refresh() {
     const occasion = OCCASIONS[state.occasion];
     // Paid if Deluxe is ticked or the design uses any Deluxe effect.
-    const used = deluxeInUse(config, occasion);
+    const used = deluxeInUse(config, occasion).filter((item) => !baseUse.has(item) || picked.has(item));
     if (used.length && !deluxeInput.checked) deluxeInput.checked = true;
     state.deluxe = deluxeInput.checked;
     for (const name in chipFor) chipFor[name].setAttribute('aria-checked', String(name === state.occasion));
@@ -247,14 +252,21 @@ export function create(ctx) {
     if (ctx.director) ctx.director.play(OCCASIONS[state.occasion], words(), state.deluxe);
   }
 
-  function sendIt() {
+  async function sendIt() {
     if (!wordsOk()) return;
     if (state.deluxe) {
       payForDeluxe();
       return;
     }
+    if (state.paying) return;
+    state.paying = true;
     show('sheet');
-    const url = giftLink({ occasion: state.occasion, ...words(), look: lookOf(config) });
+    status.textContent = 'Making your link…';
+    // A short link that keeps the words out of the address, kept by the server; if the
+    // server can't be reached (offline, the preview), the words ride in a long link instead.
+    const url = await shortLink({ occasion: state.occasion, ...words(), look: lookOf(config) });
+    state.paying = false;
+    status.textContent = '';
     track('share', { method: 'free_link', content_type: state.occasion });
     linkBox.value = url;
     linkBox.hidden = false;
@@ -348,8 +360,14 @@ export function create(ctx) {
   ctx.builder = {
     open: () => open.click(),
     refresh: () => refresh(),
+    /** Customize says a Deluxe shell was switched on (or off) by the person. */
+    picked(item, on) {
+      if (on) picked.add(item);
+      else picked.delete(item);
+    },
     /** Forget the show as it is now: the next open applies an occasion's own look. */
     startFresh() {
+      picked.clear();
       state.baseline = lookJson();
       state.guessed = false;
     },
