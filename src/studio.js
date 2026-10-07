@@ -44,7 +44,7 @@ export function create(ctx) {
   const { config, container, signal } = ctx;
   const refreshers = [];
 
-  const open = el('button', 'studio-open', 'Customize');
+  const open = el('button', 'studio-open', '🎨 Customize');
   open.type = 'button';
   const sheet = el('section', 'studio');
   sheet.hidden = true;
@@ -187,15 +187,26 @@ export function create(ctx) {
     button('studio-link', 'Advanced settings', () => { onDone = null; show(false); if (ctx.advanced) ctx.advanced.open(); }),
   );
 
+  // Opened on its own (not from the builder): a way to send the show as it is now.
+  const sendBar = el('div', 'studio-sendbar');
+  const sendShow = button('studio-send', 'Send this show →', () => {
+    onDone = null;
+    show(false);
+    if (ctx.builder) ctx.builder.open();
+  });
+  sendShow.append(el('small', '', 'Add your words and send it. It plays just like this.'));
+  sendBar.append(sendShow);
+
   sheet.append(head, making, actions,
     section('Style', presets), section('Colours', swatches), section('Fireworks', shellGroups),
-    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('View', cameras), footer);
+    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('View', cameras), footer, sendBar);
   container.append(open, sheet);
 
   // Opened from the greeting builder, Done goes back to it.
   let onDone = null;
   function show(on) {
     if (on) refresh();
+    sendBar.hidden = Boolean(onDone) || !ctx.builder; // from the builder, Done goes back to it
     sheet.hidden = !on;
     open.hidden = on;
     container.classList.toggle('customizing', on);

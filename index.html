@@ -130,7 +130,10 @@
   .walk-hint.faded, .hero-mode .walk-hint { opacity: 0; }
 
   /* Fireworks messages: the send button, the composer, and the card a recipient sees. */
-  .send-open { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); padding: 10px 16px; border: 1px solid var(--rule); border-radius: 999px; background: var(--glass); color: var(--ink); font: 600 14px var(--sans); cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  /* The one main action on the home screen: send a show. Customize beside it is secondary. */
+  .send-open { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); padding: 14px 22px; border: 0; border-radius: 999px; background: var(--spark); color: #1a1006; font: 700 16px var(--sans); cursor: pointer; box-shadow: 0 6px 22px rgb(255 180 92 / 0.35), 0 2px 8px rgb(0 0 0 / 0.4); }
+  .send-open:active { transform: scale(0.98); }
+  @media (max-width: 480px) { .send-open-wide { display: none; } }
   .send-open[hidden] { display: none; }
   .send-box, .gift-card { position: absolute; z-index: 2; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(360px, calc(100% - 32px)); box-sizing: border-box; display: grid; gap: 10px; padding: 16px; border: 1px solid var(--rule); border-radius: 12px; background: var(--glass); color: var(--ink); font: 14px var(--sans); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .send-box[hidden], .gift-card[hidden] { display: none; }
@@ -151,6 +154,9 @@
   .builder-deluxe-list { color: var(--muted); font-size: 12px; line-height: 1.4; }
   .builder-bar { position: absolute; z-index: 2; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 8px; width: min(360px, calc(100% - 32px)); }
   .builder-bar[hidden] { display: none; }
+  .builder-own { display: grid; gap: 4px; margin: 0; padding: 10px 12px; border: 1px solid rgb(255 180 92 / 0.45); border-radius: 8px; background: rgb(255 180 92 / 0.08); font-size: 13px; line-height: 1.4; }
+  .builder-own[hidden] { display: none; }
+  .builder-own-reset { justify-self: start; padding: 2px 0; border: 0; background: none; color: var(--muted); font: 12px var(--sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   .builder-chip:focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
   .building .panel, .building .walk-hint, .building .debug { display: none; }
   .send-link { font: 12px var(--mono); text-transform: none; }
@@ -181,7 +187,7 @@
   .gift-mode .panel, .gift-mode .debug, .gift-mode .send-open, .gift-mode .walk-hint { display: none; }
   .hero-mode :is(.send-open, .send-box, .gift-card, .builder-bar) { display: none; }
   /* The hint sits above the send button on narrow screens. */
-  @media (max-width: 640px) { .walk-hint { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } }
+  @media (max-width: 640px) { .walk-hint { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); } }
 
   /* Embedded in a client's site: just the scene. */
   .embed-mode :is(.hero, .hero-exit, .panel, .walk-hint, .debug, .send-open, .send-box, .gift-card, .builder-bar) { display: none !important; }
