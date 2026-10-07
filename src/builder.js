@@ -1,6 +1,8 @@
-// The greeting builder: "Make a SkyGreeting". Pick an occasion, write the words (they go
-// up in the live show as you type), design the show in Customize, preview the ending,
-// then send exactly that. Deluxe effects are marked ✦; using any, or ticking Deluxe,
+// The greeting builder ("Send a fireworks show"). Two ways in, one send screen: start
+// here (pick an occasion, write the words, design the show in Customize), or play and
+// customize the show first and then tap Send: the builder opens with that show, exactly as
+// it is, and only adds the words and the ending. (If the show hasn't been touched, the
+// occasion's own look is applied, as before.) Preview the ending, then send exactly that. Deluxe effects are marked ✦; using any, or ticking Deluxe,
 // makes it a paid send, and the send button always says which. Nothing asks for money
 // while you're making it.
 //
@@ -11,13 +13,22 @@ import { track, rememberPrice } from './track.js';
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, giftLink } from './link.js';
 import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion, paidItems } from './occasions.js';
 import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
+import { applyPreset } from './presets.js';
 import { BLOCKED_NOTE, greetingBlocked, isBlocked } from './moderate.js';
 
 const TEXT_WEIGHT = 0.7; // how often the live show spells the message while building
 
 export function create(ctx) {
   const { config, container, signal } = ctx;
-  const state = { occasion: DEFAULT_OCCASION, deluxe: false, typed: false, paying: false };
+  const state = { occasion: DEFAULT_OCCASION, deluxe: false, typed: false, paying: false, guessed: false, baseline: '' };
+  // The show as the app itself leaves it (the defaults, or the last occasion look applied):
+  // anything different was set by the person, by playing with Customize or the panel, or
+  // saved from their last visit, and is theirs to send. Worked out before anything changes.
+  const lookJson = () => JSON.stringify(lookOf(config));
+  const fresh = structuredClone(config);
+  applyPreset(fresh, 'Default');
+  state.baseline = JSON.stringify(lookOf(fresh));
+  const designIsMine = () => lookJson() !== state.baseline;
   let price = PRICE;
   let priceCents = Math.round(Number(String(PRICE).replace(/[^0-9.]/g, '')) * 100) || 499;
   // The real price, from the server (a test price while trying out checkout).
@@ -31,7 +42,9 @@ export function create(ctx) {
     }, () => {});
   }
 
-  const open = el('button', 'send-open', 'Make a SkyGreeting');
+  // "Send a fireworks show" where it fits; "Send a show" on a narrow phone, beside Customize.
+  const open = el('button', 'send-open');
+  open.append('🎆 Send a ', el('span', 'send-open-wide', 'fireworks '), 'show');
   open.type = 'button';
 
   // The sheet.
@@ -41,7 +54,7 @@ export function create(ctx) {
   const close = el('button', 'send-close', 'Close');
   close.type = 'button';
   const head = el('div', 'builder-head');
-  head.append(el('p', 'send-title', 'Make a SkyGreeting'), close);
+  head.append(el('p', 'send-title', 'Send a fireworks show'), close);
   const chips = el('div', 'builder-chips');
   chips.setAttribute('role', 'radiogroup');
   chips.setAttribute('aria-label', 'Occasion');
@@ -54,6 +67,13 @@ export function create(ctx) {
     chipFor[name] = chip;
     chips.append(chip);
   }
+  // Shown when the show being sent is the one the person set up themselves.
+  const own = el('p', 'builder-own');
+  const ownText = el('span', '', '✓ Your show is included: the colours, fireworks and sky you set up.');
+  const ownReset = el('button', 'builder-own-reset');
+  ownReset.type = 'button';
+  own.append(ownText, ownReset);
+  ownReset.addEventListener('click', () => choose(state.occasion, true), { signal });
   const message = field('Message', MESSAGE_LIMIT, 'builder-loud');
   const message2 = field('Second line (optional)', MESSAGE_LIMIT, 'builder-loud');
   const to = field('Their name (optional)', NAME_LIMIT, 'builder-loud');
@@ -118,7 +138,7 @@ export function create(ctx) {
   privacyLink.target = '_blank';
   privacyLink.rel = 'noopener';
   terms.append('By sending, you agree to SkyGreeting’s ', termsLink, '. ', privacyLink, '.');
-  sheet.append(head, chips, message.label, message2.label, to.label, from.label, customize, included, deluxeBox, row, linkBox, status, terms);
+  sheet.append(head, chips, own, message.label, message2.label, to.label, from.label, customize, included, deluxeBox, row, linkBox, status, terms);
 
   // While a preview plays: a slim bar instead of the sheet.
   const bar = el('div', 'builder-bar');
@@ -159,13 +179,19 @@ export function create(ctx) {
 
   container.append(open, sheet, bar, soon);
 
-  function choose(name) {
+  // `fresh`: use the occasion's own look even over a show the person set up.
+  function choose(name, fresh = false) {
     state.occasion = name;
     if (!state.typed || !message.input.value.trim()) {
       message.input.value = OCCASIONS[name].message;
       state.typed = false;
     }
-    applyOccasion(config, name, deluxeInput.checked);
+    // A show the person set up is kept as it is; the occasion then gives only the words
+    // and the ending. Otherwise the occasion's look (scene, fireworks, ground show) is applied.
+    if (fresh || !designIsMine()) {
+      applyOccasion(config, name, deluxeInput.checked);
+      state.baseline = lookJson();
+    }
     config.look.text = words().message;
     config.look.mix.text = TEXT_WEIGHT;
     refresh();
@@ -178,6 +204,8 @@ export function create(ctx) {
     if (used.length && !deluxeInput.checked) deluxeInput.checked = true;
     state.deluxe = deluxeInput.checked;
     for (const name in chipFor) chipFor[name].setAttribute('aria-checked', String(name === state.occasion));
+    own.hidden = !designIsMine();
+    ownReset.textContent = `Use the ${occasion.label} look instead`;
     included.textContent = `Free: ${occasion.free.map((item) => LABELS[item]).join(', ')}`;
     deluxeList.textContent = `Adds ${occasion.deluxe.map((item) => LABELS[item]).join(', ')}`;
     deluxeTitle.textContent = `✦ Deluxe · ${price} to send`;
@@ -278,7 +306,21 @@ export function create(ctx) {
     }
   }
 
+  // The occasion a show set up by the person most likely is for: Halloween's fireworks or
+  // palette mean Halloween; otherwise the palette hints (red, white and blue: congrats;
+  // pastels: love; gold: thank you), and anything else is a birthday.
+  function guessOccasion() {
+    if (state.guessed) return;
+    state.guessed = true;
+    if (state.typed || !designIsMine()) return;
+    const mix = config.look.mix;
+    const spooky = ['pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'].some((type) => mix[type] > 0);
+    const byPalette = { halloween: 'halloween', usa: 'congrats', pastel: 'love', gold: 'thanks' };
+    state.occasion = spooky ? 'halloween' : byPalette[config.look.palette] || 'birthday';
+  }
+
   open.addEventListener('click', () => {
+    guessOccasion();
     choose(state.occasion);
     status.textContent = '';
     linkBox.hidden = true;
@@ -306,8 +348,14 @@ export function create(ctx) {
   ctx.builder = {
     open: () => open.click(),
     refresh: () => refresh(),
-    /** While a greeting is being made: its occasion's Deluxe effects, for the ✦ marks. */
-    get deluxe() { return state.view && state.view !== 'closed' ? [...paidItems(OCCASIONS[state.occasion])] : null; },
+    /** Forget the show as it is now: the next open applies an occasion's own look. */
+    startFresh() {
+      state.baseline = lookJson();
+      state.guessed = false;
+    },
+    /** The Deluxe effects, for Customize's ✦ marks: always, so playing with the show first shows what's paid too. */
+    get deluxe() { return [...paidItems(OCCASIONS[state.occasion])]; },
+    get price() { return price; },
     get summary() { return state.view && state.view !== 'closed' ? `${OCCASIONS[state.occasion].label} greeting · ${send.textContent}` : ''; },
   };
   refresh();

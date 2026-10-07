@@ -261,7 +261,10 @@ export function create(ctx) {
     container.classList.remove('gift-mode');
     card.remove();
     if (ctx.director) ctx.director.stop();
-    if (build && ctx.builder) ctx.builder.open();
+    if (build && ctx.builder) {
+      ctx.builder.startFresh(); // a new greeting, not the one just watched
+      ctx.builder.open();
+    }
   }
 
   return {

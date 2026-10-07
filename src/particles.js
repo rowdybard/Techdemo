@@ -1,8 +1,10 @@
 // Particle pool: one instanced quad per particle, all drawn in a single call. Every
-// buffer is allocated once. Spawning claims a contiguous run from a ring cursor, writes
-// only that run, and uploads only that run. A run that would pass the end starts over
-// at zero instead, so it never wraps. Nothing is freed: dead particles collapse to
-// nothing in the shader until the cursor comes round and reuses them.
+// buffer is allocated once. Spawning claims a contiguous run, writes only that run, and
+// uploads only that run. Dead particles collapse to nothing in the shader until a later
+// run reuses them. A run is placed at a ring cursor, but never over particles that are
+// still alive (or not yet born): it skips past them to free space, and only when the
+// pool is genuinely full does it overwrite the oldest, as the ring always did. A run
+// that would pass the end starts over at zero, so it never wraps.
 import * as THREE from 'three';
 import { fireworksFragment, fireworksVertex } from './fireworks.glsl.js';
 
@@ -54,9 +56,38 @@ export function createPool(size, uniforms) {
   const runFirst = new Float64Array(RUNS);
   const runLast = new Float64Array(RUNS);
   const runSize = new Uint32Array(RUNS);
+  const runAt = new Uint32Array(RUNS); // where each run starts in the pool
+  let squeezed = 0; // runs that had to overwrite live particles because the pool was full
   let runIndex = 0;
   let runFirstBorn = Infinity;
   let runLastDeath = -Infinity;
+
+  // Where `count` particles can go without covering any that are alive or still waiting to
+  // be born at `now`: from the cursor on, skipping past each live run in the way, and
+  // starting over at zero once. Falls back to the cursor (the oldest) if it's all full.
+  function claim(count, now) {
+    let at = cursor + count > size ? 0 : cursor;
+    let wrapped = at === 0 && cursor !== 0;
+    for (let tries = 0; tries < 48; tries++) {
+      const end = at + count;
+      let blockedUntil = -1;
+      for (let i = 0; i < RUNS; i++) {
+        if (runLast[i] <= now || runSize[i] === 0) continue;
+        const from = runAt[i];
+        const to = from + runSize[i];
+        if (from < end && to > at && to > blockedUntil) blockedUntil = to;
+      }
+      if (blockedUntil < 0) return at;
+      at = blockedUntil;
+      if (at + count > size) {
+        if (wrapped) break;
+        wrapped = true;
+        at = 0;
+      }
+    }
+    squeezed++;
+    return cursor + count > size ? 0 : cursor;
+  }
 
   return {
     mesh,
@@ -69,10 +100,9 @@ export function createPool(size, uniforms) {
 
     /** Claims `count` particles and returns the index of the first. */
     begin(count) {
-      if (cursor + count > size) cursor = 0;
-      runStart = cursor;
+      runStart = claim(count, uniforms.uTime.value);
       runCount = count;
-      cursor += count;
+      cursor = runStart + count;
       runFirstBorn = Infinity;
       runLastDeath = -Infinity;
       return runStart;
@@ -113,7 +143,13 @@ export function createPool(size, uniforms) {
       runFirst[runIndex] = runFirstBorn;
       runLast[runIndex] = runLastDeath;
       runSize[runIndex] = runCount;
+      runAt[runIndex] = runStart;
       runIndex = (runIndex + 1) % RUNS;
+    },
+
+    /** How many runs overwrote live particles because the pool was full (0 is healthy). */
+    get squeezed() {
+      return squeezed;
     },
 
     /** Particles in runs that are live now (an upper bound: a run counts whole). */

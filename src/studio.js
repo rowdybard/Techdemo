@@ -44,7 +44,7 @@ export function create(ctx) {
   const { config, container, signal } = ctx;
   const refreshers = [];
 
-  const open = el('button', 'studio-open', 'Customize');
+  const open = el('button', 'studio-open', '🎨 Customize');
   open.type = 'button';
   const sheet = el('section', 'studio');
   sheet.hidden = true;
@@ -58,8 +58,10 @@ export function create(ctx) {
   const making = el('p', 'studio-making');
   refreshers.push(() => {
     const summary = ctx.builder ? ctx.builder.summary : '';
-    making.hidden = !summary;
-    making.textContent = summary ? `${summary}. ✦ effects make it a Deluxe send.` : '';
+    // Making a greeting: what it is and costs. Playing first: what ✦ means, so no surprise.
+    making.hidden = !ctx.builder;
+    making.textContent = summary ? `${summary}. ✦ effects make it a Deluxe send.`
+      : ctx.builder ? `✦ marks Deluxe effects. Using any makes the send ${ctx.builder.price}; everything else sends free.` : '';
   });
 
   // Big moments.
@@ -137,7 +139,8 @@ export function create(ctx) {
     });
     refreshers.push(() => {
       chip.setAttribute('aria-pressed', String(style === 'off' ? !config.fountains.enabled : config.fountains.enabled && config.fountains.style === style));
-      chip.classList.toggle('is-deluxe', deluxeItem(style) || (style === 'halloween' && Boolean(ctx.builder && ctx.builder.deluxe)));
+      // The two mixes include paid effects, so they're marked too.
+      chip.classList.toggle('is-deluxe', deluxeItem(style) || ((style === 'halloween' || style === 'mixed') && Boolean(ctx.builder)));
     });
     ground.append(chip);
   }
@@ -187,15 +190,26 @@ export function create(ctx) {
     button('studio-link', 'Advanced settings', () => { onDone = null; show(false); if (ctx.advanced) ctx.advanced.open(); }),
   );
 
+  // Opened on its own (not from the builder): a way to send the show as it is now.
+  const sendBar = el('div', 'studio-sendbar');
+  const sendShow = button('studio-send', 'Send this show →', () => {
+    onDone = null;
+    show(false);
+    if (ctx.builder) ctx.builder.open();
+  });
+  sendShow.append(el('small', '', 'Add your words and send it. It plays just like this.'));
+  sendBar.append(sendShow);
+
   sheet.append(head, making, actions,
     section('Style', presets), section('Colours', swatches), section('Fireworks', shellGroups),
-    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('View', cameras), footer);
+    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('View', cameras), footer, sendBar);
   container.append(open, sheet);
 
   // Opened from the greeting builder, Done goes back to it.
   let onDone = null;
   function show(on) {
     if (on) refresh();
+    sendBar.hidden = Boolean(onDone) || !ctx.builder; // from the builder, Done goes back to it
     sheet.hidden = !on;
     open.hidden = on;
     container.classList.toggle('customizing', on);
