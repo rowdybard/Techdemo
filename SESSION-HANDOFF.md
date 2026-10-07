@@ -15,6 +15,7 @@ Where things stand as of **October 5, 2026**, for whoever picks this up next (a 
 - Every module in `src/` exports `create(ctx)` returning `{ update(dt, time), dispose() }`. Update order is `MODULES` in `src/main.js`. Nothing allocates in the render loop. Files stay under about 400 lines.
 - Everything is procedural: no textures, models or fonts at runtime.
 - **Server:** one Cloudflare Worker (`worker/index.js`, name `techdemo`), static files as assets. Routes: `/api/config`, `/api/checkout`, `/api/share` (free greetings get a short `?g=` link), `/api/stripe-webhook`, `/api/greeting`, `/api/report`, `/api/taken-down`, and `/` when it has `?g=` or `?msg=` (link previews; greeting pages are `noindex`).
+- **Showcase greetings** for marketing are Deluxe records kept in code (`worker/showcase.js`), not KV.
 - **Storage:** KV namespace `GREETINGS` (id in `wrangler.jsonc`). Paid greetings (`g:<id>`), reports (`r:`), take-downs (`h:`). Each paid greeting is also copied into its Stripe PaymentIntent metadata, and `/api/greeting` rebuilds a missing record from Stripe.
 - **Payments:** Stripe Checkout through the REST API. Webhook signature checked with WebCrypto.
 - **Config:** `wrangler.jsonc` (price `DELUXE_PRICE_CENTS` = 499, `keep_vars` true). The build command copies `index.html about.html terms.html privacy.html robots.txt sitemap.xml favicon.* site.webmanifest icons _headers src vendor` into `.deploy/`. **A new top-level file or folder that must go live has to be added to that command.**

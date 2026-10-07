@@ -17,6 +17,7 @@
 // Plain variables (wrangler.jsonc): DELUXE_PRICE_CENTS. Storage: the GREETINGS KV namespace.
 
 import { greetingBlocked } from '../src/moderate.js';
+import { showcase } from './showcase.js';
 
 const OCCASIONS = new Set(['halloween', 'birthday', 'love', 'congrats', 'thanks']);
 const LIMITS = { message: 24, message2: 24, to: 16, from: 24 };
@@ -339,6 +340,8 @@ async function autoshowPage(request, env, url) {
 }
 
 async function load(env, id) {
+  const shown = showcase(id); // the owner's Deluxe showcase greetings (showcase.js)
+  if (shown) return shown;
   const text = await env.GREETINGS.get(`g:${id}`);
   return text ? JSON.parse(text) : null;
 }

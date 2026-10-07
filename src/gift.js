@@ -20,6 +20,7 @@ import { greetingBlocked } from './moderate.js';
 const FIRST_PLAY = 1.2; // seconds after the greeting is ready
 const POLL_MS = 2000; // waiting for the payment to be confirmed
 const POLL_TRIES = 30;
+const CARD_BACK = 2.5; // seconds after the ending before the card comes back (its last shells are still bursting)
 
 export function create(ctx) {
   const { config, container, signal } = ctx;
@@ -33,6 +34,7 @@ export function create(ctx) {
   let playAt = 0;
   let now = 0;
   let watching = false; // the card steps aside while the ending plays
+  let busyUntil = -Infinity; // and stays aside this long after, while the last shells burst
 
   const card = el('div', 'gift-card');
   const title = el('p', 'gift-from');
@@ -271,7 +273,8 @@ export function create(ctx) {
       now = time;
       // Out of the way while the show plays (on a phone it covers half the screen), and
       // back with its buttons once it's over.
-      const playing = Boolean(occasion) && (pending || Boolean(ctx.director && ctx.director.active));
+      if (occasion && (pending || (ctx.director && ctx.director.active))) busyUntil = time + CARD_BACK;
+      const playing = time < busyUntil;
       if (playing !== watching) {
         watching = playing;
         card.classList.toggle('gift-watching', playing);
