@@ -200,9 +200,9 @@ export function create(ctx) {
 // one end, and a few dim work lights. Shells launch from along its length. The two side
 // barges are short ones without a cabin, for ground shows.
 export const BARGE_LENGTH = 130;
-// Ground shows' brightness never goes past Customize's Sparkle at 65% (0.8 + 0.65 × 2.2):
+// Ground shows' brightness never goes past Customize's Sparkle at about 55% (0.8 + 0.55 × 2.2):
 // above that their overlapping sparks bloom into glowing blobs. Not a setting.
-const GROUND_BRIGHTNESS = 2.23;
+const GROUND_BRIGHTNESS = 2.0;
 export const SIDE_BARGE_LENGTH = 34;
 export const SIDE_BARGE_OFFSET = 108; // metres from the main barge's middle to each side barge's
 

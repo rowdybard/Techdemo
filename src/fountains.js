@@ -26,7 +26,7 @@ const PATTERNS = ['together', 'sweep', 'alternate', 'sweep-back'];
 // Dimmer than shell colours: hundreds of sparks overlap in a fountain.
 const COLORS = {
   gold: [[0.6, 0.34, 0.09], [0.55, 0.18, 0.04]],
-  silver: [[0.55, 0.55, 0.6], [0.4, 0.42, 0.6]],
+  silver: [[0.42, 0.42, 0.47], [0.3, 0.32, 0.46]], // dimmer than it looks: white sparks pile up into a white blob
 };
 
 export function create(ctx) {

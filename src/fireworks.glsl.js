@@ -91,7 +91,7 @@ export const fireworksVertex = /* glsl */ `
 
 export const fireworksFragment = /* glsl */ `
   uniform float uBrightness;
-  uniform float uGroundBrightness; // ground shows never go brighter than this (Sparkle at 65%)
+  uniform float uGroundBrightness; // ground shows never go brighter than this (Sparkle at about 55%)
   uniform float uGlitter;
 
   varying vec3 vColor;

@@ -41,7 +41,7 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 **Owner's list: all done (October 5, 2026).** Stripe verified with bank, receipts, descriptor and a test purchase; hello@ email routing; www redirect; Google Analytics settings; Search Console; checkout rate limit. Real-device checks: Save as video produces an MP4 on the owner's Android phone. Still worth watching: frame rate with the lighthouse beam and side barges on a phone and on the old Revvl tablet, and how Google Search Console reports indexing over the next weeks.
 
 **Possible next work:**
-- Fountains still glow a lot at Sparkle 80% on three barges; the cap is 65% (`GROUND_BRIGHTNESS` in `fireworks.js`). Lower the default Sparkle (about 65%) or thin the fountain sparks if it still looks blown out on a phone.
+- Fountain glow was toned down on October 7 (silver about a quarter, the ground cap `GROUND_BRIGHTNESS` from 2.23 to 2.0). If it's still blown out on a phone, thin the fountain sparks rather than dimming further.
 - Refunds are manual in the Stripe dashboard and don't switch the greeting off. A KV export for backups isn't built (Stripe holds a copy of each paid greeting). A buyer can't resend a lost link themselves.
 - Load time: first paint about 264 ms and about 1.9 s overall (Cloudflare, falling). Remaining cost is the three.js download and preparing the scene on phones. Bundling would break the no-build-step rule (the owner's call).
 - Customize remembers each visitor's last settings, so old defaults can linger on a device (Start over resets).
