@@ -19,7 +19,7 @@ Where things stand as of **October 5, 2026**, for whoever picks this up next (a 
 - **Storage:** KV namespace `GREETINGS` (id in `wrangler.jsonc`). Paid greetings (`g:<id>`), reports (`r:`), take-downs (`h:`). Each paid greeting is also copied into its Stripe PaymentIntent metadata, and `/api/greeting` rebuilds a missing record from Stripe.
 - **Payments:** Stripe Checkout through the REST API. Webhook signature checked with WebCrypto.
 - **Config:** `wrangler.jsonc` (price `DELUXE_PRICE_CENTS` = 499, `keep_vars` true). The build command copies `index.html about.html terms.html privacy.html robots.txt sitemap.xml favicon.* site.webmanifest icons _headers src vendor` into `.deploy/`. **A new top-level file or folder that must go live has to be added to that command.**
-- **Secrets** live only in the Cloudflare dashboard (Workers → techdemo → Settings → Variables and Secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Never put `sk_` or `whsec_` keys in chat, files or commits. (A `pk_` publishable key is public.) `GET /api/config` reports whether each is present, never the value.
+- **Secrets** live only in the Cloudflare dashboard (Workers → techdemo → Settings → Variables and Secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `RESEND_API_KEY` (emails lost links from /find; not set as of October 7, 2026). Never put `sk_` or `whsec_` keys in chat, files or commits. (A `pk_` publishable key is public.) `GET /api/config` reports whether each is present, never the value.
 - **Analytics:** Google Analytics 4, tag `G-BTBT8MCNPJ` (inline in `index.html`). Events from `src/track.js`: `share`, `begin_checkout`, `purchase`, `save_video`. Never sends greeting words, names or the private id.
 
 ## Working here
@@ -42,7 +42,7 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 
 **Possible next work:**
 - Fountain glow was toned down on October 7 (silver about a quarter, the ground cap `GROUND_BRIGHTNESS` from 2.23 to 2.0). If it's still blown out on a phone, thin the fountain sparks rather than dimming further.
-- Refunds are manual in the Stripe dashboard and don't switch the greeting off. A KV export for backups isn't built (Stripe holds a copy of each paid greeting). A buyer can't resend a lost link themselves.
+- Refunds are manual in the Stripe dashboard and don't switch the greeting off. A KV export for backups isn't built (Stripe holds a copy of each paid greeting). Lost links: /find emails them once `RESEND_API_KEY` is set (owner: sign up at Resend, verify skygreeting.com there, add the key as a Cloudflare secret).
 - Load time: first paint about 264 ms and about 1.9 s overall (Cloudflare, falling). Remaining cost is the three.js download and preparing the scene on phones. Bundling would break the no-build-step rule (the owner's call).
 - Customize remembers each visitor's last settings, so old defaults can linger on a device (Start over resets).
 - Christmas, New Year's and Valentine's are meant to be new entries in `src/occasions.js` plus any new shells; the pricing plan lists Business ($49/month), 5-packs and a Deluxe tier that don't exist.

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find my link · SkyGreeting</title>
+<meta name="description" content="Lost the link to a Deluxe SkyGreeting? We’ll email it to you again.">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#161e38">
+<link rel="canonical" href="https://skygreeting.com/find">
+<style>
+  :root {
+    --night: #0b1020;
+    --ink: #e9edf5;
+    --muted: #98a2b7;
+    --rule: rgb(233 237 245 / 0.14);
+    --spark: #ffb45c;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  html { background: var(--night); }
+  body { margin: 0; color: var(--ink); font: 16px/1.65 var(--sans); background: linear-gradient(to bottom, #161e38, var(--night) 420px); }
+  main { max-width: 680px; margin: 0 auto; padding: 48px 16px 72px; }
+  .back { color: var(--spark); font-weight: 600; text-decoration: none; }
+  h1 { margin: 24px 0 4px; font-size: clamp(28px, 6vw, 40px); line-height: 1.15; letter-spacing: -0.01em; }
+  .updated { margin: 0 0 32px; color: var(--muted); font-size: 14px; }
+  h2 { margin: 40px 0 8px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 20px; }
+  p, li { color: var(--ink); }
+  ul { padding-left: 20px; }
+  li + li { margin-top: 6px; }
+  a { color: var(--spark); }
+  .short { padding: 14px 16px; border: 1px solid rgb(255 180 92 / 0.35); border-radius: 10px; background: rgb(255 180 92 / 0.08); }
+  .short p { margin: 0; }
+
+  form { display: grid; gap: 10px; margin: 24px 0 8px; }
+  label { font-weight: 600; }
+  input { box-sizing: border-box; width: 100%; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 10px; background: rgb(255 255 255 / 0.06); color: var(--ink); font: 16px var(--sans); }
+  input:focus { outline: 2px solid var(--spark); outline-offset: 1px; }
+  button { justify-self: start; padding: 12px 20px; border: 0; border-radius: 999px; background: var(--spark); color: #2a1600; font: 600 15px var(--sans); cursor: pointer; }
+  button[disabled] { opacity: 0.6; cursor: default; }
+  .status { min-height: 1.6em; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">← Back to SkyGreeting</a>
+  <h1>Find my link</h1>
+  <p class="updated">For Deluxe greetings</p>
+
+  <p>Lost the link to a Deluxe SkyGreeting you bought? Type the email you paid with and we’ll send every link bought with it to that inbox.</p>
+
+  <form id="find">
+    <label for="email">Email you paid with</label>
+    <input id="email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com">
+    <button type="submit">Email me my links</button>
+    <p class="status" id="status" role="status"></p>
+  </form>
+
+  <p>The link was also in your payment receipt from Stripe, so it’s worth searching your inbox for “SkyGreeting”. Still stuck? Email <a href="mailto:hello@skygreeting.com">hello@skygreeting.com</a>.</p>
+</main>
+<script>
+  // Plain page, no build step: posts the email to the worker (worker/resend.js).
+  const form = document.getElementById('find');
+  const status = document.getElementById('status');
+  const button = form.querySelector('button');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    button.disabled = true;
+    status.textContent = 'Sending…';
+    try {
+      const response = await fetch('/api/resend', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: form.email.value }),
+      });
+      const data = await response.json().catch(() => ({}));
+      status.textContent = response.ok
+        ? 'If that email bought a SkyGreeting, its link is on the way. Check your inbox (and spam) in a minute.'
+        : data.error || 'Something went wrong. Please try again.';
+    } catch {
+      status.textContent = 'Couldn’t reach SkyGreeting. Check your connection and try again.';
+    }
+    button.disabled = false;
+  });
+</script>
+</body>
+</html>

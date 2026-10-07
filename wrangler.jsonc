@@ -9,7 +9,7 @@
   "name": "techdemo",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-30",
-  "build": { "command": "rm -rf .deploy && mkdir .deploy && cp -r index.html about.html terms.html privacy.html robots.txt sitemap.xml favicon.ico favicon.svg site.webmanifest icons _headers src vendor .deploy/" },
+  "build": { "command": "rm -rf .deploy && mkdir .deploy && cp -r index.html about.html find.html terms.html privacy.html robots.txt sitemap.xml favicon.ico favicon.svg site.webmanifest icons _headers src vendor .deploy/" },
   // The worker answers /api/* and the home page (to fill in link previews for greetings).
   "assets": { "directory": "./.deploy", "binding": "ASSETS", "run_worker_first": ["/api/*", "/", "/autoshow", "/autoshow/"] },
   "kv_namespaces": [{ "binding": "GREETINGS", "id": "ce11e2e797df435582f3725b943b236b" }],

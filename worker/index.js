@@ -7,17 +7,20 @@
 //   GET  /api/greeting?id=…   a greeting's words and occasion, once paid (asks Stripe
 //                             directly if the webhook hasn't arrived yet)
 //   POST /api/report          a recipient reports a greeting (three people take it down)
+//   POST /api/resend          emails a buyer their Deluxe links again (resend.js)
 //   GET  /api/taken-down?o=…  whether a free greeting has been taken down
 //   GET  /?g=… or /?msg=…     the page itself, with the link preview filled in for that greeting
 //   GET  /api/config          the Deluxe price, for the send button, and whether the
 //                             Stripe keys are present (true/false, never the keys)
 //
 // Secrets (Cloudflare → Worker → Settings → Variables and Secrets, type Secret):
-//   STRIPE_SECRET_KEY, and STRIPE_WEBHOOK_SECRET once a webhook exists.
+//   STRIPE_SECRET_KEY, and STRIPE_WEBHOOK_SECRET once a webhook exists; RESEND_API_KEY
+//   for emailing lost links (skygreeting.com/find).
 // Plain variables (wrangler.jsonc): DELUXE_PRICE_CENTS. Storage: the GREETINGS KV namespace.
 
 import { greetingBlocked } from '../src/moderate.js';
 import { showcase } from './showcase.js';
+import { resend } from './resend.js';
 
 const OCCASIONS = new Set(['halloween', 'birthday', 'love', 'congrats', 'thanks']);
 const LIMITS = { message: 24, message2: 24, to: 16, from: 24 };
@@ -30,13 +33,14 @@ export default {
     try {
       if (url.pathname === '/api/config' && request.method === 'GET') {
         // Whether each key is present (never the key itself), to check the setup from outside.
-        return json({ priceCents: price(env), payments: Boolean(env.STRIPE_SECRET_KEY), webhook: Boolean(env.STRIPE_WEBHOOK_SECRET) });
+        return json({ priceCents: price(env), payments: Boolean(env.STRIPE_SECRET_KEY), webhook: Boolean(env.STRIPE_WEBHOOK_SECRET), email: Boolean(env.RESEND_API_KEY) });
       }
       if (url.pathname === '/api/checkout' && request.method === 'POST') return await checkout(request, env, url);
       if (url.pathname === '/api/stripe-webhook' && request.method === 'POST') return await webhook(request, env);
       if (url.pathname === '/api/share' && request.method === 'POST') return await share(request, env);
       if (url.pathname === '/api/greeting' && request.method === 'GET') return await greeting(env, url.searchParams.get('id'));
       if (url.pathname === '/api/report' && request.method === 'POST') return await report(request, env);
+      if (url.pathname === '/api/resend' && request.method === 'POST') return await resend(request, env, { json, sha256, stripe, load });
       if (url.pathname === '/api/taken-down' && request.method === 'GET') return await takenDown(env, url.searchParams);
       if (url.pathname.startsWith('/api/')) return json({ error: 'Not found' }, 404);
       if (url.pathname === '/autoshow/') return Response.redirect(`${url.origin}/autoshow${url.search}`, 301); // its files are found from /autoshow
@@ -91,7 +95,7 @@ async function checkout(request, env, url) {
     // Stripe asks for the buyer's email. Its receipt shows this description, so the
     // private link reaches their inbox (with receipts turned on in Stripe's settings).
     'payment_intent_data[description]': `Your SkyGreeting: ${site}/?g=${id}`,
-    'custom_text[submit][message]': `Your private SkyGreeting link is shown right after payment and sent with your receipt. Terms and refunds: ${site}/terms`,
+    'custom_text[submit][message]': `Your private SkyGreeting link is shown right after payment and sent with your receipt (lost it? ${site}/find). Terms and refunds: ${site}/terms`,
     success_url: `${site}/?g=${id}&sent=1`,
     cancel_url: `${site}/?canceled=1`,
   });
