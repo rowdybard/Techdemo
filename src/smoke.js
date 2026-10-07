@@ -16,14 +16,17 @@
 // over the screen, which is what costs time on phones.
 import * as THREE from 'three';
 import { smokeFragment, smokeVertex } from './smoke.glsl.js';
-import { positionAt } from './particles.js';
+import { positionAt, velocityAt } from './particles.js';
 
-const PUFFS = { desktop: 176, phone: 64 };
+// Many small puffs rather than a few big ones: each lies along a star's trail, so the
+// total area drawn (what costs time on a GPU) stays about what the old big puffs used.
+const PUFFS = { desktop: 520, phone: 170 };
 // Ground smoke gets its own part of the ring, so the barges (the side ones play almost
 // all the time) can't crowd out the smoke from bursts or pile up without limit.
-const GROUND_SHARE = 0.35;
+const GROUND_SHARE = 0.25;
 const GROUND_EVERY = { desktop: 2, phone: 3.2 }; // seconds between puffs from each burning tube
-const PER_SHELL = { desktop: 7, phone: 4 };
+const RAYS = { desktop: 8, phone: 5 }; // star trails per burst that leave smoke
+const ALONG = { desktop: 3, phone: 2 }; // puffs along each trail
 const SHELL_RECORDS = 64; // fireworks.js keeps this many burst records
 const FOUNTAIN_RECORDS = 22; // the main barge's tubes and the two side barges' (fountains.js)
 const HANGING = { willow: true, palm: true }; // sparks that fall a long way, leaving curtains
@@ -34,6 +37,7 @@ const STARS = {
   ring: [1.4, 1, 1], crossette: [1.1, 0.8, 0.8], crackle: [1.6, 0.8, 0.73], multibreak: [1.4, 1, 1],
 };
 const spot = [0, 0, 0];
+const vel = [0, 0, 0];
 
 // How much faster the air moves at height y than at 10 m (the wind's own height): the
 // usual power law over open water, held to a sensible range. The shader uses the same.
@@ -57,6 +61,9 @@ export function create(ctx) {
   const look = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
   const extra = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4);
   extra.setUsage(THREE.DynamicDrawUsage);
+  const trail = new THREE.InstancedBufferAttribute(new Float32Array(size * 4), 4); // direction, stretch along it
+  trail.setUsage(THREE.DynamicDrawUsage);
+  quad.setAttribute('aTrail', trail);
   quad.setAttribute('aExtra', extra);
   origin.setUsage(THREE.DynamicDrawUsage);
   shape.setUsage(THREE.DynamicDrawUsage);
@@ -124,7 +131,10 @@ export function create(ctx) {
   // One puff: where and when it appears, its starting radius, how fast it spreads (metres
   // per square-root second), how long it lasts, and its shape: stretched across and up,
   // tilted, and how fine its noise is.
-  function puff(x, y, z, born, radius, growth, life, across, up, tilt, rise = 0, glow = 1, density = 1, ground = false) {
+  // A trail puff also gets the direction its star was flying (tx, ty, tz) and how far to
+  // stretch along it; the shader lines the puff up with that direction on screen.
+  function puff(x, y, z, born, radius, growth, life, across, up, tilt, rise = 0, glow = 1, density = 1, ground = false,
+    tx = 0, ty = 0, tz = 0, stretch = 0) {
     const slot = claim(ground);
     if (slot < 0) return;
     const o = slot * 4;
@@ -148,6 +158,10 @@ export function create(ctx) {
     extra.array[o] = rise;
     extra.array[o + 1] = glow;
     extra.array[o + 2] = density;
+    trail.array[o] = tx;
+    trail.array[o + 1] = ty;
+    trail.array[o + 2] = tz;
+    trail.array[o + 3] = stretch;
     if (slot < dirtyFrom) dirtyFrom = slot;
     if (slot > dirtyTo) dirtyTo = slot;
   }
@@ -158,32 +172,33 @@ export function create(ctx) {
     attribute.needsUpdate = true;
   }
 
-  // A shell's smoke, appearing as it bursts, laid along where its sparks went.
+  // A shell's smoke. Stars leave smoke all along their trails, so it's laid along a few
+  // star paths (spread evenly over the burst, a golden spiral turned at random), worked out
+  // with the same motion the sparks use (the type's drag, speed and burn time, gravity, the
+  // wind): each puff born as its star passes, stretched along the way the star was flying,
+  // thickening toward where the star burns out. Willow and palm trails curve down into
+  // hanging curtains. A faint puff marks the break itself.
   function shellSmoke(record) {
     const lowTier = ctx.post && ctx.post.tier === 'low';
-    const count = Math.max(2, Math.round((phone ? PER_SHELL.phone : PER_SHELL.desktop) * (lowTier ? 0.5 : 1)));
     const reach = record.size;
     const life = settings.linger;
-    const born = record.time + 0.2;
 
     if (record.type === 'text') {
       // A wide band where the letters were.
+      const count = phone ? 4 : 7;
       const width = config.look.textWidth;
       for (let k = 0; k < count; k++) {
         const x = record.x + ((k + Math.random()) / count - 0.5) * width;
-        puff(x, record.y + (Math.random() - 0.5) * 12, record.z, born + Math.random() * 0.6,
+        puff(x, record.y + (Math.random() - 0.5) * 12, record.z, record.time + 0.2 + Math.random() * 0.6,
           width / count * (0.45 + Math.random() * 0.25), 2 + Math.random() * 1.5, life * (0.6 + Math.random() * 0.5),
           1.1 + Math.random() * 0.5, 0.75 + Math.random() * 0.3, (Math.random() - 0.5) * 0.3);
       }
       return;
     }
 
-    // A small, dense puff where the shell broke (the bursting charge).
-    puff(record.x, record.y, record.z, record.time + 0.1, reach * (0.12 + Math.random() * 0.05), 1.8 + Math.random(),
-      life * (0.6 + Math.random() * 0.3), 1 + Math.random() * 0.4, 0.8 + Math.random() * 0.4, Math.random() * 6.28, 0, 1, 1.3);
+    puff(record.x, record.y, record.z, record.time + 0.1, reach * (0.07 + Math.random() * 0.03), 1.4 + Math.random(),
+      life * (0.5 + Math.random() * 0.3), 1, 0.9, Math.random() * 6.28, 0, 1, 0.7);
 
-    // The rest where stars burned out: spread evenly over the burst (a golden spiral,
-    // turned at random), each placed late in its star's burn and born as the star gets there.
     const star = STARS[record.type] || STARS.peony;
     const { physics } = config;
     const drag = star[0] * physics.drag;
@@ -192,20 +207,35 @@ export function create(ctx) {
     const g = 9.81 * physics.gravity;
     const hanging = HANGING[record.type];
     const spin = Math.random() * 6.28;
-    const n = count - 1;
-    for (let k = 0; k < n; k++) {
-      const up = 1 - (2 * (k + 0.5)) / n;
+    const rays = Math.max(3, Math.round((phone ? RAYS.phone : RAYS.desktop) * (lowTier ? 0.6 : 1)));
+    const along = phone ? ALONG.phone : ALONG.desktop;
+    for (let k = 0; k < rays; k++) {
+      const up = 1 - (2 * (k + 0.5)) / rays;
       const flat = Math.sqrt(1 - up * up);
       const a = k * 2.39996 + spin;
       const s = speed * (0.85 + Math.random() * 0.3);
-      // Willow and palm stars fall a long way: the curtain of smoke hangs along the fall.
-      const t = burn * (hanging ? 0.45 + Math.random() * 0.4 : 0.6 + Math.random() * 0.4);
-      positionAt(spot, record.x, record.y, record.z, Math.cos(a) * flat * s, up * s, Math.sin(a) * flat * s, drag, t, g, physics.windX, physics.windZ);
-      puff(spot[0], spot[1], spot[2], record.time + t * 0.85, reach * (0.15 + Math.random() * 0.07), 1.8 + Math.random() * 1.2,
-        life * (0.55 + Math.random() * 0.45),
-        hanging ? 0.55 + Math.random() * 0.25 : 0.8 + Math.random() * 0.6,
-        hanging ? 1.8 + Math.random() * 0.8 : 0.7 + Math.random() * 0.5,
-        hanging ? (Math.random() - 0.5) * 0.3 : Math.random() * 6.28, 0, 1, hanging ? 1 : 1.25);
+      const vx = Math.cos(a) * flat * s;
+      const vy = up * s;
+      const vz = Math.sin(a) * flat * s;
+      let px = record.x;
+      let py = record.y;
+      let pz = record.z;
+      for (let j = 0; j < along; j++) {
+        // Spread along the burn (from a little out to where it dies), a bit ragged.
+        const share = (j + 0.75 + (Math.random() - 0.5) * 0.4) / along;
+        const t = burn * (hanging ? 0.2 + 0.75 * share : 0.12 + 0.88 * share);
+        positionAt(spot, record.x, record.y, record.z, vx, vy, vz, drag, t, g, physics.windX, physics.windZ);
+        velocityAt(vel, vx, vy, vz, drag, t, g, physics.windX, physics.windZ);
+        const step = Math.hypot(spot[0] - px, spot[1] - py, spot[2] - pz);
+        px = spot[0];
+        py = spot[1];
+        pz = spot[2];
+        const fly = Math.hypot(vel[0], vel[1], vel[2]) || 1;
+        const radius = reach * (0.045 + Math.random() * 0.025) * (0.75 + (0.5 * (j + 1)) / along);
+        puff(spot[0], spot[1], spot[2], record.time + t, radius, 1.2 + Math.random(),
+          life * (0.5 + Math.random() * 0.45), 1, hanging ? 0.5 : 0.65 + Math.random() * 0.25, 0, 0, 1, hanging ? 1 : 1.2, false,
+          vel[0] / fly, vel[1] / fly, vel[2] / fly, Math.min(3.5, Math.max(1.2, step / (2 * radius))));
+      }
     }
   }
 
@@ -265,6 +295,7 @@ export function create(ctx) {
         upload(shape);
         upload(look);
         upload(extra);
+        upload(trail);
         dirtyFrom = size;
         dirtyTo = -1;
       }

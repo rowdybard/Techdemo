@@ -13,6 +13,7 @@ export const smokeVertex = /* glsl */ `
   attribute vec4 aOrigin; // xyz, birth time
   attribute vec4 aShape; // start radius, growth, life, seed
   attribute vec4 aLook; // stretch across, stretch up, tilt, noise scale
+  attribute vec4 aTrail; // a trail puff: the direction its star flew, and how far it stretches along it
   attribute vec4 aExtra; // rise (m/s, buoyant at first), glow (how strongly firework light lights it), density
   uniform float uTime;
   uniform vec3 uWindOffset; // metres the air has moved (origins are stored relative to it)
@@ -67,10 +68,16 @@ export const smokeVertex = /* glsl */ `
     vLight = light;
 
     // Stretched (wind shear draws it out sideways as it ages) and tilted, facing the camera.
+    vec4 view = viewMatrix * vec4(center, 1.0);
     vec2 stretch = aLook.xy * vec2(1.0 + age * 0.025, 1.0);
     float angle = aLook.z;
+    if (aTrail.w > 0.0) {
+      // Lined up with the star's path as it looks from here, so trails read as streaks.
+      vec2 along = (viewMatrix * vec4(aTrail.xyz, 0.0)).xy;
+      if (dot(along, along) > 1e-4) angle = atan(along.y, along.x);
+      stretch = vec2(aTrail.w * (1.0 + age * 0.02), aLook.y);
+    }
     vec2 corner = mat2(cos(angle), sin(angle), -sin(angle), cos(angle)) * (position.xy * stretch);
-    vec4 view = viewMatrix * vec4(center, 1.0);
     view.xy += corner * radius;
     gl_Position = projectionMatrix * view;
     // Where this corner is in the world (for the lighthouse beams).
