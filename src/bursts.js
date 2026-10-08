@@ -48,7 +48,8 @@ function fillLight(out, born, at, color, size) {
 }
 
 // A sphere of sparks. The shared body of peony, chrysanthemum, willow and strobe.
-function sphereBurst(pool, count, born, at, inherit, speed, drag, a, b, change, life, radius, trail, kind) {
+// `scale` dims every spark's colour (1 = as given).
+function sphereBurst(pool, count, born, at, inherit, speed, drag, a, b, change, life, radius, trail, kind, scale = 1) {
   const spin = Math.random() * Math.PI * 2;
   let i = pool.begin(count);
   for (let k = 0; k < count; k++) {
@@ -59,7 +60,7 @@ function sphereBurst(pool, count, born, at, inherit, speed, drag, a, b, change, 
     const l = life * jitter(0.15);
     pool.set(i++, at[0], at[1], at[2], born,
       dir[0] * s + inherit[0] * 0.3, dir[1] * s + inherit[1] * 0.3, dir[2] * s + inherit[2] * 0.3, drag,
-      c[0], c[1], c[2], c2[0], c2[1], c2[2], l * 0.45, l, radius, trail, kind);
+      c[0] * scale, c[1] * scale, c[2] * scale, c2[0] * scale, c2[1] * scale, c2[2] * scale, l * 0.45, l, radius, trail, kind);
   }
   pool.end();
 }
@@ -71,8 +72,10 @@ function peony(pool, shell, config, palette, born, at, velocity, out) {
   const b = Math.random() < 0.3 ? pick(palette) : a;
   const change = Math.random() < 0.25 ? pick(palette) : null;
   const kind = look.glitter > 0 && Math.random() < 0.25 ? KIND.glitter : KIND.spark;
+  // A glitter peony burns at 45%: its sparks flash at 2.2× (fireworks.glsl.js), and across
+  // a whole peony the flashes overlapped into fuzzy glowing blobs, worst in green.
   sphereBurst(pool, shell.count, born, at, velocity, shell.size * drag, drag, a, b, change,
-    look.lifetime, 0.4 * look.sparkSize, 0.07, kind);
+    look.lifetime, 0.4 * look.sparkSize, 0.07, kind, kind === KIND.glitter ? 0.45 : 1);
   fillLight(out, born, at, a, shell.size);
 }
 
