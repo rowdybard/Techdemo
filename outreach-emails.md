@@ -12,7 +12,7 @@ The beach and fireworks demo also fits beach rentals, waterfront restaurants and
 
 Hi [Name],
 
-I'm Daniel, a Michigan developer who builds real-time 3D water and ocean scenes that run right in the browser. No plugins, and they load fast on phones.
+I'm Daniel, a Michigan designer of real-time 3D water and ocean scenes for the web, built with AI coding tools. They run right in the browser with no plugins, and load fast on phones.
 
 A live animated water hero on [Business]'s homepage would make you stand out from every other [marina / pool company / waterpark / boat dealer] in the area. Here's a demo of what I build: https://techdemo.maxpug17.workers.dev/#hero
 
@@ -27,7 +27,7 @@ Daniel
 
 Hi [Name],
 
-I'm Daniel, a Michigan developer specializing in real-time 3D water for the web. Demo: https://techdemo.maxpug17.workers.dev/#hero
+I'm Daniel, a Michigan designer of real-time 3D water scenes for the web, built with AI coding tools. Demo: https://techdemo.maxpug17.workers.dev/#hero
 
 I can deliver a custom animated water hero section for [Business]'s site (your colors, logo, and copy) as a drop-in embed in about a week, for a flat $500. It's a single lightweight file that works on desktop and mobile.
 

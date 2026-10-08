@@ -67,4 +67,5 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 - They want steps to flow without stopping for approval, "pretty and realistic" visuals, plain-language explanations (they're not a developer), and short answers that say what's done and what they need to do.
 - Test details go in the summary only if they matter. Tell them plainly when something couldn't be verified here.
 - Don't suggest turning off their BetBlocker. Never ask them to paste secrets. Use their email only to identify them.
-- Commit trailers follow the session's attribution instructions; push only to `ccr-09268299-owgtnw`.
+- They are open that the project is built with AI coding tools (October 8, 2026): `about.html` has a "How it's made" line saying so, and the outreach drafts say the same. They don't want it hidden and don't want it to be the headline. Keep new public copy consistent with that, and don't describe the work as hand-coded.
+- Commit trailers follow the session's attribution instructions; push only to the branch the session names (`ccr-09268299-owgtnw` is the one that deploys; a session may be assigned its own branch, which needs merging into it to go live).
