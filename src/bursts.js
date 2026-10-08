@@ -107,7 +107,10 @@ function strobe(pool, shell, config, palette, born, at, velocity, out) {
 
 // A few thick comets thrown mostly upward and outward, shedding glitter as they fall.
 // Drawn as plain sparks, not KIND.comet, whose white-hot core is for the rising shell:
-// on the fronds it turned every colour white.
+// on the fronds it turned every colour white. A frond burns down to 30% once it has
+// slowed (otherwise its trail bunched up behind its head into a glowing ball), and the
+// glitter it sheds is dimmer at both ends of its path: at the base, where every frond
+// starts, and at the end, where it slows and the sparks crowd together.
 function palm(pool, shell, config, palette, born, at, velocity, out) {
   const { look, physics } = config;
   const g = 9.81 * physics.gravity;
@@ -127,12 +130,13 @@ function palm(pool, shell, config, palette, born, at, velocity, out) {
     const vy = rise * s + velocity[1] * 0.3;
     const vz = Math.sin(angle) * flat * s + velocity[2] * 0.3;
     pool.set(i++, at[0], at[1], at[2], born, vx, vy, vz, drag,
-      color[0], color[1], color[2], color[0], color[1], color[2], 99, life, 1.8 * look.sparkSize, 1.0, KIND.spark);
+      color[0], color[1], color[2], color[0] * 0.3, color[1] * 0.3, color[2] * 0.3, life * 0.42, life, 1.3 * look.sparkSize, 1.0, KIND.spark);
     for (let k = 0; k < shed; k++) {
       const t = ((k + 0.5) / shed) * life * 0.8;
+      const near = 0.45 + 0.55 * Math.sin((Math.PI * (k + 0.5)) / shed);
       positionAt(p, at[0], at[1], at[2], vx, vy, vz, drag, t, g, physics.windX, physics.windZ);
       pool.set(i++, p[0], p[1], p[2], born + t, (Math.random() - 0.5) * 3, -1 - Math.random() * 2, (Math.random() - 0.5) * 3, 2,
-        GOLD[0], GOLD[1], GOLD[2], GOLD[0], GOLD[1], GOLD[2], 99, 1.0 + Math.random() * 0.8, 0.3 * look.sparkSize, 0.25, KIND.glitter);
+        GOLD[0] * near, GOLD[1] * near, GOLD[2] * near, GOLD[0] * near, GOLD[1] * near, GOLD[2] * near, 99, 1.0 + Math.random() * 0.8, 0.3 * look.sparkSize, 0.25, KIND.glitter);
     }
   }
   pool.end();
