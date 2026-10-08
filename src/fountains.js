@@ -22,6 +22,9 @@ const MAX_NOZZLES = 14;
 const SIDE_TUBES = 4; // on each side barge
 const SIDE_GAP = 1.2; // seconds between side shows
 const SIDE_SCALE = 0.72; // side effects reach this much of the main barge's height
+// Every ground effect sizes itself from the fountain height and the spark size, so a show
+// is drawn with both raised by this much (on the owner's word: about 10% bigger).
+const GROUND_SCALE = 1.1;
 const PATTERNS = ['together', 'sweep', 'alternate', 'sweep-back'];
 // Dimmer than shell colours: hundreds of sparks overlap in a fountain.
 const COLORS = {
@@ -80,7 +83,9 @@ export function create(ctx) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return;
     pool.groundShow(true);
+    grow();
     playMain(pool, start, forced);
+    shrink();
     pool.groundShow(false);
   }
 
@@ -115,7 +120,9 @@ export function create(ctx) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return start + 2;
     pool.groundShow(true);
+    grow();
     const end = playSides(pool, start);
+    shrink();
     pool.groundShow(false);
     return end;
   }
@@ -145,6 +152,21 @@ export function create(ctx) {
       }
     }
     return end;
+  }
+
+  // Raise the height and spark size while a show is written, then put them back (the
+  // settings stay as the person set them; only the effects come out bigger).
+  let grownHeight = 0;
+  let grownSize = 0;
+  function grow() {
+    grownHeight = settings.height;
+    grownSize = config.look.sparkSize;
+    settings.height = grownHeight * GROUND_SCALE;
+    config.look.sparkSize = grownSize * GROUND_SCALE;
+  }
+  function shrink() {
+    settings.height = grownHeight;
+    config.look.sparkSize = grownSize;
   }
 
   // Before the main barge has played: the style it will start with.

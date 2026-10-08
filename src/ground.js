@@ -21,7 +21,7 @@ const PER_COMET = 1 + SHED;
 
 // Writes one comet from (x, y, z) leaning `lean` radians across the barge, at `speed`.
 // Its head is a plain spark in its colour (KIND.comet's white core is the rising shell's).
-function comet(pool, i, config, born, x, y, z, lean, speed, color, radius, life) {
+function comet(pool, i, config, born, x, y, z, lean, speed, color, radius, life, trail = 0.3) {
   const { physics, look } = config;
   const g = 9.81 * physics.gravity;
   const drag = 0.3;
@@ -29,7 +29,7 @@ function comet(pool, i, config, born, x, y, z, lean, speed, color, radius, life)
   const vy = Math.cos(lean) * speed;
   const vz = (Math.random() - 0.5) * 2;
   pool.set(i++, x, y, z, born, vx, vy, vz, drag,
-    color[0], color[1], color[2], 1, 0.55, 0.2, life * 0.75, life, radius * look.sparkSize, 0.3, KIND.spark);
+    color[0], color[1], color[2], 1, 0.55, 0.2, life * 0.75, life, radius * look.sparkSize, trail, KIND.spark);
   for (let k = 0; k < SHED; k++) {
     const t = ((k + 0.5) / SHED) * life * 0.85;
     positionAt(p, x, y, z, vx, vy, vz, drag, t, g, physics.windX, physics.windZ);
@@ -90,7 +90,8 @@ export function candles(pool, config, phone, start, tubes, y, z, palette, lights
     for (let b = 0; b < balls; b++) {
       const color = pick(palette, t + b);
       const lean = (Math.random() - 0.5) * 0.12;
-      i = comet(pool, i, config, start + offset + b * every, tubes[t], y, z, lean, speed * (0.9 + Math.random() * 0.2), color, 1.7, 2.6);
+      // A star, not a bulb: small, with a tail (at 1.7 m and the short tail they read as fat glowing bulbs).
+      i = comet(pool, i, config, start + offset + b * every, tubes[t], y, z, lean, speed * (0.9 + Math.random() * 0.2), color, 1.0, 2.6, 0.5);
     }
     light(lights[t], start, balls * every + 1, tubes[t], y + 25, z, pick(palette, t), 18, 0.6, 'pops');
   }
