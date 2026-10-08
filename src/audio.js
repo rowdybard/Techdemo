@@ -17,6 +17,8 @@
 // a few new nodes (a buffer source plays once), so this is the one module that allocates
 // during the show; a voice cap bounds it, and every voice disconnects itself when done.
 
+import { makeNoiseSoon, noiseNow } from './noise.js';
+
 const SPEED_OF_SOUND = 343;
 const MAX_VOICES = 32;
 const SHAPES = new Set(['heart', 'star', 'text', 'pumpkin', 'skull', 'bat', 'ghost', 'web']);
@@ -25,18 +27,29 @@ const HISSERS = new Set(['willow', 'palm', 'wisp', 'chrysanthemum']);
 let shared = null; // { audio, brown, white, crackle, room } for the page's lifetime
 let lastInput = 0; // when the person last touched the page (ms), for the idle sleep
 
+// Buffers at the context's own rate (the length is kept, so on a 44.1 kHz phone the noise
+// runs about a tenth slower, which no one can hear in noise).
+function fillBuffers(page) {
+  if (page.room) return;
+  const { audio } = page;
+  const n = noiseNow();
+  const buffer = (channels) => {
+    const b = audio.createBuffer(channels.length, channels[0].length, audio.sampleRate);
+    for (let c = 0; c < channels.length; c++) b.copyToChannel(channels[c], c);
+    return b;
+  };
+  page.brown = buffer([n.brown]);
+  page.white = buffer([n.white]);
+  page.crackle = buffer([n.crackle]);
+  page.room = buffer(n.room);
+}
+
 function sharedAudio() {
   if (shared) return shared;
   const Context = window.AudioContext || window.webkitAudioContext;
   if (!Context) return null;
   const audio = new Context();
-  shared = {
-    audio,
-    brown: makeBrown(audio, 4),
-    white: makeWhite(audio, 2),
-    crackle: makeCrackle(audio, 2),
-    room: makeRoom(audio, 2.8),
-  };
+  shared = { audio, brown: null, white: null, crackle: null, room: null }; // filled by fillBuffers
   addEventListener('pagehide', () => audio.close(), { once: true });
   // A page that isn't on screen makes no sound: a tab left open in the background, a
   // phone locked or switched to another app. Without this the sea kept playing under
@@ -74,12 +87,24 @@ export function create(ctx) {
   let heardGround = -1e9;
   let groundVoices = 0;
 
+  let starting = false;
+  // Browsers want the context made and resumed in the tap itself. Everything else (the
+  // noise buffers, the echo, whose impulse is analysed on the spot, and the sea) waits
+  // until the page has painted, so the tap is answered at once.
   function start() {
-    if (audio || !settings.enabled) return;
+    if (audio || starting || !settings.enabled) return;
     page = sharedAudio();
     if (!page) return;
+    if (page.audio.state === 'suspended') page.audio.resume();
+    starting = true;
+    requestAnimationFrame(() => setTimeout(build, 0));
+  }
+
+  function build() {
+    starting = false;
+    if (signal.aborted || audio) return;
+    fillBuffers(page);
     audio = page.audio;
-    if (audio.state === 'suspended') audio.resume();
     compressor = audio.createDynamicsCompressor();
     compressor.threshold.value = -16;
     compressor.ratio.value = 5;
@@ -106,6 +131,8 @@ export function create(ctx) {
     start();
   };
   for (const type of ['pointerdown', 'keydown', 'wheel', 'touchstart']) addEventListener(type, touched, { signal, passive: true });
+  // The noise is made in idle moments once the show is up (not while it's still loading).
+  if (settings.enabled) ctx.container.addEventListener('scene-ready', makeNoiseSoon, { once: true, signal });
   lastInput = performance.now();
   ctx.audioState = () => (audio ? audio.state : 'none');
 
@@ -369,54 +396,4 @@ function latest(records, key, before) {
 
 function fract(x) {
   return x - Math.floor(x);
-}
-
-// Brown noise: white noise through a leaky integrator, deep enough for booms and surf.
-function makeBrown(audio, seconds) {
-  const buffer = audio.createBuffer(1, Math.floor(audio.sampleRate * seconds), audio.sampleRate);
-  const data = buffer.getChannelData(0);
-  let last = 0;
-  for (let i = 0; i < data.length; i++) {
-    last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
-    data[i] = last * 3.5;
-  }
-  return buffer;
-}
-
-function makeWhite(audio, seconds) {
-  const buffer = audio.createBuffer(1, Math.floor(audio.sampleRate * seconds), audio.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-  return buffer;
-}
-
-// Sparse sharp clicks, like a crackle shell's tiny pops.
-function makeCrackle(audio, seconds) {
-  const buffer = audio.createBuffer(1, Math.floor(audio.sampleRate * seconds), audio.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    if (Math.random() < 0.0009) {
-      const length = 40 + Math.floor(Math.random() * 120);
-      for (let k = 0; k < length && i + k < data.length; k++) data[i + k] += (Math.random() * 2 - 1) * (1 - k / length);
-    }
-  }
-  return buffer;
-}
-
-// The echo off the water: a stereo tail of noise, darker and sparser as it decays, with a
-// gap before it (the first reflection comes back from far off).
-function makeRoom(audio, seconds) {
-  const length = Math.floor(audio.sampleRate * seconds);
-  const buffer = audio.createBuffer(2, length, audio.sampleRate);
-  const gap = Math.floor(audio.sampleRate * 0.12);
-  for (let channel = 0; channel < 2; channel++) {
-    const data = buffer.getChannelData(channel);
-    let low = 0;
-    for (let i = gap; i < length; i++) {
-      const t = (i - gap) / (length - gap);
-      low += (Math.random() * 2 - 1 - low) * (0.35 - 0.3 * t); // duller as it fades
-      data[i] = low * Math.pow(1 - t, 2.4) * 0.6;
-    }
-  }
-  return buffer;
 }
