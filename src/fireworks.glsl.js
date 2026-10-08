@@ -33,6 +33,7 @@ export const fireworksVertex = /* glsl */ `
   varying float vKind;
   varying float vSeed;
   varying float vGround;
+  varying float vRamp;        // 0..1 brightness while the burst is still tight
 
   vec3 positionAt(float t) {
     float k = aMotion.w;
@@ -80,6 +81,15 @@ export const fireworksVertex = /* glsl */ `
     vHalf = halfLength / radius;
     vAge = age / life;
     vSeconds = age;
+    // A burst is born on one point, so for a moment hundreds of sparks overlap there and
+    // add up past white. They start dim and reach full brightness as it opens. A long
+    // trail (willow, palm) keeps its tail on the break point until the spark is a trail
+    // length old, so those overlap there for longer: they hold at 40% until the tails
+    // let go. Ground shows keep their own ramp (their brightness is capped separately).
+    float opening = mix(0.03, 1.0, smoothstep(0.02, 0.45, age));
+    float held = mix(1.0, 0.4, smoothstep(0.3, 0.9, trail));
+    float anchored = mix(held, 1.0, smoothstep(trail * 0.9, trail * 1.5 + 0.001, age)); // + 0.001: never equal edges (NaN)
+    vRamp = aColor.w > 0.5 ? mix(0.1, 1.0, smoothstep(0.0, 0.4, age)) : opening * anchored;
     vKind = aShape.w;
     vSeed = fract(aStart.x * 0.1731 + aStart.z * 0.0937 + aStart.w * 7.13 + aMotion.x * 0.37);
     vGround = aColor.w;
@@ -103,6 +113,7 @@ export const fireworksFragment = /* glsl */ `
   varying float vKind;
   varying float vSeed;
   varying float vGround;
+  varying float vRamp;
 
   float hash(float n) {
     return fract(sin(n) * 43758.5453);
@@ -121,7 +132,7 @@ export const fireworksFragment = /* glsl */ `
 
     // Sparks brighten as they spread (hundreds start on one point, and at full strength
     // they would add up to a white blot), then fade and cool toward orange at the end.
-    float fade = (1.0 - smoothstep(0.6, 1.0, vAge)) * mix(0.1, 1.0, smoothstep(0.0, 0.4, vSeconds));
+    float fade = (1.0 - smoothstep(0.6, 1.0, vAge)) * vRamp;
     vec3 color = mix(vColor, vec3(1.0, 0.45, 0.12) * dot(vColor, vec3(0.33)), smoothstep(0.55, 1.0, vAge) * 0.6);
     float brightness = fade;
 
