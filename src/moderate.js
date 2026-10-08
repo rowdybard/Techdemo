@@ -13,11 +13,16 @@
 
 const rot13 = (text) => text.replace(/[a-z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97));
 
+// The second block is a curated set of French and Spanish slurs (racial, ethnic and
+// homophobic terms with no ordinary or affectionate meaning), checked against the 50k
+// commonest words in seven languages so no everyday word is caught. It is a starter set,
+// not exhaustive; a native speaker should review it before those languages are promoted.
 const WORDS = new Set(rot13(`avttre avttref avttn avttnf avtthu pbba pbbaf wvtnobb cbepuzbaxrl fcvp fcvpf fcvpx jrgonpx
   jrgonpxf ornare ornaref puvax puvaxf tbbx tbbxf xvxr xvxrf enturnq enturnqf gbjryurnq gbjryurnqf fnaqavttre cnxv cnxvf
   tlcb tlccb mvccreurnq snt sntf snttbg snttbgf sntbg qlxr qlxrf genaal genaavrf furznyr ergneq ergneqf ergneqrq phag
   phagf pbpx pbpxf phzfubg wvmm oybjwbo unaqwbo qvyqb cbea cbeab nany encr encrq encvfg encrf crqb crqbcuvyr cnrqb zbyrfg
-  zbyrfgre anmv anmvf uvgyre urvy xxx fjnfgvxn juvgrcbjre xlf`).split(/\s+/));
+  zbyrfgre anmv anmvf uvgyre urvy xxx fjnfgvxn juvgrcbjre xlf
+  obhtabhyr obhtabhyrf onzobhyn onzobhynf pebhvyyr pebhvyyrf lbhcva lbhcvaf avnxbhr avnxbhrf puvargbdhr puvargbdhrf gneybhmr gneybhmrf tbhvar tbhvarf znevpba znevpbarf znevpn znevpnf znevpbanmb obyyren obyyrenf ohwneeba ohwneebarf fhqnpn fhqnpnf artengn artengnf`).split(/\s+/));
 
 const STEMS = rot13(`avttre avttn avtth snttbg fnaqavttre cbepuzbaxrl xvyylbhefrys xvyyhefrys arpxlbhefrys
   unatlbhefrys ubcrlbhqvr tbnaqqvr lbhfubhyqqvr juvgrcbjre fvrturvy urvyuvgyre`).split(/\s+/).concat(['1488']);
