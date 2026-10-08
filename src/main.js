@@ -23,10 +23,11 @@ import * as builder from './builder.js';
 import * as studio from './studio.js';
 import * as gift from './gift.js';
 import * as autoshow from './autoshow.js';
+import * as viewlock from './viewlock.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [wind, sky, burstlights, ocean, beach, landmarks, lighthouse, walk, fireworks, fountains, smoke, audio, post, debug, ui, director, video, builder, studio, gift, autoshow];
+const MODULES = [wind, sky, burstlights, ocean, beach, landmarks, lighthouse, walk, fireworks, fountains, smoke, audio, post, debug, ui, director, video, builder, studio, viewlock, gift, autoshow];
 
 const DEG = Math.PI / 180;
 

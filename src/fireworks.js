@@ -125,7 +125,9 @@ export function create(ctx) {
   canvas.addEventListener('pointerup', (event) => {
     // Anyone can tap the sky to launch a shell (not on a client's embedded header).
     if (ctx.link.embed) return;
-    if (Math.hypot(event.clientX - downX, event.clientY - downY) > TAP_PIXELS || performance.now() - downAt > TAP_MS) return;
+    // With the view locked (viewlock.js) a drag does nothing else, so a sloppier press counts.
+    const slack = ctx.viewLocked ? 3 : 1;
+    if (Math.hypot(event.clientX - downX, event.clientY - downY) > TAP_PIXELS * slack || performance.now() - downAt > TAP_MS * slack) return;
     const box = canvas.getBoundingClientRect();
     pointer.set(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1);
     ray.setFromCamera(pointer, camera);

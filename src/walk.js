@@ -45,7 +45,7 @@ export function create(ctx) {
   const hideHint = setTimeout(() => hint.classList.add('faded'), 9000);
 
   function start() {
-    if (walking) return;
+    if (walking || ctx.viewLocked) return; // the view lock (viewlock.js) holds the camera still
     walking = true;
     controls.enabled = false;
     // Carry on looking the way the orbiting camera was.
@@ -59,7 +59,7 @@ export function create(ctx) {
     if (!walking) return;
     walking = false;
     dragging = false;
-    controls.enabled = true;
+    controls.enabled = !ctx.viewLocked;
   }
   ctx.walk = { stop, get active() { return walking; } };
 

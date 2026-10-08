@@ -38,6 +38,7 @@ Link parameters: `s` (the settings JSON, base64url), `business`, `headline`, `co
 - The **Lake Michigan** preset adds a pier and lighthouse (two beams sweeping the haze and lighting the smoke, a lamp that flares as a beam passes you and shines on the water), dune grass, and calmer freshwater waves. The light's brightness, speed and colour are adjustable.
 - **Customize** (bottom right) is the everyday settings drawer: style presets, colour swatches, which fireworks and ground show, sliders for pace, size, sparkle, sky, wind and smoke, sound, the pier and grass, the lighthouse's light, and the camera. **Advanced settings** at its foot (or `#advanced` on the link) opens the full developer panel, which has the Client mockup folder and Save & load.
 - Keys: `WASD` or arrows to walk the beach (drag to look, `Shift` to run, `Esc` to go back), `H` hero mode, `` ` `` stats overlay, `Shift+R` rebuild (the leak test).
+- **Lock view** (the small pill above Customize) holds the camera still, so a tap only launches a firework; while locked a press can wander a little and still count as a tap. Remembered per visitor; not shown in embeds or the autoshow.
 
 ## Run it locally
 
