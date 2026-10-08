@@ -145,7 +145,15 @@ export const fireworksFragment = /* glsl */ `
     // Hundreds of fountain sparks overlap in one place, so they're capped below where they
     // would merge into a glowing blob, however high Sparkle goes.
     float sparkle = vGround > 0.5 ? min(uBrightness, uGroundBrightness) : uBrightness;
-    gl_FragColor = vec4(color * intensity * brightness * sparkle, 1.0);
+
+    // ACES tone mapping washes bright colours toward white, so a burst's core lost its
+    // colour and read as a white blob. Deepen the hue before the brightness multiply so the
+    // colour survives being pushed bright, and ease the peak down a touch so the dense core
+    // stops clipping to white. Comet and crackle whites are near-grey already, so the
+    // saturation lift barely touches them.
+    float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    color = max(mix(vec3(luma), color, 1.3), 0.0);
+    gl_FragColor = vec4(color * intensity * brightness * sparkle * 0.82, 1.0);
 
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
