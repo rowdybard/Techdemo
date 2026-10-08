@@ -24,6 +24,18 @@ const STEMS = rot13(`avttre avttn avtth snttbg fnaqavttre cbepuzbaxrl xvyylbhefr
 
 const LOOKALIKE = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', 8: 'b', '@': 'a', $: 's', '!': 'i', '|': 'i', '+': 't' };
 
+// Everyday phrases in other languages that hold a word from the list above: French and
+// Catalan for "late" ("joyeux anniversaire en retard" is a belated birthday), and Mexican
+// Spanish's casual "¿qué pedo?". They're taken out before the check, so the word on its
+// own is still caught.
+const ALLOWED = new RegExp(`(^|[^a-z])(?:${[
+  'en retard', 'du retard', 'de retard', 'le retard', 'un retard', 'mon retard', 'ton retard', 'son retard',
+  'notre retard', 'votre retard', 'leur retard', 'quel retard', 'ce retard', 'les retards', 'des retards',
+  'amb retard', 'el retard', 'aquest retard',
+  'que pedo', 'que pedos', 'ni pedo', 'sin pedo', 'todo pedo', 'esta pedo', 'bien pedo', 'pinche pedo',
+  'el pedo', 'un pedo', 'tu pedo', 'mi pedo', 'su pedo', 'de pedo', 'puro pedo',
+].map((phrase) => phrase.replace(/ /g, '[^a-z0-9]+')).join('|')})(?![a-z])`, 'g');
+
 function normalise(text) {
   return String(text || '')
     .normalize('NFKD').replace(/[̀-ͯ]/g, '') // accents
@@ -36,8 +48,8 @@ function letters(text) {
 
 /** True if the text has words a greeting can't carry. */
 export function isBlocked(text) {
-  const plain = normalise(text);
-  if (!plain) return false;
+  const plain = normalise(text).replace(ALLOWED, '$1 ');
+  if (!plain.trim()) return false;
   // Whole words, with look-alikes read as letters, and repeated letters squeezed to two
   // ("niiigga") as well as kept.
   for (const raw of plain.split(/[^a-z0-9@$!|+]+/)) {
