@@ -2,14 +2,15 @@
 // are assets; worker/index.js runs for /api/* (checkout, greetings, reports) and the home
 // page (link previews).
 // Every `wrangler deploy` (locally or in Cloudflare's Git builds) first runs the build
-// command, which copies the pages, src/ and vendor/ into .deploy/, and uploads only that folder
+// command, which copies every top-level page (*.html, so a new page goes live by existing), src/ and
+// vendor/ into .deploy/, and uploads only that folder
 // as assets, so dev tooling (node_modules, tools/, screenshots, .git) never goes live.
 // Secrets (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) live in the Cloudflare dashboard.
 {
   "name": "techdemo",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-30",
-  "build": { "command": "rm -rf .deploy && mkdir .deploy && cp -r index.html about.html find.html terms.html privacy.html robots.txt sitemap.xml favicon.ico favicon.svg site.webmanifest icons _headers src vendor .deploy/" },
+  "build": { "command": "rm -rf .deploy && mkdir .deploy && cp -r *.html robots.txt sitemap.xml favicon.ico favicon.svg site.webmanifest icons _headers src vendor .deploy/" },
   // The worker answers /api/* and the home page (to fill in link previews for greetings).
   "assets": { "directory": "./.deploy", "binding": "ASSETS", "run_worker_first": ["/api/*", "/", "/autoshow", "/autoshow/"] },
   "kv_namespaces": [{ "binding": "GREETINGS", "id": "ce11e2e797df435582f3725b943b236b" }],

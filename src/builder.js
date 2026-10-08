@@ -357,6 +357,19 @@ export function create(ctx) {
     sendIt();
   }, { signal });
 
+  // A button on a page of ideas (?make=love&text=…, read in link.js) opens the builder on
+  // that occasion once the show is up, with the words in the box if the link carried them.
+  const make = ctx.link.make;
+  if (make && OCCASIONS[make.occasion]) {
+    state.occasion = make.occasion;
+    state.guessed = true; // the link said which; don't guess from the design
+    if (make.text) {
+      message.input.value = make.text;
+      state.typed = true;
+    }
+    container.addEventListener('scene-ready', () => open.click(), { once: true, signal });
+  }
+
   ctx.builder = {
     open: () => open.click(),
     refresh: () => refresh(),

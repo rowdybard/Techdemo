@@ -65,9 +65,17 @@ export function readLink(config) {
   // show spell them again once it's over), so the opening shells can't spoil the reveal or
   // spell the demo's own text while a short link's words are still loading.
   if (!autoshow && (paid || gift)) config.look.mix.text = 0;
+  // A button on a page of ideas (?make=love, optionally &text=HAPPY NEW YEAR): open the
+  // builder on that occasion. builder.js checks the occasion exists; the words are
+  // capped and must pass the same filter as typed ones.
+  const makeText = cleanText(params.get('text'), MESSAGE_LIMIT).toUpperCase();
+  const make = !embed && !autoshow && !gift && !paid && /^[a-z]{3,12}$/.test(params.get('make') || '')
+    ? { occasion: params.get('make'), text: greetingBlocked({ message: makeText }) ? '' : makeText }
+    : null;
   return {
     embed,
     autoshow,
+    make,
     gift: autoshow ? null : paid || gift,
     hero: !autoshow && !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero'),
   };

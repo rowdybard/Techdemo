@@ -1,0 +1,44 @@
+/* The ideas pages (made by tools/make-ideas.py): plain, fast, readable pages that each answer
+   one search. The same dusk look as About and Terms. No script, no web font. */
+:root {
+  --night: #0b1020;
+  --ink: #e9edf5;
+  --muted: #98a2b7;
+  --rule: rgb(233 237 245 / 0.14);
+  --spark: #ffb45c;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+html { background: var(--night); }
+body { margin: 0; color: var(--ink); font: 16px/1.65 var(--sans); background: linear-gradient(to bottom, #161e38, var(--night) 420px); }
+main { max-width: 720px; margin: 0 auto; padding: 28px 16px 40px; }
+a { color: var(--spark); }
+.crumbs { margin: 0; color: var(--muted); font-size: 14px; }
+.crumbs a { color: var(--muted); }
+h1 { margin: 18px 0 12px; font-size: clamp(28px, 6vw, 40px); line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { margin: 38px 0 8px; padding-top: 22px; border-top: 1px solid var(--rule); font-size: 21px; line-height: 1.3; text-wrap: balance; }
+h3 { margin: 22px 0 4px; font-size: 17px; }
+.lead { margin: 0 0 20px; font-size: 18px; line-height: 1.55; }
+.hero { margin: 0 0 18px; }
+.hero img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 12px; background: #161e38; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 8px; }
+.cta, .ghost { display: inline-block; padding: 12px 20px; border-radius: 999px; font: 700 15px/1.2 var(--sans); text-decoration: none; }
+.cta { background: var(--spark); color: #1a1006; }
+.ghost { border: 1px solid rgb(255 180 92 / 0.55); color: var(--ink); }
+.cta:focus-visible, .ghost:focus-visible, a:focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+ul, ol { padding-left: 22px; }
+li + li { margin-top: 6px; }
+.examples { list-style: none; display: grid; gap: 8px; padding: 0; margin: 12px 0; }
+.examples li { margin: 0; padding: 10px 14px; border: 1px solid var(--rule); border-radius: 10px; background: rgb(233 237 245 / 0.04); }
+.examples b { display: block; margin-bottom: 1px; color: var(--spark); font-size: 15px; letter-spacing: 0.06em; }
+.note { margin: 20px 0; padding: 14px 16px; border: 1px solid rgb(255 180 92 / 0.35); border-radius: 10px; background: rgb(255 180 92 / 0.08); }
+.note p { margin: 0; }
+.cards { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; padding: 0; margin: 14px 0; }
+.cards li { margin: 0; }
+.cards a { display: block; height: 100%; box-sizing: border-box; padding: 13px 15px; border: 1px solid var(--rule); border-radius: 12px; background: rgb(233 237 245 / 0.04); color: var(--ink); text-decoration: none; }
+.cards a:hover, .cards a:focus-visible { border-color: rgb(255 180 92 / 0.6); }
+.cards strong { display: block; margin-bottom: 3px; color: var(--spark); font-size: 15px; }
+.cards span { color: var(--muted); font-size: 14px; line-height: 1.45; }
+footer { max-width: 720px; margin: 0 auto; padding: 0 16px 48px; color: var(--muted); font-size: 14px; }
+footer p { margin: 0 0 6px; }
+footer a { color: var(--muted); }
