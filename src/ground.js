@@ -20,6 +20,7 @@ function pick(palette, i) {
 const PER_COMET = 1 + SHED;
 
 // Writes one comet from (x, y, z) leaning `lean` radians across the barge, at `speed`.
+// Its head is a plain spark in its colour (KIND.comet's white core is the rising shell's).
 function comet(pool, i, config, born, x, y, z, lean, speed, color, radius, life) {
   const { physics, look } = config;
   const g = 9.81 * physics.gravity;
@@ -28,7 +29,7 @@ function comet(pool, i, config, born, x, y, z, lean, speed, color, radius, life)
   const vy = Math.cos(lean) * speed;
   const vz = (Math.random() - 0.5) * 2;
   pool.set(i++, x, y, z, born, vx, vy, vz, drag,
-    color[0], color[1], color[2], 1, 0.55, 0.2, life * 0.75, life, radius * look.sparkSize, 0.3, KIND.comet);
+    color[0], color[1], color[2], 1, 0.55, 0.2, life * 0.75, life, radius * look.sparkSize, 0.3, KIND.spark);
   for (let k = 0; k < SHED; k++) {
     const t = ((k + 0.5) / SHED) * life * 0.85;
     positionAt(p, x, y, z, vx, vy, vz, drag, t, g, physics.windX, physics.windZ);

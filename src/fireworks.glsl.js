@@ -89,7 +89,7 @@ export const fireworksVertex = /* glsl */ `
     float opening = mix(0.03, 1.0, smoothstep(0.02, 0.45, age));
     float held = mix(1.0, 0.4, smoothstep(0.3, 0.9, trail));
     float anchored = mix(held, 1.0, smoothstep(trail * 0.9, trail * 1.5 + 0.001, age)); // + 0.001: never equal edges (NaN)
-    vRamp = aColor.w > 0.5 ? mix(0.1, 1.0, smoothstep(0.0, 0.4, age)) : opening * anchored;
+    vRamp = opening * (aColor.w > 0.5 ? 1.0 : anchored);
     vKind = aShape.w;
     vSeed = fract(aStart.x * 0.1731 + aStart.z * 0.0937 + aStart.w * 7.13 + aMotion.x * 0.37);
     vGround = aColor.w;
@@ -130,10 +130,13 @@ export const fireworksFragment = /* glsl */ `
     float u = vHalf > 0.01 ? clamp((vAlong + vHalf) / (2.0 * vHalf), 0.0, 1.0) : 1.0;
     float intensity = core * mix(0.04, 1.0, pow(u, 1.6));
 
-    // Sparks brighten as they spread (hundreds start on one point, and at full strength
-    // they would add up to a white blot), then fade and cool toward orange at the end.
-    float fade = (1.0 - smoothstep(0.6, 1.0, vAge)) * vRamp;
-    vec3 color = mix(vColor, vec3(1.0, 0.45, 0.12) * dot(vColor, vec3(0.33)), smoothstep(0.55, 1.0, vAge) * 0.6);
+    // Sparks brighten as they spread (vRamp: hundreds start on one point, and at full
+    // strength they would add up to a white blot). A star then burns at full colour until
+    // three quarters of its life and goes out over the last quarter, warming a little as
+    // it dies but keeping its own hue (a long dim tail read as pale grey against the
+    // sunset). Ground shows keep their earlier, longer fade, so fountain plumes stay thin.
+    float fade = (1.0 - smoothstep(vGround > 0.5 ? 0.6 : 0.75, 1.0, vAge)) * vRamp;
+    vec3 color = vColor * mix(vec3(1.0), vec3(1.0, 0.62, 0.38), smoothstep(0.7, 1.0, vAge) * 0.6);
     float brightness = fade;
 
     // Flicker and blink run on the spark's own age, not the page's clock: after a long
@@ -145,7 +148,7 @@ export const fireworksFragment = /* glsl */ `
     } else if (vKind > 1.5 && vKind < 2.5) { // strobe: blinks once it has slowed
       float blink = step(0.55, fract(vSeconds * (6.0 + 4.0 * vSeed) + vSeed));
       brightness *= mix(1.0, blink * 2.6, smoothstep(0.15, 0.3, vAge));
-    } else if (vKind > 2.5 && vKind < 3.5) { // comet: hot white core
+    } else if (vKind > 2.5 && vKind < 3.5) { // comet (the rising shell only): hot white core
       color = mix(color, vec3(1.0, 0.9, 0.75), core * 0.6);
       brightness *= 1.4;
     } else if (vKind > 3.5) {                // crackle pop: one sharp flash

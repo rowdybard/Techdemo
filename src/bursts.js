@@ -103,6 +103,8 @@ function strobe(pool, shell, config, palette, born, at, velocity, out) {
 }
 
 // A few thick comets thrown mostly upward and outward, shedding glitter as they fall.
+// Drawn as plain sparks, not KIND.comet, whose white-hot core is for the rising shell:
+// on the fronds it turned every colour white.
 function palm(pool, shell, config, palette, born, at, velocity, out) {
   const { look, physics } = config;
   const g = 9.81 * physics.gravity;
@@ -122,7 +124,7 @@ function palm(pool, shell, config, palette, born, at, velocity, out) {
     const vy = rise * s + velocity[1] * 0.3;
     const vz = Math.sin(angle) * flat * s + velocity[2] * 0.3;
     pool.set(i++, at[0], at[1], at[2], born, vx, vy, vz, drag,
-      color[0], color[1], color[2], color[0], color[1], color[2], 99, life, 1.8 * look.sparkSize, 1.0, KIND.comet);
+      color[0], color[1], color[2], color[0], color[1], color[2], 99, life, 1.8 * look.sparkSize, 1.0, KIND.spark);
     for (let k = 0; k < shed; k++) {
       const t = ((k + 0.5) / shed) * life * 0.8;
       positionAt(p, at[0], at[1], at[2], vx, vy, vz, drag, t, g, physics.windX, physics.windZ);
@@ -189,7 +191,7 @@ function crossette(pool, shell, config, palette, born, at, velocity, out) {
     const vy = dir[1] * s;
     const vz = dir[2] * s;
     pool.set(i++, at[0], at[1], at[2], born, vx, vy, vz, drag,
-      color[0], color[1], color[2], color[0], color[1], color[2], 99, split, 1.5 * look.sparkSize, 0.35, KIND.comet);
+      color[0], color[1], color[2], color[0], color[1], color[2], 99, split, 1.5 * look.sparkSize, 0.35, KIND.spark);
     positionAt(p, at[0], at[1], at[2], vx, vy, vz, drag, split, g, physics.windX, physics.windZ);
     velocityAt(v, vx, vy, vz, drag, split, g, physics.windX, physics.windZ);
     // Two directions across the comet's path, for the cross.
@@ -200,7 +202,7 @@ function crossette(pool, shell, config, palette, born, at, velocity, out) {
       const up = Math.sin(angle) * shell.size * 0.55 * drag;
       pool.set(i++, p[0], p[1], p[2], born + split,
         v[0] + (-v[2] / len) * side, v[1] + up, v[2] + (v[0] / len) * side, drag * 1.2,
-        color[0], color[1], color[2], GOLD[0], GOLD[1], GOLD[2], 0.8, look.lifetime * 0.8, 1.0 * look.sparkSize, 0.45, KIND.comet);
+        color[0], color[1], color[2], GOLD[0], GOLD[1], GOLD[2], 0.8, look.lifetime * 0.8, 1.0 * look.sparkSize, 0.45, KIND.spark);
     }
   }
   pool.end();

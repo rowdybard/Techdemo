@@ -160,7 +160,7 @@ export function create(ctx) {
     const { physics, look } = config;
     const g = 9.81 * physics.gravity;
     const duration = settings.duration;
-    const perSecond = (phone ? 60 : 120) * rate;
+    const perSecond = (phone ? 40 : 80) * rate; // thinned a third: denser plumes glowed into blobs
     const count = Math.round(perSecond * duration);
     const drag = 0.35;
     const [hot, cool] = COLORS[settings.color] || COLORS.gold;
