@@ -58,6 +58,8 @@
     gtag('js', new Date());
     gtag('config', 'G-BTBT8MCNPJ', {
       page_location: location.origin + location.pathname + (view ? '?view=' + view : ''),
+      // The worker puts the sender's name in a greeting's title, so Analytics gets a plain one.
+      page_title: view === 'greeting' ? 'SkyGreeting greeting' : document.title,
       allow_google_signals: false,
       allow_ad_personalization_signals: false,
     });

@@ -50,6 +50,7 @@ Beach scene (ocean with breaking surf, wet sand, twilight sky, wind), fireworks 
 
 ## Gotchas learned the hard way
 
+- **Analytics records the page title on its own.** The worker rewrites a greeting's `<title>` to "<sender> made you a SkyGreeting", so a sender's name reached Google Analytics (seen in the Realtime "Views by page title" card on October 8, 2026) even though the address was already stripped. The GA config in `index.html` now sets `page_title` explicitly for greetings. Anything else that puts a name or words in the title, the address or an event needs the same care; the privacy page promises Google never sees them. Names recorded before the fix stay in GA until they age out (14 months) or are deleted there.
 - **Never use `@` in a served path.** Cloudflare redirects `/vendor/three@x/…` to `%40`, which moved a module's address so the import map no longer redirected `three.core.js` to the minified file; the live site 404'd for a few minutes. After any infrastructure or path change, load the **live** site, not just localhost.
 - three.js `compileAsync` skips invisible objects, so the pier compiles when first shown, not at load. `KHR_parallel_shader_compile` is missing in the headless test browser, so that path is gated on the extension and was tested by forcing it.
 - `<h1>` and the About text are in `index.html` as screen-reader-only text because the show is a canvas and Stripe and search engines read plain text. Keep terms, privacy, about and the contact email linked from the home page.
