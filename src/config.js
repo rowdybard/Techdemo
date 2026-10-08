@@ -108,6 +108,14 @@ export const config = {
     linger: 24, // seconds a puff takes to drift away and fade
   },
 
+  // Snowfall (snow.js): flurries at the low end, a blizzard at the top. Off by default.
+  snow: {
+    amount: 0, // 0 is none
+    count: { desktop: 7000, phone: 3000 }, // flakes in the pool (a draw call whatever the amount)
+    glow: 1, // how strongly fireworks light the flakes
+    size: 1, // flake size; the panel changes it live
+  },
+
   look: {
     palette: 'classic',
     // Weight per burst type: how often each one is picked.

@@ -10,7 +10,7 @@ import { LIGHT_COLORS } from './lighthouse.js';
 const PRESET_CARDS = [
   ['Default', '🎆', 'Classic'], ['Halloween', '🎃', 'Halloween'], ['Fourth of July', '🇺🇸', 'Fourth of July'],
   ['Gold Willows', '✨', 'Gold willows'], ['Lake Michigan', '🗼', 'Lake Michigan'], ['Neon', '💜', 'Neon'],
-  ['Calm', '🌙', 'Calm'], ['Finale', '💥', 'Big finale'],
+  ['Calm', '🌙', 'Calm'], ['Winter', '❄️', 'Winter'], ['Finale', '💥', 'Big finale'],
 ];
 const PALETTES = [['classic', 'Classic'], ['usa', 'Red, white & blue'], ['gold', 'Gold'], ['neon', 'Neon'], ['pastel', 'Pastel'], ['halloween', 'Halloween']];
 const SHELLS = {
@@ -32,6 +32,7 @@ const SLIDERS = [
   { name: 'Wind', low: 'Still', high: 'Gusty', get: (c) => c.physics.windSpeed / 10, set: (c, v) => { c.physics.windSpeed = v * 10; } },
   { name: 'Smoke', low: 'None', high: 'Lots', get: (c) => (c.smoke.enabled ? c.smoke.amount / 2 : 0),
     set: (c, v) => { c.smoke.amount = v * 2; c.smoke.enabled = v > 0.01; } },
+  { name: 'Snow', low: 'None', high: 'Blizzard', get: (c) => c.snow.amount, set: (c, v) => { c.snow.amount = v; } },
 ];
 // The lighthouse's light, shown while the pier is on.
 const LIGHTHOUSE = [

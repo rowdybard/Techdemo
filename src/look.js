@@ -1,5 +1,5 @@
 // A greeting's look: the parts of a show someone designs in Customize (colours, which
-// fireworks, ground show, pace, size, sparkle, sky, wind, smoke, pier and its light,
+// fireworks, ground show, pace, size, sparkle, sky, wind, smoke, snow, pier and its light,
 // grass, view),
 // packed small enough to ride in a free link or be stored with a paid greeting. Also
 // what a free send may use: an occasion's Deluxe effects are taken back out.
@@ -27,6 +27,7 @@ export function lookOf(config) {
     t: Math.round(config.sky.timeOfDay * 100) / 100,
     w: Math.round(config.physics.windSpeed * 10) / 10,
     k: config.smoke.enabled ? Math.round(config.smoke.amount * 100) / 100 : 0,
+    n: Math.round(config.snow.amount * 100) / 100,
     e: config.fountains.sideBarges ? 1 : 0,
     i: config.landmarks.pier ? 1 : 0,
     d: config.landmarks.grass ? 1 : 0,
@@ -70,6 +71,7 @@ export function applyLook(config, look) {
   const smoke = number(look.k, 0, 2, config.smoke.enabled ? config.smoke.amount : 0);
   config.smoke.enabled = smoke > 0.01;
   config.smoke.amount = smoke;
+  config.snow.amount = number(look.n, 0, 1, config.snow.amount);
   if (look.e === 0 || look.e === 1) config.fountains.sideBarges = look.e === 1;
   if (look.i === 0 || look.i === 1) config.landmarks.pier = look.i === 1;
   if (look.d === 0 || look.d === 1) config.landmarks.grass = look.d === 1;
