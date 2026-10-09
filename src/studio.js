@@ -303,6 +303,12 @@ export function create(ctx) {
       onDone = then;
       show(true);
     },
+    /** Marks a Style card as the one in use (the builder applies an occasion's look without a tap here). */
+    get style() { return currentPreset; },
+    setStyle(name) {
+      currentPreset = name;
+      refresh();
+    },
   };
   refresh();
 

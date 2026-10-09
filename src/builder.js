@@ -197,15 +197,18 @@ export function create(ctx) {
       applyOccasion(config, name, deluxeInput.checked);
       state.baseline = lookJson();
       state.borrowed = null;
+      if (ctx.studio) ctx.studio.setStyle(OCCASIONS[name].preset); // Customize's Style cards show it
     } else {
       // Their own fireworks stay, but an occasion with a setting of its own (New Year's frozen
       // lake) brings that along, and gives it back when they pick another.
       const wants = borrowScene(config, name);
-      if (wants && !state.borrowed) state.borrowed = wants;
+      if (wants && !state.borrowed) state.borrowed = { scene: wants, style: ctx.studio ? ctx.studio.style : null };
       else if (!wants && state.borrowed) {
-        returnScene(config, state.borrowed);
+        returnScene(config, state.borrowed.scene);
+        if (ctx.studio && state.borrowed.style) ctx.studio.setStyle(state.borrowed.style);
         state.borrowed = null;
       }
+      if (wants && ctx.studio) ctx.studio.setStyle(OCCASIONS[name].preset);
     }
     config.look.text = words().message;
     config.look.mix.text = TEXT_WEIGHT;
