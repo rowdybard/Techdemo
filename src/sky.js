@@ -6,6 +6,7 @@
 // The sun and dusk uniforms are shared through ctx.sky so the water and sand match.
 import * as THREE from 'three';
 import { noiseGLSL, skyGLSL } from './glsl.js';
+import { PLACES } from './places.js';
 
 const DEG = Math.PI / 180;
 
@@ -22,6 +23,7 @@ const fragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uStars;
   uniform float uClouds;
+  uniform vec4 uMoon;           // xyz: direction, w: brightness (0 is no moon)
   varying vec3 vDirection;
 
   ${noiseGLSL}
@@ -57,6 +59,15 @@ const fragmentShader = /* glsl */ `
       color = mix(color, mix(skyZenith() * 0.6, lit, 0.8), cover * 0.85);
     }
 
+    // The moon: a small bright disc in a soft halo, dimmed by cloud.
+    if (uMoon.w > 0.0) {
+      color += vec3(0.012, 0.02, 0.042) * uMoon.w * exp(-up * 5.0);   // moonlit haze low in the sky
+      float angle = acos(clamp(dot(dir, uMoon.xyz), -1.0, 1.0));
+      float disc = 1.0 - smoothstep(0.0100, 0.0122, angle);
+      float halo = exp(-angle * angle / 0.004) * 0.28 + exp(-angle * 5.0) * 0.04;
+      color += vec3(0.8, 0.88, 1.0) * (disc * 4.0 + halo) * uMoon.w * (1.0 - cover * 0.75);
+    }
+
     // Stars come out as the dusk fades, hide behind clouds and thin out into the horizon haze.
     // Skipped entirely when they're off, so a GPU that draws them badly never draws them.
     float clear = uStars * (1.0 - cover);
@@ -82,6 +93,7 @@ export function create(ctx) {
     uTime: { value: 0 },
     uStars: { value: settings.starBrightness },
     uClouds: { value: settings.cloudCoverage },
+    uMoon: { value: new THREE.Vector4(0, 1, 0, 0) },
   };
   // Other shaders take these same uniform objects, so one update here reaches them all.
   ctx.sky = { uniforms };
@@ -99,9 +111,13 @@ export function create(ctx) {
   );
   dome.frustumCulled = false;
   dome.renderOrder = -1;
+  dome.userData.mirrored = true; // the frozen lake reflects it (mirror.js)
   scene.add(dome);
 
   const sun = uniforms.uSunDirection.value;
+  const moon = uniforms.uMoon.value;
+  const MOON_AZIMUTH = -30 * DEG; // left of straight ahead, high, clear of where the shells burst
+  const MOON_ELEVATION = 26 * DEG;
 
   return {
     update(dt, time) {
@@ -115,6 +131,8 @@ export function create(ctx) {
       uniforms.uTime.value = time;
       uniforms.uStars.value = settings.starBrightness;
       uniforms.uClouds.value = settings.cloudCoverage;
+      const place = PLACES[config.place.environment];
+      moon.set(Math.sin(MOON_AZIMUTH) * Math.cos(MOON_ELEVATION), Math.sin(MOON_ELEVATION), -Math.cos(MOON_AZIMUTH) * Math.cos(MOON_ELEVATION), place ? place.moon : 0);
     },
 
     dispose() {

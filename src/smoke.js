@@ -78,12 +78,7 @@ export function create(ctx) {
     shape.array[i * 4 + 2] = 1;
   }
 
-  const beam = ctx.lighthouse ? ctx.lighthouse.uniforms : {
-    uBeamOrigin: { value: new THREE.Vector3() },
-    uBeamDir: { value: new THREE.Vector3(1, 0, 0) },
-    uBeamColor: { value: new THREE.Color(0, 0, 0) },
-    uBeamShape: { value: new THREE.Vector2(1, 0.05) },
-  };
+  const beam = ctx.beam; // the lighthouse writes it (environment.js keeps it alive between places)
   const uniforms = {
     ...ctx.burstLights.uniforms,
     ...beam,

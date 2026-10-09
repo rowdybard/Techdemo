@@ -6,6 +6,7 @@
 import { PRESETS, applyPreset, remember } from './presets.js';
 import { LABELS } from './occasions.js';
 import { LIGHT_COLORS } from './lighthouse.js';
+import { PLACES } from './places.js';
 
 const PRESET_CARDS = [
   ['Default', '🎆', 'Classic'], ['Halloween', '🎃', 'Halloween'], ['Fourth of July', '🇺🇸', 'Fourth of July'],
@@ -19,7 +20,7 @@ const SHELLS = {
 };
 const GROUND = [['off', 'Off'], ['mixed', 'A bit of everything'], ['halloween', 'Halloween mix'], ['fountains', 'Fountains'], ['shooters', 'Shooters'],
   ['candles', 'Roman candles'], ['mines', 'Mines'], ['fans', 'V fans'], ['cauldron', 'Cauldrons'], ['wisps', 'Wisps'], ['lightning', 'Lightning'], ['lanterns', 'Lanterns']];
-const CAMERAS = [['sand', 'On the sand'], ['drone', 'From above'], ['water', 'In the water']];
+const CAMERAS = ['sand', 'drone', 'water']; // named by the place (places.js)
 
 // Sliders: what they show, and how they map to settings (value 0..1 both ways).
 const SLIDERS = [
@@ -166,26 +167,43 @@ export function create(ctx) {
 
   // Switches.
   const switches = el('div', 'studio-switches');
+  const beachOnly = [toggle('Pier & lighthouse', () => config.landmarks.pier, (on) => { config.landmarks.pier = on; }),
+    toggle('Dune grass', () => config.landmarks.grass, (on) => { config.landmarks.grass = on; })];
   switches.append(
     toggle('Sound', () => config.sound.enabled && config.sound.volume > 0, (on) => { config.sound.enabled = true; config.sound.volume = on ? 0.6 : 0; }),
     toggle('Side barges', () => config.fountains.sideBarges, (on) => { config.fountains.sideBarges = on; }),
-    toggle('Pier & lighthouse', () => config.landmarks.pier, (on) => { config.landmarks.pier = on; }),
-    toggle('Dune grass', () => config.landmarks.grass, (on) => { config.landmarks.grass = on; }),
+    ...beachOnly,
   );
 
-  // Camera.
+  // Where the show is set, and the camera views, which the place names.
+  const places = el('div', 'studio-segments');
+  for (const name in PLACES) {
+    const segment = button('studio-segment', `${PLACES[name].icon} ${PLACES[name].label}`, () => {
+      config.place.environment = name;
+      changed();
+    });
+    refreshers.push(() => segment.setAttribute('aria-pressed', String(config.place.environment === name)));
+    places.append(segment);
+  }
   const cameras = el('div', 'studio-segments');
-  for (const [name, label] of CAMERAS) {
-    const segment = button('studio-segment', label, () => {
+  for (const name of CAMERAS) {
+    const segment = button('studio-segment', '', () => {
       ctx.setCameraPreset(name);
       changed();
     });
-    refreshers.push(() => segment.setAttribute('aria-pressed', String(config.camera.preset === name)));
+    refreshers.push(() => {
+      segment.textContent = (PLACES[config.place.environment] || PLACES.beach).views[name];
+      segment.setAttribute('aria-pressed', String(config.camera.preset === name));
+    });
     cameras.append(segment);
   }
 
   const lighthouseSection = section('Lighthouse', lighthouse);
-  refreshers.push(() => { lighthouseSection.hidden = !config.landmarks.pier; });
+  refreshers.push(() => {
+    const beach = config.place.environment === 'beach';
+    lighthouseSection.hidden = !beach || !config.landmarks.pier;
+    for (const row of beachOnly) row.hidden = !beach;
+  });
 
   const footer = el('div', 'studio-footer');
   footer.append(
@@ -205,7 +223,7 @@ export function create(ctx) {
 
   sheet.append(head, making, actions,
     section('Style', presets), section('Colours', swatches), section('Fireworks', shellGroups),
-    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('View', cameras), footer, sendBar);
+    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('Place', places), section('View', cameras), footer, sendBar);
   container.append(open, sheet);
 
   // Opened from the greeting builder, Done goes back to it.

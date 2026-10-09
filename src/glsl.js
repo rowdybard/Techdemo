@@ -1,7 +1,7 @@
 // GLSL shared by several shaders: hashing and noise, and the twilight sky gradient
 // that the sky dome draws and the water and wet sand reflect.
 
-export const noiseGLSL = /* glsl */ `
+export const valueNoiseGLSL = /* glsl */ `
   float hash13(vec3 p) {
     p = fract(p * vec3(0.1031, 0.1030, 0.0973));
     p += dot(p, p.yzx + 33.33);
@@ -49,6 +49,20 @@ export const noiseGLSL = /* glsl */ `
     return vec3(nearest, sqrt(second) - nearest, id);
   }
 
+  float fbm(vec2 p) {
+    float sum = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 5; i++) {
+      sum += amplitude * valueNoise(p);
+      p = p * 2.03 + 17.1;
+      amplitude *= 0.5;
+    }
+    return sum;
+  }
+`;
+
+// The foam: needs fwidth, so fragment shaders only (the plain noise above also runs in vertex shaders).
+export const foamGLSL = /* glsl */ `
   // Foam coverage from an amount (0 to 1), in world metres. Thick foam is white froth
   // full of bubble holes of mixed sizes; as it thins it pulls back into a wobbly lace,
   // and the lace tears into scraps. Detail too small to see at a distance is skipped,
@@ -81,18 +95,10 @@ export const noiseGLSL = /* glsl */ `
   // Light on foam: it's white, so it takes the colour of the bright sky near the horizon
   // and of the afterglow, not just the dim sky overhead. Needs skyGLSL.
   #define FOAM_LIGHT(glow) (skyGradient(vec3(0.0, 0.18, -1.0)) * 0.9 + (glow) * 0.8 + skyZenith() * 1.5)
-
-  float fbm(vec2 p) {
-    float sum = 0.0;
-    float amplitude = 0.5;
-    for (int i = 0; i < 5; i++) {
-      sum += amplitude * valueNoise(p);
-      p = p * 2.03 + 17.1;
-      amplitude *= 0.5;
-    }
-    return sum;
-  }
 `;
+
+// Noise, and foam on top of it: what the water and sand shaders include.
+export const noiseGLSL = valueNoiseGLSL + foamGLSL;
 
 // Needs the uniforms uSunDirection (vec3) and uDusk (float, 1 at late dusk, 0 at night).
 export const skyGLSL = /* glsl */ `

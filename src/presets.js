@@ -6,7 +6,7 @@ import { config as defaults } from './config.js';
 
 // The parts of the config a person designs. Everything else (resolutions, pool size,
 // camera geometry) belongs to the app.
-const SAVED = ['sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'smoke', 'snow', 'look', 'physics', 'bloom', 'sound', 'hero'];
+const SAVED = ['place', 'sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'smoke', 'snow', 'lake', 'look', 'physics', 'bloom', 'sound', 'hero'];
 const STORAGE_KEY = 'beach-fireworks-settings';
 // [section, key, the old default] for defaults changed since launch (see recall).
 const UPGRADES = [['physics', 'heightMin', 85], ['physics', 'heightMax', 135]];

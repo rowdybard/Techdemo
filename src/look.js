@@ -1,10 +1,11 @@
 // A greeting's look: the parts of a show someone designs in Customize (colours, which
-// fireworks, ground show, pace, size, sparkle, sky, wind, smoke, snow, pier and its light,
-// grass, view),
+// fireworks, ground show, pace, size, sparkle, sky, wind, smoke, snow, place, pier and its
+// light, grass, view),
 // packed small enough to ride in a free link or be stored with a paid greeting. Also
 // what a free send may use: an occasion's Deluxe effects are taken back out.
 import { GROUND, paidItems } from './occasions.js';
 import { LIGHT_COLORS } from './lighthouse.js';
+import { PLACE_NAMES } from './places.js';
 
 const MIXES = {
   mixed: ['fountains', 'shooters', 'candles', 'mines', 'fans'],
@@ -32,6 +33,7 @@ export function lookOf(config) {
     i: config.landmarks.pier ? 1 : 0,
     d: config.landmarks.grass ? 1 : 0,
     c: config.camera.preset,
+    a: config.place.environment,
   };
   // The lighthouse's light, only when there's a lighthouse.
   if (config.landmarks.pier) {
@@ -79,6 +81,7 @@ export function applyLook(config, look) {
   config.landmarks.sweep = number(look.v, 0, 20, config.landmarks.sweep);
   if (typeof look.u === 'string' && Object.hasOwn(LIGHT_COLORS, look.u)) config.landmarks.lightColor = look.u;
   if (CAMERAS.has(look.c)) config.camera.preset = look.c;
+  if (PLACE_NAMES.includes(look.a)) config.place.environment = look.a;
 }
 
 /**

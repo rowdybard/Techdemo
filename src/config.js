@@ -1,8 +1,8 @@
 // Every tunable in one plain object. Modules read it through ctx.config, and the panel
 // changes it live. Units are metres, seconds and degrees unless a name says otherwise.
 //
-// World layout: +Y is up, the sea lies toward -Z, and the waterline runs along z = 0,
-// so the beach rises toward +Z behind the default camera.
+// World layout: +Y is up, the water (sea or lake) lies toward -Z, and the waterline runs along
+// z = 0, so the shore rises toward +Z behind the default camera.
 
 export const config = {
   renderer: {
@@ -38,6 +38,11 @@ export const config = {
   controls: {
     damping: 0.08,
     rotateSpeed: 0.2, // one swipe across a phone screen covers the whole range
+  },
+
+  // Where the show is set (places.js lists them; environment.js builds the scenery).
+  place: {
+    environment: 'beach', // 'beach' or 'lake'
   },
 
   sky: {
@@ -114,6 +119,11 @@ export const config = {
     count: { desktop: 7000, phone: 3000 }, // flakes in the pool (a draw call whatever the amount)
     glow: 1, // how strongly fireworks light the flakes
     size: 1, // flake size; the panel changes it live
+  },
+
+  // The frozen lake (lake.js): how much of the ice has opened into water.
+  lake: {
+    open: 0.5, // 0 is solid ice, 1 is mostly open water
   },
 
   look: {

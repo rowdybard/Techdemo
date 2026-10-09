@@ -3,7 +3,7 @@
 // Michigan's pier heads. Inside, a lens turns and throws two opposite beams that sweep
 // the haze. Side-on a beam is a soft shaft, brightest near the lamp; when one swings
 // toward you the lamp flares. The beams light any smoke they pass through (smoke.js
-// reads ctx.lighthouse), and the lamp joins the firework lights, so it shines on the
+// reads ctx.beam, a copy that environment.js keeps alive), and the lamp joins the firework lights, so it shines on the
 // water (burstlights.js). Brightness, turning speed and colour are config.landmarks
 // settings, and only ever move uniforms. Shaders are in lighthouse.glsl.js.
 import * as THREE from 'three';
@@ -194,6 +194,12 @@ export function create(ctx) {
       const b = tint[2];
       lampGlow.setRGB(r * light, g * light, b * light);
       beamColor.setRGB(r * light, g * light, b * light);
+      if (ctx.beam) { // the copy the smoke reads, which outlives this lighthouse
+        ctx.beam.uBeamOrigin.value.copy(lampPosition);
+        ctx.beam.uBeamDir.value.copy(beamDir);
+        ctx.beam.uBeamColor.value.copy(beamColor);
+        ctx.beam.uBeamShape.value.set(LENS, SPREAD);
+      }
       glareUniforms.uGlareColor.value.setRGB(r, g, b).multiplyScalar(light * (0.3 + 5 * flash));
       glareUniforms.uGlareSize.value = 0.025 + 0.06 * flash;
       shaftMaterial.uniforms.uHaze.value = 0.1 * (0.6 + 0.4 * config.sky.timeOfDay);
@@ -206,6 +212,7 @@ export function create(ctx) {
     dispose() {
       scene.remove(group);
       for (const thing of disposables) thing.dispose();
+      if (ctx.beam) ctx.beam.uBeamColor.value.setRGB(0, 0, 0); // no light, no beam in the smoke
       ctx.lighthouse = null;
     },
   };
