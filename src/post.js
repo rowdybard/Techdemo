@@ -4,7 +4,8 @@
 //
 // Tiers set the pixel-ratio cap, multisampling and the bloom's resolution. On 'auto' the
 // app measures frame time over the first two seconds and steps down a tier if frames
-// average more than about 20 ms, then measures again.
+// average more than about 20 ms, then measures again. A change of place (the frozen lake costs
+// more than the beach) starts the measuring over.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -108,6 +109,7 @@ export function create(ctx) {
   let last = 0;
   let total = 0;
   let frames = 0;
+  let measuredPlace = ctx.place;
 
   function makeTarget(samples) {
     return new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples });
@@ -123,6 +125,13 @@ export function create(ctx) {
       bloom.radius = config.bloom.radius;
       bloom.threshold = config.bloom.threshold;
 
+      if (settings.tier === 'auto' && ctx.place !== measuredPlace) {
+        measuredPlace = ctx.place;
+        measuring = true;
+        windowStart = performance.now() + WARM_UP * 2; // the new place's shaders compile first
+        total = 0;
+        frames = 0;
+      }
       if (!measuring) return;
       const now = performance.now();
       const frame = now - last;

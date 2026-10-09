@@ -1,13 +1,14 @@
 // The village across the lake: chalets and a few big lodges in rows along the far shore, snow
 // on every roof and light in nearly every window. One instanced mesh; each house is a box and
-// a gable roof (36 triangles). The vertex shader stands each one on landHeight with a deep
+// a gable roof (36 triangles). Each is handed the height of its ground when the lake is built
+// (landHeight in lake.glsl.js) and stands on it with a deep
 // foundation, so it sits on the slope however the ground falls. Windows are drawn in the
 // fragment shader as a grid on each wall, warm and bright enough that the bloom pass gives each
 // a halo, and they blur into a glow of average brightness when they're smaller than a pixel
 // (a phone, or a house far off), so nothing shimmers.
 import * as THREE from 'three';
 import { valueNoiseGLSL, skyGLSL } from './glsl.js';
-import { lakeGLSL, LAKE, lakeDistance } from './lake.glsl.js';
+import { LAKE, lakeDistance, landHeight } from './lake.glsl.js';
 import { burstLightGLSL } from './burstlights.js';
 
 const CELL = [3.2, 3.5]; // metres per window, across and up
@@ -16,6 +17,7 @@ const vertexShader = /* glsl */ `
   attribute vec3 aNormal;
   attribute vec4 aFace;         // along the face 0..1, up 0..1, 1 if the face runs along the house's width, part (0 wall, 1 roof, 2 gable)
   attribute vec4 aPlace;        // x, z, turn, a random number
+  attribute float aGround;      // the ground's height under it
   attribute vec4 aSize;         // width, depth, wall height, roof height
   attribute vec4 aLook;         // wall colour (rgb), how many windows are lit
   varying vec3 vWorld;
@@ -26,11 +28,8 @@ const vertexShader = /* glsl */ `
   varying vec2 vSize;
   varying float vSeed;
 
-  ${valueNoiseGLSL}
-  ${lakeGLSL}
-
   void main() {
-    float ground = landHeight(aPlace.xy);
+    float ground = aGround;
     vec3 local = position;                       // x, z in -0.5..0.5, y in 0..1 (walls) or above (roof)
     float roof = aFace.w > 0.5 && aFace.w < 1.5 ? 1.0 : 0.0;
     local.x *= aSize.x * (1.0 + 0.16 * roof);    // the roof overhangs
@@ -189,7 +188,9 @@ export function create(ctx) {
   const place = new Float32Array(houses.length * 4);
   const size = new Float32Array(houses.length * 4);
   const look = new Float32Array(houses.length * 4);
+  const ground = new Float32Array(houses.length);
   houses.forEach((house, i) => {
+    ground[i] = landHeight(house.x, house.z);
     const wall = house.lodge ? 7 + Math.random() * 3 : 4.6 + Math.random() * 3.6;
     place.set([house.x, house.z, (Math.random() - 0.5) * 0.4 + 0, Math.random()], i * 4);
     size.set([house.width, house.lodge ? 12 + Math.random() * 4 : 7 + Math.random() * 4, wall, house.lodge ? 4 + Math.random() * 2 : 3 + Math.random() * 3], i * 4);
@@ -200,6 +201,7 @@ export function create(ctx) {
   const geometry = new THREE.InstancedBufferGeometry();
   for (const name in unit.attributes) geometry.setAttribute(name, unit.attributes[name]);
   geometry.setAttribute('aPlace', new THREE.InstancedBufferAttribute(place, 4));
+  geometry.setAttribute('aGround', new THREE.InstancedBufferAttribute(ground, 1));
   geometry.setAttribute('aSize', new THREE.InstancedBufferAttribute(size, 4));
   geometry.setAttribute('aLook', new THREE.InstancedBufferAttribute(look, 4));
   geometry.instanceCount = houses.length;

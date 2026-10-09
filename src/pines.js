@@ -1,13 +1,13 @@
 // Snow-laden pines, one instanced mesh. Each tree is a stack of drooping skirts (six tiers of
 // a twelve-pointed cone, notched like branch tips) on a thin trunk, 84 triangles. A few stand on
 // the near bank, framing the view, and hundreds crowd the shores and slopes beyond the lake,
-// thinning out at the treeline. The vertex shader stands each tree on landHeight (lake.glsl.js),
-// so the trees follow the land exactly and any that fall on the ice or above the treeline are
-// simply not drawn. In the fragment shader snow settles on every upward face in broken patches,
+// thinning out at the treeline. Each tree is handed the height of the ground it stands on when the
+// lake is built (landHeight in lake.glsl.js), and trees that would fall on the ice or above the
+// treeline are never made, so the GPU does no terrain work for them. In the fragment shader snow settles on every upward face in broken patches,
 // the rest staying near black, lit by the moon and the bursts.
 import * as THREE from 'three';
 import { valueNoiseGLSL, skyGLSL } from './glsl.js';
-import { lakeGLSL, LAKE, ISLANDS, lakeDistance } from './lake.glsl.js';
+import { LAKE, ISLANDS, lakeDistance, landHeight } from './lake.glsl.js';
 import { burstLightGLSL } from './burstlights.js';
 
 const TIERS = 6;
@@ -17,19 +17,14 @@ const vertexShader = /* glsl */ `
   attribute vec3 aNormal;
   attribute vec2 aShade;        // x: how far up its tier the point is (0 at the skirt edge), y: how far up the tree
   attribute vec4 aPlace;        // x, z, height in metres, turn
-  attribute vec4 aLook;         // width relative to height, snow load, lean, a random number
+  attribute vec4 aLook;         // width relative to height, snow load, lean, the ground's height
   varying vec3 vWorld;
   varying vec3 vNormal;
   varying vec2 vShade;
   varying float vSnow;
 
-  ${valueNoiseGLSL}
-  ${lakeGLSL}
-
   void main() {
-    float ground = landHeight(aPlace.xy);
-    // Not on the ice, and not above the treeline (which wanders with the tree).
-    bool shown = ground > 0.4 && ground < 380.0 + 120.0 * aLook.w;
+    float ground = aLook.w;
     float turn = aPlace.w;
     float c = cos(turn);
     float s = sin(turn);
@@ -40,7 +35,7 @@ const vertexShader = /* glsl */ `
     vWorld = world;
     vShade = aShade;
     vSnow = aLook.y;
-    gl_Position = shown ? projectionMatrix * viewMatrix * vec4(world, 1.0) : vec4(2.0, 2.0, 2.0, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
   }
 `;
 
@@ -140,14 +135,18 @@ export function create(ctx) {
   const place = new Float32Array(total * 4);
   const look = new Float32Array(total * 4);
   let n = 0;
+  // A tree where the ground is: not on the ice, not above the treeline (which wanders a little).
   const add = (x, z, height, snow) => {
+    if (n >= total) return;
+    const ground = landHeight(x, z);
+    if (ground <= 0.4 || ground >= 380 + 120 * Math.random()) return;
     place.set([x, z, height, Math.random() * Math.PI * 2], n * 4);
-    look.set([0.55 + Math.random() * 0.25, snow, (Math.random() - 0.5) * 0.8, Math.random()], n * 4);
+    look.set([0.55 + Math.random() * 0.25, snow, (Math.random() - 0.5) * 0.8, ground], n * 4);
     n++;
   };
 
   // The forest: round the lake, thickest at the shore, mostly on the far side where the view is.
-  while (n < forest) {
+  for (let tries = 0; n < forest && tries < forest * 4; tries++) {
     const far = Math.random() < 0.72;
     const angle = far ? Math.PI * (1.12 + Math.random() * 0.76) : Math.random() * Math.PI * 2; // 1.12 pi..1.88 pi faces the camera, across the lake
     const out = 35 + Math.pow(Math.random(), 1.5) * 1000;
@@ -166,7 +165,7 @@ export function create(ctx) {
     }
   }
   // The near bank: big pines at the edges of the view, never in the middle of it.
-  while (n < total) {
+  for (let tries = 0; n < total && tries < 400; tries++) {
     const side = n % 2 === 0 ? -1 : 1;
     const x = side * (14 + Math.random() * 70);
     const z = 8 + Math.random() * 60 - (Math.abs(x) > 40 ? 12 : 0);
@@ -180,7 +179,7 @@ export function create(ctx) {
   for (const name in geometry.attributes) instanced.setAttribute(name, geometry.attributes[name]);
   instanced.setAttribute('aPlace', new THREE.InstancedBufferAttribute(place, 4));
   instanced.setAttribute('aLook', new THREE.InstancedBufferAttribute(look, 4));
-  instanced.instanceCount = total;
+  instanced.instanceCount = n; // the trees that found ground
 
   const material = new THREE.ShaderMaterial({
     name: 'Pines',

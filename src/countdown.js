@@ -12,9 +12,10 @@ const CENTRE = [0, 132, -380]; // over the barge, high enough to clear the mount
 const AFTER = 3.2; // seconds the clock's last light lingers after zero
 
 const vertexShader = /* glsl */ `
+  uniform float uQuadScale;     // how much of the quad is drawn (the picture keeps its size)
   varying vec2 vUV;
   void main() {
-    vUV = position.xy / ${RADIUS.toFixed(1)};
+    vUV = position.xy * uQuadScale / ${RADIUS.toFixed(1)};
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
@@ -46,9 +47,10 @@ export function create(ctx) {
   const geometry = new THREE.PlaneGeometry(size, size);
   geometry.deleteAttribute('normal');
   geometry.deleteAttribute('uv');
+  const quadScale = { value: 1 };
   const mesh = new THREE.Mesh(geometry, new THREE.ShaderMaterial({
     name: 'Countdown',
-    uniforms,
+    uniforms: { ...uniforms, uQuadScale: quadScale },
     vertexShader,
     fragmentShader,
     transparent: true,
@@ -102,6 +104,8 @@ export function create(ctx) {
       const since = Math.max(-rem, 0);
       const intro = THREE.MathUtils.smoothstep(length - rem, 0, 1);
       mesh.visible = true;
+      quadScale.value = since > 0 ? 1 : 0.65; // before zero the quad only needs to cover the dial
+      mesh.scale.setScalar(quadScale.value);
       uniforms.uClock.value.set(rem, intro, since, 1);
       // The dial's light on the snow: steady, rising as zero nears, a flash at zero.
       lamp.intensity = intro * Math.exp(-since * 1.6) * (0.45 + 0.4 * Math.max(0, 1 - rem / 10) + 2 * Math.exp(-since * 5) * (since > 0 ? 1 : 0));

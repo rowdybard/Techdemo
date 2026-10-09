@@ -12,6 +12,43 @@ import { lakeGLSL } from './lake.glsl.js';
 import { burstLightGLSL } from './burstlights.js';
 import { clockGLSL } from './clock.glsl.js';
 
+// Where the lake's surface is: the quad lake.js draws, and the mask texture covers.
+export const ICE_RECT = { x: -1200, z: -710, width: 2400, depth: 760 };
+
+// The parts of the surface that never change (where the open water lies, frost patches, wind
+// streaks, which stretches of the big cracks show) are drawn once into a texture when the lake is
+// built, on the GPU, so the surface shader reads them in one lookup instead of twenty noise
+// evaluations a pixel. r: how open the water wants to be (before the Open water setting), g: frost
+// patches, b: wind streaks, a: crack visibility.
+export const maskVertex = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }
+`;
+
+export const maskFragment = /* glsl */ `
+  varying vec2 vUv;
+  ${noiseGLSL}
+  ${lakeGLSL}
+  void main() {
+    vec2 p = vec2(${ICE_RECT.x.toFixed(1)}, ${ICE_RECT.z.toFixed(1)}) + vUv * vec2(${ICE_RECT.width.toFixed(1)}, ${ICE_RECT.depth.toFixed(1)});
+    // The open water lies where the show shows it off: a bay right in front of the viewer (a burst
+    // high over the barge is mirrored only a few metres from a low camera) and a channel round the
+    // barge. The ice comes back toward the shore.
+    float field = 0.55 * fbm(p * 0.0032 + 4.0) + 0.45 * fbm(p * 0.012 + 9.0);
+    float bay = 1.0 - smoothstep(0.55, 1.0, length((p - vec2(0.0, -75.0)) / vec2(340.0, 125.0)));
+    float channel = 1.0 - smoothstep(0.4, 1.0, length((p - vec2(0.0, -400.0)) / vec2(260.0, 120.0)));
+    float shore = smoothstep(5.0, 16.0, -lakeDistance(p));
+    float open = field + 0.55 * max(bay, channel) * shore;
+    float blotch = fbm(p * 0.018 + 13.0);
+    float drift = fbm(vec2(p.x * 0.006, p.y * 0.05) + 4.0);
+    float crackShown = valueNoise(p * 0.02 + 3.0);
+    gl_FragColor = vec4(open / 1.6, blotch, drift, crackShown);
+  }
+`;
+
 export const iceVertex = /* glsl */ `
   varying vec3 vWorld;
   void main() {
@@ -28,6 +65,7 @@ export const iceFragment = /* glsl */ `
   uniform vec3 uEnvCentre;
   uniform float uEnvRadius;
   uniform vec4 uClockBox;       // where the countdown clock hangs: x, y, z, half the quad's size
+  uniform sampler2D uMasks;     // the surface's fixed patterns (see maskFragment)
   varying vec3 vWorld;
 
   ${noiseGLSL}
@@ -36,16 +74,9 @@ export const iceFragment = /* glsl */ `
   ${burstLightGLSL}
   ${clockGLSL}
 
-  // How open the water is here: 1 in the middle of a patch, 0 under ice, with a ragged edge
-  // (the ice comes back thicker toward the shore). The open water lies where the show shows it
-  // off: a bay right in front of the viewer, because a burst high over the barge is mirrored in
-  // the water only a few metres from a low camera, and a channel round the barge.
-  float openness(vec2 p, out float rim) {
-    float field = 0.55 * fbm(p * 0.0032 + 4.0) + 0.45 * fbm(p * 0.012 + 9.0);
-    float bay = 1.0 - smoothstep(0.55, 1.0, length((p - vec2(0.0, -75.0)) / vec2(340.0, 125.0)));
-    float channel = 1.0 - smoothstep(0.4, 1.0, length((p - vec2(0.0, -400.0)) / vec2(260.0, 120.0)));
-    float shore = smoothstep(5.0, 16.0, -lakeDistance(p));
-    float level = field + 0.55 * max(bay, channel) * shore - mix(0.95, 0.3, uOpen);
+  // How open the water is here: 1 in the middle of a patch, 0 under ice, with a ragged edge.
+  float openness(float wants, out float rim) {
+    float level = wants * 1.6 - mix(0.95, 0.3, uOpen);
     float edge = fwidth(level) * 1.2 + 0.012;
     rim = 1.0 - smoothstep(0.0, 0.05, abs(level));
     return smoothstep(-edge, edge, level) * step(0.001, uOpen);
@@ -86,13 +117,17 @@ export const iceFragment = /* glsl */ `
     vec3 view = toEye / distance;
     float near = 1.0 - smoothstep(15.0, 160.0, distance);
 
+    vec4 masks = texture2D(uMasks, (p - vec2(${ICE_RECT.x.toFixed(1)}, ${ICE_RECT.z.toFixed(1)})) / vec2(${ICE_RECT.width.toFixed(1)}, ${ICE_RECT.depth.toFixed(1)}));
     float rim;
-    float water = openness(p, rim);
+    float water = openness(masks.r, rim);
 
     // Ice: faint undulation, long pressure cracks, frost where it has snowed on it.
     vec2 bumps = (vec2(valueNoise(p * 0.35), valueNoise(p * 0.35 + 19.0)) - 0.5) * 0.02 * (0.3 + 0.7 * near);
-    vec3 crackCell = cells(p * 0.055);
-    float crack = (1.0 - smoothstep(0.0, 0.035 + 0.02 * (1.0 - near), crackCell.y)) * smoothstep(0.1, 0.9, valueNoise(p * 0.02 + 3.0));
+    float crack = 0.0;
+    if (distance < 450.0) { // farther off a crack is thinner than a pixel
+      vec3 crackCell = cells(p * 0.055);
+      crack = (1.0 - smoothstep(0.0, 0.035 + 0.02 * (1.0 - near), crackCell.y)) * smoothstep(0.1, 0.9, masks.a) * (1.0 - smoothstep(300.0, 450.0, distance));
+    }
     if (near > 0.02) { // up close, a finer net of cracks too
       // Wandering cracks: the cell walls warped by noise, broken into stretches, thin.
       vec2 warped = p * 0.28 + (vec2(valueNoise(p * 0.6), valueNoise(p * 0.6 + 40.0)) - 0.5) * 1.1;
@@ -101,14 +136,14 @@ export const iceFragment = /* glsl */ `
       crack = max(crack, (1.0 - smoothstep(0.0, 0.028, fine.y)) * near * 0.45 * stretch);
     }
     // Frost: blown snow in streaks along the wind, patches, a thick band along the shore.
-    float blotch = smoothstep(0.58, 0.8, fbm(p * 0.018 + 13.0));
-    float drift = smoothstep(0.6, 0.84, fbm(vec2(p.x * 0.006, p.y * 0.05) + 4.0));
+    float blotch = smoothstep(0.58, 0.8, masks.g);
+    float drift = smoothstep(0.6, 0.84, masks.b);
     float shoreBand = smoothstep(4.0, 1.0, -lakeDistance(p));
     float away = smoothstep(8.0, 70.0, distance); // the ice at your feet is clear
     float frost = max(max(blotch * 0.8, drift * 0.7) * away, shoreBand);
     frost = max(frost, rim * 0.8); // the ice around a patch of water is thin, white where it is dusted
 
-    vec2 slope = mix(bumps, ripples(p, uTime), water);
+    vec2 slope = water > 0.001 ? mix(bumps, ripples(p, uTime), water) : bumps;
     vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
     vec3 r = reflect(-view, n);
     r.y = abs(r.y);
@@ -118,12 +153,13 @@ export const iceFragment = /* glsl */ `
     vec3 up = vec3(0.0, 1.0, 0.0);
     vec3 moonColor = vec3(0.3, 0.39, 0.62) * uMoon.w;
     vec3 fill = vec3(0.035, 0.05, 0.09) * uMoon.w + skyZenith() * 2.0;
-    vec3 lightOnSnow = moonColor * max(dot(up, uMoon.xyz), 0.0) + fill + burstDiffuse(vWorld, up) * 0.22;
+    vec3 bursts = burstDiffuse(vWorld, up);
+    vec3 lightOnSnow = moonColor * max(dot(up, uMoon.xyz), 0.0) + fill + bursts * 0.22;
 
     // Ice: dark blue-black with a little teal depth, milky where it's close and thin.
     vec3 body = mix(vec3(0.004, 0.008, 0.013), vec3(0.008, 0.02, 0.028), valueNoise(p * 0.15)) * (1.0 + 1.5 * near * (1.0 - fresnel));
     body += vec3(0.05, 0.09, 0.12) * crack * lightOnSnow * 3.0;
-    vec3 dust = vec3(0.7, 0.78, 0.9) * lightOnSnow * (0.85 + 0.15 * valueNoise(p * 1.7));
+    vec3 dust = vec3(0.7, 0.78, 0.9) * lightOnSnow * (near > 0.0 ? 0.85 + 0.15 * valueNoise(p * 1.7) : 0.92);
     vec3 iceColor = mix(body, dust, frost * 0.85);
 
     // Open water: nearly black.
@@ -141,11 +177,13 @@ export const iceFragment = /* glsl */ `
     float sharp = mix(70.0, 800.0, water);
     color += burstReflection(vWorld, r, sharp) * mix(0.1, 1.0, fresnel) * glossy * mix(0.5, 1.0, water);
 
-    // Sparkle of frost crystals.
-    vec2 cell = floor(p * 11.0);
-    float lucky = step(0.993, hash12(cell)) * near * frost * (1.0 - water);
-    float facing = hash13(vec3(cell, floor(dot(view, vec3(31.0, 17.0, 23.0)))));
-    color += (moonColor * 3.0 + burstDiffuse(vWorld, up) * 0.4) * lucky * smoothstep(0.7, 1.0, facing);
+    // Sparkle of frost crystals, near the eye.
+    if (near > 0.0) {
+      vec2 cell = floor(p * 11.0);
+      float lucky = step(0.993, hash12(cell)) * near * frost * (1.0 - water);
+      float facing = hash13(vec3(cell, floor(dot(view, vec3(31.0, 17.0, 23.0)))));
+      color += (moonColor * 3.0 + bursts * 0.4) * lucky * smoothstep(0.7, 1.0, facing);
+    }
 
     // Distance: the far ice melts into the haze.
     vec3 haze = skyGradient(normalize(vec3(-view.x, 0.03, -view.z))) + vec3(0.016, 0.024, 0.045) * uMoon.w;

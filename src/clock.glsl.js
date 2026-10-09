@@ -49,16 +49,24 @@ export const clockGLSL = /* glsl */ `
     if (intro <= 0.001 || max(abs(uv.x), abs(uv.y)) > 2.05) return vec3(0.0);
 
     float fade = intro * exp(-since * 2.2);
+    vec3 gold = vec3(1.0, 0.72, 0.32);
+    vec3 hot = vec3(1.0, 0.93, 0.78);
+    float r = length(uv);
+    // Outside the dial only the ring that leaves it at zero shows, so nothing else is worked out
+    // there (the quad is big, and before zero countdown.js shrinks it to the dial anyway).
+    if (r > 1.3) {
+      if (since <= 0.0) return vec3(0.0);
+      float shockOut = abs(r - (0.95 + since * 1.1));
+      return (hot * smoothstep(0.05, 0.01, shockOut) * 2.5 + gold * exp(-shockOut * 8.0)) * exp(-since * 2.6) * fade * uClock.w
+        * (1.0 - smoothstep(1.8, 2.05, max(abs(uv.x), abs(uv.y))));
+    }
     float age = ceil(rem) - rem;                         // seconds since the number last changed
     float pop = exp(-age * 9.0) * step(0.0, rem);
-    float r = length(uv);
     float ang = atan(uv.x, uv.y);                         // clockwise from 12 o'clock
     ang = ang < 0.0 ? ang + CLOCK_TAU : ang;
     float left = clamp(rem / 10.0, 0.0, 1.0);             // how much of the countdown is left
     float lit = step(ang, left * CLOCK_TAU);
 
-    vec3 gold = vec3(1.0, 0.72, 0.32);
-    vec3 hot = vec3(1.0, 0.93, 0.78);
     vec3 light = gold * exp(-r * r * 2.4) * 0.07;         // a warm haze behind it all
 
     // The rim: a thin ring, bright where time is left, with a spark at the head of the arc.
@@ -68,6 +76,7 @@ export const clockGLSL = /* glsl */ `
     light += hot * exp(-behindHead * behindHead * 90.0) * exp(-onRim * 40.0) * 3.0 * step(0.0, rem);
 
     // Ticks: sixty small ones and twelve long ones, brighter inside the lit arc.
+    if (r > 0.72 && r < 0.92) {
     float hours = ang / (CLOCK_TAU / 12.0);
     float toHour = abs(fract(hours + 0.5) - 0.5) * (CLOCK_TAU / 12.0) * r;
     float quarter = step(mod(floor(hours + 0.5), 3.0), 0.5);
@@ -76,6 +85,7 @@ export const clockGLSL = /* glsl */ `
     float toMinute = abs(fract(minutes + 0.5) - 0.5) * (CLOCK_TAU / 60.0) * r;
     float minuteTick = smoothstep(0.005, 0.0015, toMinute) * smoothstep(0.855, 0.865, r) * step(r, 0.9);
     light += gold * (hourTick * (0.5 + 1.6 * lit) + minuteTick * (0.18 + 0.7 * lit));
+    }
 
     // The sweep hand, once round each second, with a wake behind it.
     float turn = CLOCK_TAU * age;
@@ -92,7 +102,9 @@ export const clockGLSL = /* glsl */ `
     vec2 q = uv / scale;
     int ones = int(mod(shown, 10.0));
     vec3 digits = vec3(0.0);
-    if (shown >= 10.0) {
+    if (abs(uv.x) > 1.0 || abs(uv.y) > 1.05) {
+      // beyond the digits and their glow
+    } else if (shown >= 10.0) {
       digits += clockDigit(q - vec2(-0.37, 0.0), int(shown / 10.0), pop);
       digits += clockDigit(q - vec2(0.37, 0.0), ones, pop);
     } else {

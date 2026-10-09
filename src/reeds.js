@@ -1,16 +1,17 @@
 // Frozen reeds along the near shore: tufts of dead stalks standing out of the snow at the edge of
 // the ice, stiff, rimed with frost at the tips, swaying a little in the wind. They fill the lower
 // corners of the shore view and give the eye something close to measure the lake by. One instanced
-// mesh; each tuft stands on landHeight (lake.glsl.js) computed in its own vertex shader.
+// mesh; each blade is handed the height of its ground when the lake is built (landHeight).
 import * as THREE from 'three';
-import { valueNoiseGLSL, skyGLSL } from './glsl.js';
-import { lakeGLSL, LAKE, lakeDistance } from './lake.glsl.js';
+import { skyGLSL } from './glsl.js';
+import { LAKE, lakeDistance, landHeight } from './lake.glsl.js';
 import { burstLightGLSL } from './burstlights.js';
 
 const SEGMENTS = 4;
 
 const vertexShader = /* glsl */ `
   attribute vec4 aPlace;        // x, z, height, which way it leans
+  attribute float aGround;      // the ground's height under it
   attribute vec4 aLook;         // sway phase, lean, thickness, a random number
   uniform float uTime;
   uniform vec2 uWind;           // m/s, x and z
@@ -18,11 +19,8 @@ const vertexShader = /* glsl */ `
   varying float vUp;
   varying float vRandom;
 
-  ${valueNoiseGLSL}
-  ${lakeGLSL}
-
   void main() {
-    float ground = landHeight(aPlace.xy);
+    float ground = aGround;
     float up = position.y;                                   // 0 at the root, 1 at the tip
     float taper = (1.0 - up * 0.82) * aLook.z;
     vec2 lean = vec2(cos(aPlace.w), sin(aPlace.w)) * aLook.y * up * up * aPlace.z;
@@ -83,6 +81,7 @@ export function create(ctx) {
 
   const place = new Float32Array(total * 4);
   const look = new Float32Array(total * 4);
+  const ground = new Float32Array(total);
   let n = 0;
   for (let t = 0; t < tufts; t++) {
     // Clumps either side of the view, nearest the middle first, never right in front of the eye.
@@ -94,7 +93,10 @@ export function create(ctx) {
     for (let b = 0; b < blades; b++) {
       const a = Math.random() * Math.PI * 2;
       const r = Math.sqrt(Math.random()) * 1.1;
-      place.set([cx + Math.cos(a) * r, cz + Math.sin(a) * r * 0.6, height * (0.55 + Math.random() * 0.6), Math.random() * Math.PI * 2], n * 4);
+      const x = cx + Math.cos(a) * r;
+      const z = cz + Math.sin(a) * r * 0.6;
+      ground[n] = landHeight(x, z);
+      place.set([x, z, height * (0.55 + Math.random() * 0.6), Math.random() * Math.PI * 2], n * 4);
       look.set([Math.random() * 6.28, 0.1 + Math.random() * 0.22, 0.02 + Math.random() * 0.02, Math.random()], n * 4);
       n++;
     }
@@ -114,6 +116,7 @@ export function create(ctx) {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setIndex(index);
   geometry.setAttribute('aPlace', new THREE.InstancedBufferAttribute(place, 4));
+  geometry.setAttribute('aGround', new THREE.InstancedBufferAttribute(ground, 1));
   geometry.setAttribute('aLook', new THREE.InstancedBufferAttribute(look, 4));
   geometry.instanceCount = total;
 

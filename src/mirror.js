@@ -34,7 +34,8 @@ export function create(ctx) {
   const lights = ctx.burstLights.uniforms.uBurstPosition.value;
   const savedStrength = new Float32Array(lights.length);
   const hidden = [];
-  let lastKey = '';
+  let lastNight = -1;
+  let lastMoon = -1;
   let lastAt = -1e9;
 
   function capture() {
@@ -60,9 +61,11 @@ export function create(ctx) {
   return {
     update(dt, time) {
       // What changes the scenery's look: how bright the night is, and the moon.
-      const key = `${Math.round(config.sky.timeOfDay * 50)}|${ctx.sky.uniforms.uMoon.value.w}`;
-      if (key !== lastKey && time - lastAt > 0.5) {
-        lastKey = key;
+      const night = Math.round(config.sky.timeOfDay * 50);
+      const moon = ctx.sky.uniforms.uMoon.value.w;
+      if ((night !== lastNight || moon !== lastMoon) && time - lastAt > 0.5) {
+        lastNight = night;
+        lastMoon = moon;
         lastAt = time;
         capture();
       }
