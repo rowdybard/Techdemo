@@ -89,7 +89,7 @@ async function checkout(request, env, url) {
     'line_items[0][price_data][currency]': 'usd',
     'line_items[0][price_data][unit_amount]': String(price(env)),
     'line_items[0][price_data][product_data][name]': 'SkyGreeting Deluxe',
-    'line_items[0][price_data][product_data][description]': `A ${words.occasion} fireworks greeting with every effect and the grand finale`,
+    'line_items[0][price_data][product_data][description]': `A ${words.occasion === 'newyear' ? 'New Year' : words.occasion} fireworks greeting with every effect: a grand finale that more than doubles the show, a gift-wrapped opening, your name signed in the sky and both your initials in a heart`,
     client_reference_id: id,
     'metadata[greeting]': id,
     // Stripe asks for the buyer's email. Its receipt shows this description, so the

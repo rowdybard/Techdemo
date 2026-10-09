@@ -11,9 +11,9 @@
 // The price shown comes from the server. Words only ever reach the page as textContent.
 import { track, rememberPrice } from './track.js';
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, shortLink } from './link.js';
-import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion, borrowScene, paidItems, returnScene } from './occasions.js';
+import { DEFAULT_OCCASION, OCCASIONS, PRICE, applyOccasion, borrowScene, paidItems, returnScene } from './occasions.js';
 import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
-import { endingLength } from './director.js';
+import { createPlans } from './plans.js';
 import { applyPreset } from './presets.js';
 import { BLOCKED_NOTE, greetingBlocked, isBlocked } from './moderate.js';
 
@@ -100,16 +100,14 @@ export function create(ctx) {
     spellTimer = setTimeout(() => { if (ctx.fireworks && !sheet.hidden) ctx.fireworks.launch('text'); }, 1200);
   }, { signal });
 
-  const included = el('p', 'builder-included');
-  const deluxeBox = el('label', 'builder-deluxe');
-  const deluxeInput = el('input');
-  deluxeInput.type = 'checkbox';
-  const deluxeText = el('span');
-  const deluxeTitle = el('strong');
-  const deluxeList = el('span', 'builder-deluxe-list');
-  deluxeText.append(deluxeTitle, deluxeList);
-  deluxeBox.append(deluxeInput, deluxeText);
-  deluxeInput.addEventListener('change', () => setDeluxe(deluxeInput.checked), { signal });
+  // Free or Deluxe (plans.js): cards in the sheet, and a switch on the bar that plays the one picked.
+  let wantDeluxe = false;
+  const plans = createPlans((on, fromPreview) => {
+    if (on !== state.deluxe) setDeluxe(on);
+    if (!fromPreview) return;
+    if (on) track('deluxe_preview', { content_type: state.occasion });
+    startPreview();
+  }, signal);
   const customize = el('button', 'send-secondary builder-customize', '🎨 Customize the show');
   customize.type = 'button';
   customize.addEventListener('click', () => {
@@ -139,7 +137,7 @@ export function create(ctx) {
   privacyLink.target = '_blank';
   privacyLink.rel = 'noopener';
   terms.append('By sending, you agree to SkyGreeting’s ', termsLink, '. ', privacyLink, '.');
-  sheet.append(head, chips, own, message.label, message2.label, to.label, from.label, customize, included, deluxeBox, row, linkBox, status, terms);
+  sheet.append(head, chips, own, message.label, message2.label, to.label, from.label, customize, plans.cards, row, linkBox, status, terms);
 
   // While a preview plays: a slim bar instead of the sheet.
   const bar = el('div', 'builder-bar');
@@ -164,26 +162,7 @@ export function create(ctx) {
       play: () => ctx.director.play(OCCASIONS[state.occasion], words(), state.deluxe),
     });
   }, { signal });
-  // Free or Deluxe while the preview plays: a tap plays that version, so the difference is seen
-  // before paying (and it's the version that will be sent). The Deluxe side glows once a free
-  // preview is over, in case they haven't looked.
-  const versions = el('div', 'builder-versions');
-  versions.setAttribute('role', 'radiogroup');
-  versions.setAttribute('aria-label', 'Which show');
-  const freeVersion = el('button', 'builder-version');
-  const deluxeVersion = el('button', 'builder-version is-deluxe');
-  for (const [button, on] of [[freeVersion, false], [deluxeVersion, true]]) {
-    button.type = 'button';
-    button.setAttribute('role', 'radio');
-    button.addEventListener('click', () => {
-      if (on !== state.deluxe) setDeluxe(on);
-      if (on) track('deluxe_preview', { content_type: state.occasion });
-      startPreview();
-    }, { signal });
-    versions.append(button);
-  }
-  let nudging = false;
-  bar.append(versions, edit, film, barSend);
+  bar.append(plans.bar, edit, film, barSend);
 
   // When checkout can't start: say why, and offer the free version.
   const soon = el('div', 'send-box');
@@ -209,7 +188,7 @@ export function create(ctx) {
     // A show the person set up is kept as it is; the occasion then gives only the words
     // and the ending. Otherwise the occasion's look (scene, fireworks, ground show) is applied.
     if (fresh || !designIsMine()) {
-      applyOccasion(config, name, deluxeInput.checked);
+      applyOccasion(config, name, wantDeluxe);
       state.baseline = lookJson();
       state.borrowed = null;
       if (ctx.studio) ctx.studio.setStyle(OCCASIONS[name].preset); // Customize's Style cards show it
@@ -232,9 +211,12 @@ export function create(ctx) {
 
   function setDeluxe(on) {
     const occasion = OCCASIONS[state.occasion];
-    deluxeInput.checked = on;
+    const mine = designIsMine();
+    wantDeluxe = on;
     if (on) addDeluxe(config, occasion);
     else keepFree(config, occasion);
+    // Picking a version isn't designing a show: the occasion's own look stays the occasion's.
+    if (!mine) state.baseline = lookJson();
     refresh();
   }
 
@@ -242,21 +224,15 @@ export function create(ctx) {
     const occasion = OCCASIONS[state.occasion];
     // Paid if Deluxe is ticked or the design uses any Deluxe effect.
     const used = deluxeInUse(config, occasion).filter((item) => !baseUse.has(item) || picked.has(item));
-    if (used.length && !deluxeInput.checked) deluxeInput.checked = true;
-    state.deluxe = deluxeInput.checked;
+    if (used.length && !wantDeluxe) wantDeluxe = true;
+    state.deluxe = wantDeluxe;
     for (const name in chipFor) chipFor[name].setAttribute('aria-checked', String(name === state.occasion));
     own.hidden = !designIsMine();
     ownReset.textContent = `Use the ${occasion.label} look instead`;
-    included.textContent = `Free: ${occasion.free.map((item) => LABELS[item]).join(', ')}`;
-    deluxeList.textContent = `Adds ${occasion.deluxe.map((item) => LABELS[item]).join(', ')}`;
-    deluxeTitle.textContent = `✦ Deluxe · ${price} to send`;
+    plans.show(occasion, state.deluxe, price);
     const label = state.deluxe ? `Send · ${price} ✦` : 'Send · Free';
     send.textContent = label;
     barSend.textContent = label;
-    freeVersion.textContent = `Free · ${Math.round(endingLength(occasion, false))} s`;
-    deluxeVersion.textContent = `✦ Deluxe · ${Math.round(endingLength(occasion, true))} s`;
-    freeVersion.setAttribute('aria-checked', String(!state.deluxe));
-    deluxeVersion.setAttribute('aria-checked', String(state.deluxe));
   }
 
   function show(which) {
@@ -397,9 +373,7 @@ export function create(ctx) {
   barSend.addEventListener('click', sendIt, { signal });
   soonBack.addEventListener('click', () => show('sheet'), { signal });
   soonFree.addEventListener('click', () => {
-    deluxeInput.checked = false;
-    keepFree(config, OCCASIONS[state.occasion]);
-    refresh();
+    setDeluxe(false);
     sendIt();
   }, { signal });
 
@@ -439,11 +413,7 @@ export function create(ctx) {
 
   return {
     update() {
-      const ended = state.view === 'bar' && !state.deluxe && !(ctx.director && ctx.director.active);
-      if (ended !== nudging) {
-        nudging = ended;
-        deluxeVersion.classList.toggle('is-nudging', ended);
-      }
+      plans.glow(state.view === 'bar' && !state.deluxe && !(ctx.director && ctx.director.active));
     },
     dispose() {
       clearTimeout(spellTimer);
