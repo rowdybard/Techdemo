@@ -11,7 +11,7 @@
 // right then). A shell cue may name a `palette` (one of config.palettes) to be coloured with. A cue for a Deluxe
 // effect, or marked deluxe: true, plays only in a Deluxe greeting; otherwise a shell or
 // ground effect it names is swapped for the occasion's stand-in (`fallback`).
-import { PRESETS, applyPreset } from './presets.js';
+import { PRESETS, applyPreset, applyPresetSections } from './presets.js';
 
 export const PRICE = '$4.99';
 
@@ -202,6 +202,28 @@ export const DEFAULT_OCCASION = 'halloween';
 export function placeOf(name) {
   const preset = PRESETS[(OCCASIONS[name] || {}).preset];
   return (preset && preset.place && preset.place.environment) || 'beach';
+}
+
+// What makes up an occasion's setting, as opposed to its fireworks.
+const SCENE = ['place', 'sky', 'lake', 'snow'];
+
+/**
+ * Puts an occasion that has a setting of its own (New Year's frozen lake) over a show someone
+ * designed, without touching their fireworks: the place, its sky and its snow. Returns what it
+ * replaced, for `returnScene`, or null if the occasion is just set on the beach.
+ */
+export function borrowScene(config, name) {
+  const preset = PRESETS[(OCCASIONS[name] || {}).preset];
+  if (!preset || !preset.place) return null;
+  const before = {};
+  for (const key of SCENE) before[key] = JSON.parse(JSON.stringify(config[key]));
+  applyPresetSections(config, OCCASIONS[name].preset, SCENE);
+  return before;
+}
+
+/** Gives back what `borrowScene` replaced. */
+export function returnScene(config, before) {
+  for (const key of SCENE) Object.assign(config[key], before[key]);
 }
 
 /**

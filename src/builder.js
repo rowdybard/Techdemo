@@ -11,7 +11,7 @@
 // The price shown comes from the server. Words only ever reach the page as textContent.
 import { track, rememberPrice } from './track.js';
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, shortLink } from './link.js';
-import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion, paidItems } from './occasions.js';
+import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion, borrowScene, paidItems, returnScene } from './occasions.js';
 import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
 import { applyPreset } from './presets.js';
 import { BLOCKED_NOTE, greetingBlocked, isBlocked } from './moderate.js';
@@ -20,7 +20,7 @@ const TEXT_WEIGHT = 0.7; // how often the live show spells the message while bui
 
 export function create(ctx) {
   const { config, container, signal } = ctx;
-  const state = { occasion: DEFAULT_OCCASION, deluxe: false, typed: false, paying: false, guessed: false, baseline: '' };
+  const state = { occasion: DEFAULT_OCCASION, deluxe: false, typed: false, paying: false, guessed: false, baseline: '', borrowed: null };
   // The show as the app itself leaves it (the defaults, or the last occasion look applied):
   // anything different was set by the person, by playing with Customize or the panel, or
   // saved from their last visit, and is theirs to send. Worked out before anything changes.
@@ -196,6 +196,16 @@ export function create(ctx) {
     if (fresh || !designIsMine()) {
       applyOccasion(config, name, deluxeInput.checked);
       state.baseline = lookJson();
+      state.borrowed = null;
+    } else {
+      // Their own fireworks stay, but an occasion with a setting of its own (New Year's frozen
+      // lake) brings that along, and gives it back when they pick another.
+      const wants = borrowScene(config, name);
+      if (wants && !state.borrowed) state.borrowed = wants;
+      else if (!wants && state.borrowed) {
+        returnScene(config, state.borrowed);
+        state.borrowed = null;
+      }
     }
     config.look.text = words().message;
     config.look.mix.text = TEXT_WEIGHT;

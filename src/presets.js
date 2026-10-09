@@ -91,6 +91,12 @@ export function applyPreset(config, name) {
   Object.assign(config.hero, header);
 }
 
+/** Applies only these sections of a preset (a place's sky and snow, say), leaving the rest of the show as it is. */
+export function applyPresetSections(config, name, sections) {
+  const preset = PRESETS[name] || {};
+  for (const key of sections) if (isObject(preset[key])) merge(config[key], preset[key]);
+}
+
 /** The designable settings as pretty JSON, including the custom palette. */
 export function settingsJSON(config) {
   const data = snapshot(config);
