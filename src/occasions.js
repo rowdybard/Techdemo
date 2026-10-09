@@ -8,7 +8,8 @@
 // height } or { at, ground: style } (it stops the ground effect before it; with layer: true it
 // plays over it) or { at, text: 'message' | 'to' | 'year' | 'from' (the sender, signed) }, or { at,
 // countdown: seconds } to hang the giant clock in the sky, or { at, crane: seconds } to lift the
-// camera toward the show for that long (crane.js). A cue with `zero: s` in place of `at`
+// camera toward the show for that long (crane.js), or { at, keepsake: true, h } for a heart with
+// the sender's and recipient's initials in it. A cue with `zero: s` in place of `at`
 // happens s seconds after the clock reaches zero (director.js sends a shell up early so it bursts
 // right then). A shell cue may name a `palette` (one of config.palettes) to be coloured with. A cue for a Deluxe
 // effect, or marked deluxe: true, plays only in a Deluxe greeting; otherwise a shell or
@@ -34,9 +35,9 @@ export const GROUND = new Set(['fountains', 'shooters', 'candles', 'mines', 'fan
 // clock, zero is the ending's start). The camera lifts and glides toward the show (crane.js); shells
 // build across the whole sky with the ground show joining in, quicken into mirrored pairs, a breath,
 // then a crescendo of sixteen across the sky inside a second and a half, and a last high break in
-// gold over everything, and the sender's name signed under it. `shells` are the types it cycles
-// through, `ground` three ground effects (the third layered on the crescendo), `last` the three of
-// the last break.
+// gold over everything, the sender's name signed under it, and last a keepsake: a heart with their
+// initials in it. `shells` are the types it cycles through, `ground` three ground effects (the
+// third layered on the crescendo), `last` the three of the last break.
 function grandFinale(from, shells, ground, last, lastPalette = 'gold') {
   const cues = [{ zero: from - 1.5, crane: 24, deluxe: true }];
   const shell = (zero, type, x, h, palette) => cues.push({ zero, shell: type, x, h, deluxe: true, ...(palette ? { palette } : {}) });
@@ -54,6 +55,7 @@ function grandFinale(from, shells, ground, last, lastPalette = 'gold') {
   shell(from + 19.3, last[2], 160, 165, lastPalette);
   cues.push(
     { zero: from + 22.4, text: 'from', palette: 'signature', deluxe: true },
+    { zero: from + 26.6, keepsake: true, h: 150, deluxe: true },
     { zero: from - 0.4, ground: ground[0], deluxe: true },
     { zero: from + 8, ground: ground[1], deluxe: true },
     { zero: from + 16.2, ground: ground[2], deluxe: true, layer: true },
@@ -204,6 +206,7 @@ export const OCCASIONS = {
         ['willow', 90, 170], ['crackle', 130, 130], ['peony', 170, 150], ['ring', -60, 100], ['ring', 60, 100], ['crackle', 0, 120], ['strobe', 0, 100]], true, 'classic'),
       { zero: 35, ground: 'fountains', deluxe: true },
       { zero: 39, text: 'from', palette: 'signature', deluxe: true },
+      { zero: 43.2, keepsake: true, h: 150, deluxe: true },
     ],
   },
 

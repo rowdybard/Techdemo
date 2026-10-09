@@ -7,6 +7,7 @@ import { KIND } from './fireworks.glsl.js';
 
 const MAX_POINTS = 1600;
 const HEART_RED = [1, 0.12, 0.3];
+const INITIALS_GOLD = [1, 0.78, 0.42];
 const textPoints = new Float32Array(MAX_POINTS * 2); // x, y in -1..1, kept between shells
 let textCount = 0;
 let sampledText = null;
@@ -132,4 +133,19 @@ function text(pool, shell, config, palette, born, at, velocity, out) {
   fillLight(out, born, at, color, shell.size * 1.3);
 }
 
-export const SHAPE_TYPES = { heart, star, text };
+// Deluxe's keepsake: a big heart with initials inside it (S + J), held a little longer than other
+// bursts. The director puts the initials in look.text just before; they're drawn in the heart's own
+// plane, so they stay inside it from any view.
+function initials(pool, shell, config, palette, born, at, velocity, out) {
+  const frame = config.look.palette === 'custom' ? pick(palette) : HEART_RED;
+  shapeBurst(pool, Math.round(shell.count * 1.4), heartPoint, born, at, shell.size * 1.05, config, frame, config.look.lifetime * 1.6);
+  const words = config.look.text.trim().slice(0, 8);
+  if (words) {
+    if (words !== sampledText) sampleText(words);
+    const count = Math.min(Math.max(textCount, 200), Math.round(shell.count * 1.4));
+    if (textCount > 0) shapeBurst(pool, count, textPoint, born + 0.2, at, shell.size * 1.3, config, INITIALS_GOLD, config.look.lifetime * 1.7, 0.32);
+  }
+  fillLight(out, born, at, frame, shell.size * 1.2);
+}
+
+export const SHAPE_TYPES = { heart, star, text, initials };

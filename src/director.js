@@ -16,6 +16,12 @@ const SECOND_LINE = 1.6;
 const HEIGHT = { message: 132, message2: 104, to: 76, year: 132, from: 112 };
 const SKY_LIMIT = 24; // characters a text shell spells
 
+// The first letter of a name, for the keepsake heart.
+function initial(name) {
+  const letter = (name || '').toUpperCase().match(/[\p{L}\p{N}]/u);
+  return letter ? letter[0] : '';
+}
+
 // How the sender signs a Deluxe show: FROM SAM, or the name alone if that's too long.
 function signature(name) {
   const upper = (name || '').trim().toUpperCase();
@@ -31,7 +37,7 @@ function timed(list) {
   return list.map((cue) => {
     if (cue.zero === undefined) return cue;
     const burst = zero + cue.zero;
-    return { ...cue, burst, at: cue.shell || cue.text ? burst - LEAD : burst };
+    return { ...cue, burst, at: cue.shell || cue.text || cue.keepsake ? burst - LEAD : burst };
   }).sort((a, b) => a.at - b.at);
 }
 
@@ -73,7 +79,8 @@ export function create(ctx) {
       occasion = nextOccasion;
       deluxe = withDeluxe;
       allowed = allowedEffects(occasion, deluxe);
-      words = { ...nextWords, year: String(newYear()), from: signature(nextWords.from) };
+      words = { ...nextWords, year: String(newYear()), from: signature(nextWords.from),
+        initials: [initial(nextWords.from), initial(nextWords.to)].filter(Boolean).join(' + ') };
       cues = withWords(timed(occasion.ending.filter((cue) => deluxe || !cue.deluxe)), words);
       next = 0;
       start = now + 0.3;
@@ -114,6 +121,11 @@ export function create(ctx) {
     const burstAt = cue.burst === undefined ? NaN : start + cue.burst;
     if (cue.countdown) {
       if (ctx.countdown) ctx.countdown.start(start + cue.at + cue.countdown);
+    } else if (cue.keepsake) {
+      // Their initials in a heart (or one initial, if only one name was given; none, no heart).
+      if (!words.initials) return;
+      config.look.text = words.initials;
+      fireworks.launchAt('initials', middle, cue.h || 150, burstAt);
     } else if (cue.crane) {
       director.craneFrom = start + cue.at;
       director.craneUntil = director.craneFrom + cue.crane;
