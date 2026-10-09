@@ -15,6 +15,28 @@ const SECOND_LINE = 1.6;
 // Burst heights: the message, the second line, the recipient's name.
 const HEIGHT = { message: 132, message2: 104, to: 76, year: 132 };
 
+// Cues timed from the clock's zero get their real times (a copy, so the occasion's own list is
+// left as it was), and everything is put in the order it fires.
+function timed(list) {
+  const clock = list.find((cue) => cue.countdown);
+  const zero = clock ? clock.at + clock.countdown : 0;
+  return list.map((cue) => {
+    if (cue.zero === undefined) return cue;
+    const burst = zero + cue.zero;
+    return { ...cue, burst, at: cue.shell || cue.text ? burst - LEAD : burst };
+  }).sort((a, b) => a.at - b.at);
+}
+
+// When the last cue fires (or bursts), and the tail after it.
+function lengthOf(cues) {
+  return cues.reduce((last, cue) => Math.max(last, cue.burst === undefined ? cue.at : cue.burst), 0) + TAIL;
+}
+
+/** How long an occasion's ending runs, in seconds, free or Deluxe (the builder shows it). */
+export function endingLength(occasion, deluxe) {
+  return lengthOf(timed(occasion.ending.filter((cue) => deluxe || !cue.deluxe)));
+}
+
 // The year about to begin: from the middle of the year on, next year's.
 function newYear() {
   const now = new Date();
@@ -49,7 +71,7 @@ export function create(ctx) {
       start = now + 0.3;
       director.craneFrom = -Infinity;
       director.craneUntil = -Infinity;
-      end = start + cues.reduce((last, cue) => Math.max(last, cue.burst === undefined ? cue.at : cue.burst), 0) + TAIL;
+      end = start + lengthOf(cues);
       director.active = true;
       return end - start;
     },
@@ -69,18 +91,6 @@ export function create(ctx) {
       at: cue.at + SECOND_LINE, ...(cue.burst === undefined ? {} : { burst: cue.burst + SECOND_LINE }), text: 'message2',
     }));
     return list.concat(extra).sort((a, b) => a.at - b.at);
-  }
-
-  // Cues timed from the clock's zero get their real times (a copy, so the occasion's own list is
-  // left as it was), and everything is put in the order it fires.
-  function timed(list) {
-    const clock = list.find((cue) => cue.countdown);
-    const zero = clock ? clock.at + clock.countdown : 0;
-    return list.map((cue) => {
-      if (cue.zero === undefined) return cue;
-      const burst = zero + cue.zero;
-      return { ...cue, burst, at: cue.shell || cue.text ? burst - LEAD : burst };
-    }).sort((a, b) => a.at - b.at);
   }
 
   // A Deluxe effect in a free greeting becomes the occasion's stand-in.

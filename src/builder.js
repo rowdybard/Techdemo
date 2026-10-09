@@ -13,6 +13,7 @@ import { track, rememberPrice } from './track.js';
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, shortLink } from './link.js';
 import { DEFAULT_OCCASION, LABELS, OCCASIONS, PRICE, applyOccasion, borrowScene, paidItems, returnScene } from './occasions.js';
 import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
+import { endingLength } from './director.js';
 import { applyPreset } from './presets.js';
 import { BLOCKED_NOTE, greetingBlocked, isBlocked } from './moderate.js';
 
@@ -108,12 +109,7 @@ export function create(ctx) {
   const deluxeList = el('span', 'builder-deluxe-list');
   deluxeText.append(deluxeTitle, deluxeList);
   deluxeBox.append(deluxeInput, deluxeText);
-  deluxeInput.addEventListener('change', () => {
-    const occasion = OCCASIONS[state.occasion];
-    if (deluxeInput.checked) addDeluxe(config, occasion);
-    else keepFree(config, occasion);
-    refresh();
-  }, { signal });
+  deluxeInput.addEventListener('change', () => setDeluxe(deluxeInput.checked), { signal });
   const customize = el('button', 'send-secondary builder-customize', '🎨 Customize the show');
   customize.type = 'button';
   customize.addEventListener('click', () => {
@@ -148,7 +144,7 @@ export function create(ctx) {
   // While a preview plays: a slim bar instead of the sheet.
   const bar = el('div', 'builder-bar');
   bar.hidden = true;
-  const edit = el('button', 'send-secondary', 'Edit');
+  const edit = el('button', 'send-secondary builder-edit', 'Edit');
   edit.type = 'button';
   const barSend = el('button', 'send-primary');
   barSend.type = 'button';
@@ -168,7 +164,26 @@ export function create(ctx) {
       play: () => ctx.director.play(OCCASIONS[state.occasion], words(), state.deluxe),
     });
   }, { signal });
-  bar.append(edit, film, barSend);
+  // Free or Deluxe while the preview plays: a tap plays that version, so the difference is seen
+  // before paying (and it's the version that will be sent). The Deluxe side glows once a free
+  // preview is over, in case they haven't looked.
+  const versions = el('div', 'builder-versions');
+  versions.setAttribute('role', 'radiogroup');
+  versions.setAttribute('aria-label', 'Which show');
+  const freeVersion = el('button', 'builder-version');
+  const deluxeVersion = el('button', 'builder-version is-deluxe');
+  for (const [button, on] of [[freeVersion, false], [deluxeVersion, true]]) {
+    button.type = 'button';
+    button.setAttribute('role', 'radio');
+    button.addEventListener('click', () => {
+      if (on !== state.deluxe) setDeluxe(on);
+      if (on) track('deluxe_preview', { content_type: state.occasion });
+      startPreview();
+    }, { signal });
+    versions.append(button);
+  }
+  let nudging = false;
+  bar.append(versions, edit, film, barSend);
 
   // When checkout can't start: say why, and offer the free version.
   const soon = el('div', 'send-box');
@@ -215,6 +230,14 @@ export function create(ctx) {
     refresh();
   }
 
+  function setDeluxe(on) {
+    const occasion = OCCASIONS[state.occasion];
+    deluxeInput.checked = on;
+    if (on) addDeluxe(config, occasion);
+    else keepFree(config, occasion);
+    refresh();
+  }
+
   function refresh() {
     const occasion = OCCASIONS[state.occasion];
     // Paid if Deluxe is ticked or the design uses any Deluxe effect.
@@ -230,6 +253,10 @@ export function create(ctx) {
     const label = state.deluxe ? `Send · ${price} ✦` : 'Send · Free';
     send.textContent = label;
     barSend.textContent = label;
+    freeVersion.textContent = `Free · ${Math.round(endingLength(occasion, false))} s`;
+    deluxeVersion.textContent = `✦ Deluxe · ${Math.round(endingLength(occasion, true))} s`;
+    freeVersion.setAttribute('aria-checked', String(!state.deluxe));
+    deluxeVersion.setAttribute('aria-checked', String(state.deluxe));
   }
 
   function show(which) {
@@ -411,7 +438,13 @@ export function create(ctx) {
   refresh();
 
   return {
-    update() {},
+    update() {
+      const ended = state.view === 'bar' && !state.deluxe && !(ctx.director && ctx.director.active);
+      if (ended !== nudging) {
+        nudging = ended;
+        deluxeVersion.classList.toggle('is-nudging', ended);
+      }
+    },
     dispose() {
       clearTimeout(spellTimer);
       open.remove();

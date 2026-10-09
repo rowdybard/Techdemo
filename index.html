@@ -158,6 +158,18 @@
   .builder-deluxe-list { color: var(--muted); font-size: 12px; line-height: 1.4; }
   .builder-bar { position: absolute; z-index: 2; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 8px; width: min(360px, calc(100% - 32px)); }
   .builder-bar[hidden] { display: none; }
+  .builder-bar { flex-wrap: wrap; }
+  .builder-edit { flex: none; padding-inline: 18px; }
+  .builder-bar .send-primary { white-space: nowrap; }
+  .builder-versions { flex-basis: 100%; display: flex; gap: 4px; padding: 4px; border: 1px solid var(--rule); border-radius: 999px; background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .builder-version { flex: 1; padding: 8px 10px; border: 0; border-radius: 999px; background: none; color: var(--muted); font: 600 13px var(--sans); cursor: pointer; }
+  .builder-version[aria-checked="true"] { background: rgb(233 237 245 / 0.16); color: var(--ink); }
+  .builder-version.is-deluxe { color: var(--spark); }
+  .builder-version.is-deluxe[aria-checked="true"] { background: linear-gradient(135deg, #ffd98a, #ff9f43); color: #1a1006; }
+  .builder-version:focus-visible { outline: 2px solid var(--spark); outline-offset: 2px; }
+  .builder-version.is-nudging { animation: deluxe-glow 1.6s ease-in-out infinite; }
+  @keyframes deluxe-glow { 50% { box-shadow: 0 0 0 2px rgb(255 180 92 / 0.85), 0 0 18px rgb(255 180 92 / 0.55); } }
+  @media (prefers-reduced-motion: reduce) { .builder-version.is-nudging { animation: none; box-shadow: 0 0 0 2px rgb(255 180 92 / 0.85); } }
   .builder-own { display: grid; gap: 4px; margin: 0; padding: 10px 12px; border: 1px solid rgb(255 180 92 / 0.45); border-radius: 8px; background: rgb(255 180 92 / 0.08); font-size: 13px; line-height: 1.4; }
   .builder-own[hidden] { display: none; }
   .builder-own-reset { justify-self: start; padding: 2px 0; border: 0; background: none; color: var(--muted); font: 12px var(--sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
