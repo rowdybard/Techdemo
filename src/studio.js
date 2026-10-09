@@ -88,6 +88,12 @@ export function create(ctx) {
       applyPreset(config, name);
       if (scene) putScene(config, scene);
       changed();
+      // Show it at once (on the lake nothing else changes): a few of its shells break within a
+      // second or so and its ground show starts, rather than whenever the next ones happen to.
+      if (!(ctx.director && ctx.director.active)) {
+        if (ctx.fireworks) ctx.fireworks.sample();
+        if (config.fountains.enabled && ctx.fountains) ctx.fountains.start();
+      }
     });
     card.append(el('span', 'studio-card-icon', icon), el('span', '', label));
     refreshers.push(() => card.setAttribute('aria-pressed', String(currentPreset === name)));

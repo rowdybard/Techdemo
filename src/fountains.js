@@ -9,6 +9,11 @@
 // Two small side barges (config.fountains.sideBarges) keep a ground show going almost
 // all the time from four tubes each, smaller than the main barge's, always the same
 // style the main barge last played: when it changes, they change with it.
+//
+// A barge plays one show at a time. A show started while another is still pouring (a style
+// picked in Customize, an ending's next effect) stops the one before it: its sparks already in
+// the air fall, and nothing more comes out of its tubes. The schedule waits for a show to end. Only
+// an ending's cue marked `layer` (midnight's eruption) plays over what's running.
 import { KIND } from './fireworks.glsl.js';
 import { BARGE_LENGTH, SIDE_BARGE_LENGTH, SIDE_BARGE_OFFSET } from './fireworks.js';
 import { candles, fans, mines, shooters } from './ground.js';
@@ -26,6 +31,9 @@ const SIDE_SCALE = 0.72; // side effects reach this much of the main barge's hei
 // is drawn with both raised by this much (on the owner's word: about 10% bigger).
 const GROUND_SCALE = 1.1;
 const PATTERNS = ['together', 'sweep', 'alternate', 'sweep-back'];
+const MAIN = 1; // the pool's owner ids for each barge's sparks
+const SIDES = 2;
+const BREATH = 3; // seconds between the end of one scheduled show and the next, at the least
 // Dimmer than shell colours: hundreds of sparks overlap in a fountain.
 const COLORS = {
   gold: [[0.6, 0.34, 0.09], [0.55, 0.18, 0.04]],
@@ -55,6 +63,7 @@ export function create(ctx) {
     }
   }
   let current = ''; // the style the main barge last played
+  let mainUntil = -1e9; // when the main barge's show stops pouring
   let nextSide = settings.firstAt;
   let nextShow = settings.firstAt;
   let pattern = 0;
@@ -79,26 +88,53 @@ export function create(ctx) {
     return style;
   }
 
-  function runShow(start, forced = null) {
+  // `layer`: play over the show that's running instead of stopping it, and leave the side barges be.
+  function runShow(start, forced = null, layer = false) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return;
-    pool.groundShow(true);
+    if (!layer && start < mainUntil) {
+      pool.cut(MAIN, start);
+      stopLights(lights, 0, MAX_NOZZLES, start);
+    }
+    pool.groundShow(MAIN);
     grow();
-    playMain(pool, start, forced);
+    playMain(pool, start, forced, layer);
     shrink();
-    pool.groundShow(false);
+    pool.groundShow(0);
+    let until = layer ? mainUntil : start;
+    for (let i = 0; i < MAX_NOZZLES; i++) {
+      const record = lights[i];
+      if (record.time >= start - 0.01) until = Math.max(until, record.time + record.hold);
+    }
+    mainUntil = until;
   }
 
-  function playMain(pool, start, forced) {
+  // Ends the lights of a show that was stopped: a short fade, and none for tubes yet to fire.
+  function stopLights(list, from, to, time) {
+    for (let i = from; i < to; i++) {
+      const record = list[i];
+      if (record.time + record.hold <= time) continue;
+      if (record.time >= time) record.time = -1e9;
+      else record.hold = Math.min(record.hold, time - record.time + 0.6);
+    }
+  }
+
+  function playMain(pool, start, forced, layer) {
     const nozzles = Math.min(MAX_NOZZLES, Math.round(settings.nozzles * (phone ? 0.6 : 1)));
     const [bx, by, bz] = config.show.bargePosition;
     const span = BARGE_LENGTH * 0.85;
     tubes.length = 0;
     for (let i = 0; i < nozzles; i++) tubes.push(bx - span / 2 + (span * (i + 0.5)) / nozzles);
     const style = resolve(forced || settings.style);
-    // The side barges switch to it at once.
-    current = style;
-    nextSide = start;
+    // The side barges switch to it at once (a layered effect leaves them be).
+    if (!layer) {
+      current = style;
+      nextSide = start;
+      if (sidesUntil > start) {
+        pool.cut(SIDES, start);
+        stopLights(lights, MAX_NOZZLES, lights.length, start);
+      }
+    }
     if (EFFECTS[style]) {
       EFFECTS[style](pool, config, phone, start, tubes, by + 2.5, bz, config.palettes[config.look.palette], lights);
       return;
@@ -116,15 +152,16 @@ export function create(ctx) {
   }
 
   // Both side barges at once, in the main barge's style, smaller. Returns when it ends.
+  let sidesUntil = -1e9;
   function runSides(start) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return start + 2;
-    pool.groundShow(true);
+    pool.groundShow(SIDES);
     grow();
-    const end = playSides(pool, start);
+    sidesUntil = playSides(pool, start);
     shrink();
-    pool.groundShow(false);
-    return end;
+    pool.groundShow(0);
+    return sidesUntil;
   }
 
   function playSides(pool, start) {
@@ -218,10 +255,13 @@ export function create(ctx) {
 
   ctx.fountains = {
     lights,
-    /** Starts a ground show right away. */
-    start: () => runShow(now),
-    /** Starts one ground effect right away, whatever the style setting. */
-    play: (style) => runShow(now, style),
+    /** Starts a ground show right away (stopping the one running); the next scheduled one is a full gap later. */
+    start: () => {
+      runShow(now);
+      nextShow = now + settings.every;
+    },
+    /** Starts one ground effect right away, whatever the style setting; `layer` plays it over the one running. */
+    play: (style, layer = false) => runShow(now, style, layer),
   };
 
   return {
@@ -242,8 +282,10 @@ export function create(ctx) {
         nextShow = Math.max(nextShow, time + 6);
         return;
       }
-      // After a long pause, skip the shows that were missed.
+      // After a long pause, skip the shows that were missed. One still pouring (started from
+      // Customize, or an ending's last) is let finish first.
       if (nextShow < time - 1) nextShow = time;
+      if (time >= nextShow && time < mainUntil) nextShow = mainUntil + BREATH;
       if (time >= nextShow) {
         runShow(nextShow);
         nextShow += settings.every;

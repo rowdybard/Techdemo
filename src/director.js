@@ -98,7 +98,7 @@ export function create(ctx) {
       // The name goes well below the message, which is still sinking when it bursts.
       fireworks.launchAt('text', middle, HEIGHT[cue.text] || 132, burstAt);
     } else if (cue.ground) {
-      if (ctx.fountains) ctx.fountains.play(resolve(cue.ground));
+      if (ctx.fountains) ctx.fountains.play(resolve(cue.ground), Boolean(cue.layer));
     } else if (cue.shell) {
       // Pulled in on an upright phone, so shells at the sides stay on screen.
       const squeeze = ctx.camera.aspect < 1 ? 0.72 : 1;

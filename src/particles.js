@@ -51,12 +51,14 @@ export function createPool(size, uniforms) {
 
   let cursor = 0;
   let ground = 0; // 1 while a ground show writes its sparks (their Sparkle is capped)
+  let owner = 0; // who the runs written now belong to (a ground show's barge), so they can be cut
   let runStart = 0;
   let runCount = 0;
   const runFirst = new Float64Array(RUNS);
   const runLast = new Float64Array(RUNS);
   const runSize = new Uint32Array(RUNS);
   const runAt = new Uint32Array(RUNS); // where each run starts in the pool
+  const runOwner = new Uint8Array(RUNS);
   let squeezed = 0; // runs that had to overwrite live particles because the pool was full
   let runIndex = 0;
   let runFirstBorn = Infinity;
@@ -93,14 +95,41 @@ export function createPool(size, uniforms) {
     mesh,
     size,
 
-    /** Marks the sparks written from now on as a ground show's (true) or not. */
-    groundShow(on) {
-      ground = on ? 1 : 0;
+    /** Marks the sparks written from now on as a ground show's, from barge `id` (1 and up), or not (0). */
+    groundShow(id) {
+      ground = id ? 1 : 0;
+      owner = id;
+    },
+
+    /**
+     * Stops barge `id`'s ground show at `time`: its sparks not yet born never are. Those already
+     * in the air fly on and fall, so the show stops pouring rather than vanishing.
+     */
+    cut(id, time) {
+      for (let r = 0; r < RUNS; r++) {
+        if (runOwner[r] !== id || runSize[r] === 0 || runLast[r] <= time) continue;
+        const from = runAt[r];
+        const to = from + runSize[r];
+        let lastDeath = -Infinity;
+        for (let i = from; i < to; i++) {
+          const born = start[i * 4 + 3];
+          if (born > time) start[i * 4 + 3] = -1e6;
+          else lastDeath = Math.max(lastDeath, born + shape[i * 4]);
+        }
+        runLast[r] = lastDeath;
+        attributes.aStart.addUpdateRange(from * 4, runSize[r] * 4);
+        attributes.aStart.needsUpdate = true;
+      }
     },
 
     /** Claims `count` particles and returns the index of the first. */
     begin(count) {
       runStart = claim(count, uniforms.uTime.value);
+      // Runs that were there are over (or squeezed out): forget where they were, so a cut can't
+      // reach the sparks written over them.
+      for (let r = 0; r < RUNS; r++) {
+        if (runSize[r] > 0 && runAt[r] < runStart + count && runAt[r] + runSize[r] > runStart) runSize[r] = 0;
+      }
       runCount = count;
       cursor = runStart + count;
       runFirstBorn = Infinity;
@@ -144,6 +173,7 @@ export function createPool(size, uniforms) {
       runLast[runIndex] = runLastDeath;
       runSize[runIndex] = runCount;
       runAt[runIndex] = runStart;
+      runOwner[runIndex] = owner;
       runIndex = (runIndex + 1) % RUNS;
     },
 

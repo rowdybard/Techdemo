@@ -5,7 +5,8 @@
 // entry here, plus any new shells or ground effects it needs.
 //
 // Cues: { at: seconds, shell: type, x: metres across from the barge's middle, h: burst
-// height } or { at, ground: style } or { at, text: 'message' | 'to' | 'year' }, or { at,
+// height } or { at, ground: style } (it stops the ground effect before it; with layer: true it
+// plays over it) or { at, text: 'message' | 'to' | 'year' }, or { at,
 // countdown: seconds } to hang the giant clock in the sky. A cue with `zero: s` in place of `at`
 // happens s seconds after the clock reaches zero (director.js sends a shell up early so it bursts
 // right then). A shell cue may name a `palette` (one of config.palettes) to be coloured with. A cue for a Deluxe
@@ -152,9 +153,9 @@ export const OCCASIONS = {
       ...salvo(0, [['willow', -150, 108], ['peony', -100, 126], ['willow', -50, 142], ['peony', 0, 162], ['willow', 50, 142], ['peony', 100, 126], ['willow', 150, 108]]),
       { zero: 0, ground: 'fountains' },
       ...salvo(0.9, [['ring', -70, 150], ['ring', 70, 150]]),
-      { zero: 0.9, ground: 'candles' },
+      { zero: 0.9, ground: 'candles', layer: true },
       ...salvo(1.6, [['chrysanthemum', -120, 135], ['crackle', 0, 175], ['chrysanthemum', 120, 135]], true),
-      { zero: 1.6, ground: 'mines', deluxe: true },
+      { zero: 1.6, ground: 'mines', deluxe: true, layer: true },
       // The year takes the clock's place; gold falls at the sides.
       { zero: 2.9, text: 'year', width: 215 },
       ...salvo(3.2, [['willow', -170, 150], ['willow', 170, 150], ['willow', -215, 140], ['willow', 215, 140]]),

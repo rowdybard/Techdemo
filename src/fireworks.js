@@ -10,6 +10,7 @@ import { fireShell, planShell } from './shells.js';
 const SHELLS = 96; // shell records kept for counting shells in the air, lighting and sound
 const FINALE_SECONDS = 7;
 const FINALE_MAX_SHELLS = 24;
+const SAMPLE_SHELLS = 3; // shells a Style card sends up the moment it's picked
 const TAP_PIXELS = 8; // a press that moves further than this is a drag, not a tap
 const TAP_MS = 350;
 
@@ -178,6 +179,12 @@ export function create(ctx) {
       launch(uniforms.uTime.value, x, height, type, false, burstAt, palette);
     },
 
+    /** A few shells from the mix as it is now, already climbing and bursting within about a second: a new style shows at once. */
+    sample() {
+      const time = uniforms.uTime.value;
+      for (let i = 0; i < SAMPLE_SHELLS; i++) launch(time, NaN, NaN, null, true, time + 0.5 + i * 0.35);
+    },
+
     /** A few seconds of shells as fast as the pool allows. */
     finale() {
       finaleUntil = uniforms.uTime.value + FINALE_SECONDS;
@@ -198,6 +205,7 @@ export function create(ctx) {
   ctx.fireworks.launch = api.launch;
   ctx.fireworks.launchAt = api.launchAt;
   ctx.fireworks.finale = api.finale;
+  ctx.fireworks.sample = api.sample;
   return api;
 }
 
