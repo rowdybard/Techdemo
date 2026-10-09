@@ -18,6 +18,7 @@ import * as post from './post.js';
 import * as debug from './debug.js';
 import * as ui from './ui.js';
 import * as director from './director.js';
+import * as crane from './crane.js';
 import * as video from './video.js';
 import * as builder from './builder.js';
 import * as studio from './studio.js';
@@ -27,7 +28,7 @@ import * as viewlock from './viewlock.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [wind, sky, burstlights, countdown, environment, fireworks, fountains, smoke, snow, audio, post, debug, ui, director, video, builder, studio, viewlock, gift, autoshow];
+const MODULES = [wind, sky, burstlights, countdown, environment, fireworks, fountains, smoke, snow, audio, post, debug, ui, director, crane, video, builder, studio, viewlock, gift, autoshow];
 
 const DEG = Math.PI / 180;
 

@@ -7,7 +7,8 @@
 // Cues: { at: seconds, shell: type, x: metres across from the barge's middle, h: burst
 // height } or { at, ground: style } (it stops the ground effect before it; with layer: true it
 // plays over it) or { at, text: 'message' | 'to' | 'year' }, or { at,
-// countdown: seconds } to hang the giant clock in the sky. A cue with `zero: s` in place of `at`
+// countdown: seconds } to hang the giant clock in the sky, or { at, crane: seconds } to lift the
+// camera toward the show for that long (crane.js). A cue with `zero: s` in place of `at`
 // happens s seconds after the clock reaches zero (director.js sends a shell up early so it bursts
 // right then). A shell cue may name a `palette` (one of config.palettes) to be coloured with. A cue for a Deluxe
 // effect, or marked deluxe: true, plays only in a Deluxe greeting; otherwise a shell or
@@ -29,9 +30,34 @@ export const LABELS = {
 
 export const GROUND = new Set(['fountains', 'shooters', 'candles', 'mines', 'fans', 'cauldron', 'wisps', 'lightning', 'lanterns']);
 
-const finale = (start, types) => types.map((shell, k) => ({
-  at: start + k * 0.35, shell, x: ((k * 53) % 180) - 90, h: 95 + ((k * 37) % 45), deluxe: true,
-}));
+// Deluxe's grand finale, about 22 seconds timed by when each shell breaks (`zero` cues: with no
+// clock, zero is the ending's start). The camera lifts and glides toward the show (crane.js); shells
+// build across the whole sky with the ground show joining in, quicken into mirrored pairs, a breath,
+// then a crescendo of sixteen across the sky inside a second and a half, and a last high break in
+// gold over everything. `shells` are the types it cycles through, `ground` three ground effects (the
+// third layered on the crescendo), `last` the three of the last break.
+function grandFinale(from, shells, ground, last, lastPalette = 'gold') {
+  const cues = [{ zero: from - 1.5, crane: 24, deluxe: true }];
+  const shell = (zero, type, x, h, palette) => cues.push({ zero, shell: type, x, h, deluxe: true, ...(palette ? { palette } : {}) });
+  for (let k = 0; k < 18; k++) shell(from + k * 0.5, shells[k % shells.length], ((k * 71) % 300) - 150, 95 + ((k * 37) % 60));
+  for (let k = 0; k < 12; k++) {
+    const x = 40 + ((k * 53) % 150);
+    const h = 100 + ((k * 29) % 70);
+    const type = shells[(k + 3) % shells.length];
+    shell(from + 9.2 + k * 0.5, type, -x, h);
+    shell(from + 9.32 + k * 0.5, type, x, h);
+  }
+  for (let k = 0; k < 16; k++) shell(from + 16.4 + k * 0.09, shells[k % shells.length], -210 + k * 28, 110 + ((k * 41) % 80));
+  shell(from + 19, last[0], -120, 150, lastPalette);
+  shell(from + 19.15, last[1], 0, 190, lastPalette);
+  shell(from + 19.3, last[2], 120, 150, lastPalette);
+  cues.push(
+    { zero: from - 0.4, ground: ground[0], deluxe: true },
+    { zero: from + 8, ground: ground[1], deluxe: true },
+    { zero: from + 16.2, ground: ground[2], deluxe: true, layer: true },
+  );
+  return cues;
+}
 
 // New Year's midnight. Shells that burst together at the clock's zero (director.js sends them up
 // early): [type, x, burst height] for each. Spread across the whole sky, centre highest.
@@ -65,7 +91,7 @@ export const OCCASIONS = {
       { at: 12.9, shell: 'pumpkin', x: 0, h: 125 },
       { at: 13.3, shell: 'pumpkin', x: 95, h: 100 },
       { at: 13.6, ground: 'lanterns' },
-      ...finale(16.5, ['skull', 'brew', 'wisp', 'web', 'bat', 'brew', 'skull', 'crackle', 'wisp', 'pumpkin']),
+      ...grandFinale(18, ['skull', 'bat', 'brew', 'ghost', 'web', 'pumpkin', 'eyes', 'wisp', 'crackle'], ['cauldron', 'wisps', 'lightning'], ['wisp', 'pumpkin', 'wisp'], 'halloween'),
     ],
   },
 
@@ -86,7 +112,7 @@ export const OCCASIONS = {
       { at: 8.9, shell: 'ring', x: 60, h: 115 },
       { at: 10, shell: 'star', x: 0, h: 125 },
       { at: 11, ground: 'mines' },
-      ...finale(13, ['multibreak', 'crossette', 'strobe', 'peony', 'multibreak', 'ring', 'crossette', 'star']),
+      ...grandFinale(15.5, ['multibreak', 'crossette', 'peony', 'strobe', 'ring', 'star', 'chrysanthemum'], ['fans', 'candles', 'mines'], ['willow', 'crossette', 'willow']),
     ],
   },
 
@@ -106,7 +132,7 @@ export const OCCASIONS = {
       { at: 9.4, shell: 'heart', x: 80, h: 105 },
       { at: 10.5, ground: 'fans' },
       { at: 11, shell: 'willow', x: 0, h: 130 },
-      ...finale(13.5, ['heart', 'ring', 'heart', 'strobe', 'heart', 'heart', 'ring']),
+      ...grandFinale(16, ['heart', 'ring', 'willow', 'strobe', 'heart', 'peony', 'chrysanthemum'], ['fountains', 'fans', 'mines'], ['willow', 'heart', 'willow']),
     ],
   },
 
@@ -127,7 +153,7 @@ export const OCCASIONS = {
       { at: 10, shell: 'palm', x: -90, h: 100 },
       { at: 10.3, shell: 'palm', x: 90, h: 100 },
       { at: 11, ground: 'mines' },
-      ...finale(13, ['multibreak', 'crackle', 'strobe', 'crossette', 'multibreak', 'star', 'crackle', 'palm']),
+      ...grandFinale(15.5, ['multibreak', 'crackle', 'strobe', 'crossette', 'star', 'palm', 'chrysanthemum'], ['shooters', 'fans', 'mines'], ['willow', 'crackle', 'willow']),
     ],
   },
 
@@ -167,6 +193,7 @@ export const OCCASIONS = {
       // The rest of the night.
       ...barrage(14.5, 16, 0.4, ['willow', 'peony', 'ring', 'peony'], false, 'classic'),
       { zero: 13, ground: 'fans', deluxe: true },
+      { zero: 19, crane: 22, deluxe: true },
       ...barrage(20.8, 50, 0.26, ['chrysanthemum', 'willow', 'crackle', 'peony', 'strobe', 'ring', 'crackle', 'willow'], true, 'classic'),
       { zero: 20, ground: 'mines', deluxe: true },
       { zero: 25, ground: 'fountains', deluxe: true },
@@ -192,7 +219,7 @@ export const OCCASIONS = {
       { at: 9, shell: 'palm', x: -80, h: 105 },
       { at: 9.4, shell: 'palm', x: 80, h: 105 },
       { at: 10.5, ground: 'candles' },
-      ...finale(12.5, ['crackle', 'willow', 'chrysanthemum', 'crackle', 'willow', 'palm', 'crackle']),
+      ...grandFinale(15, ['crackle', 'willow', 'chrysanthemum', 'palm', 'peony', 'willow', 'crackle'], ['fountains', 'candles', 'mines'], ['willow', 'willow', 'willow']),
     ],
   },
 };

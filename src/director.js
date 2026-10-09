@@ -35,6 +35,9 @@ export function create(ctx) {
 
   const director = {
     active: false,
+    // A crane cue's span (scene seconds), for crane.js.
+    craneFrom: -Infinity,
+    craneUntil: -Infinity,
     /** Plays `occasion`'s ending with these words; returns how long it lasts. */
     play(nextOccasion, nextWords, withDeluxe) {
       occasion = nextOccasion;
@@ -44,6 +47,8 @@ export function create(ctx) {
       cues = withWords(timed(occasion.ending.filter((cue) => deluxe || !cue.deluxe)), words);
       next = 0;
       start = now + 0.3;
+      director.craneFrom = -Infinity;
+      director.craneUntil = -Infinity;
       end = start + cues.reduce((last, cue) => Math.max(last, cue.burst === undefined ? cue.at : cue.burst), 0) + TAIL;
       director.active = true;
       return end - start;
@@ -51,6 +56,7 @@ export function create(ctx) {
     stop() {
       director.active = false;
       next = cues.length;
+      director.craneUntil = -Infinity;
       if (ctx.countdown) ctx.countdown.stop();
     },
   };
@@ -90,6 +96,9 @@ export function create(ctx) {
     const burstAt = cue.burst === undefined ? NaN : start + cue.burst;
     if (cue.countdown) {
       if (ctx.countdown) ctx.countdown.start(start + cue.at + cue.countdown);
+    } else if (cue.crane) {
+      director.craneFrom = start + cue.at;
+      director.craneUntil = director.craneFrom + cue.crane;
     } else if (cue.text) {
       const text = cue.text in HEIGHT ? words[cue.text] : cue.text;
       if (!text) return;
