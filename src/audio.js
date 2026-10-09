@@ -136,10 +136,16 @@ export function create(ctx) {
   lastInput = performance.now();
   ctx.audioState = () => (audio ? audio.state : 'none');
 
-  // The sea: low surf washing in sets (two slow swells beating), and a fizz of foam.
+  // The sea: low surf washing in sets (two slow swells beating), and a fizz of foam. On the
+  // frozen lake it's a faint wind instead: the same sound at a tenth of the level.
+  let seaBus = null;
+  let heardPlace = null;
   function startSea() {
-    const surf = loop(page.brown, 'lowpass', 520, 0.7, 0.07);
-    const fizz = loop(page.white, 'highpass', 3200, 0.5, 0.008);
+    seaBus = audio.createGain();
+    seaBus.connect(master);
+    sea.push(seaBus);
+    const surf = loop(page.brown, 'lowpass', 520, 0.7, 0.07, seaBus);
+    const fizz = loop(page.white, 'highpass', 3200, 0.5, 0.008, seaBus);
     for (const [frequency, depth] of [[0.085, 0.045], [0.13, 0.025]]) {
       const swell = audio.createOscillator();
       swell.frequency.value = frequency;
@@ -152,7 +158,7 @@ export function create(ctx) {
     sea.push(...surf.nodes, ...fizz.nodes);
   }
 
-  function loop(buffer, type, frequency, q, level) {
+  function loop(buffer, type, frequency, q, level, out = master) {
     const source = audio.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
@@ -162,7 +168,7 @@ export function create(ctx) {
     filter.Q.value = q;
     const gain = audio.createGain();
     gain.gain.value = level;
-    source.connect(filter).connect(gain).connect(master);
+    source.connect(filter).connect(gain).connect(out);
     source.start(0, Math.random() * buffer.duration);
     return { gain, nodes: [source, filter, gain] };
   }
@@ -372,6 +378,10 @@ export function create(ctx) {
         return;
       }
       const now = audio.currentTime;
+      if (seaBus && ctx.place !== heardPlace) {
+        heardPlace = ctx.place;
+        seaBus.gain.setTargetAtTime(ctx.place === 'lake' ? 0.1 : 1, now, 1.5);
+      }
       clockSounds(time, now, false);
       const [, by, bz] = config.show.bargePosition;
       if (bursts) {
@@ -408,6 +418,8 @@ export function create(ctx) {
         node.disconnect();
       }
       sea.length = 0;
+      seaBus = null;
+      heardPlace = null;
       for (const node of [bus, echo, echoLevel, master, compressor]) if (node) node.disconnect();
       audio = null;
       master = null;

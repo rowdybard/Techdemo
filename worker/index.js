@@ -320,6 +320,8 @@ async function preview(request, env, url) {
     .on('meta[property="og:description"], meta[name="description"], meta[name="twitter:description"]', set(description))
     .on('meta[property="og:image"], meta[name="twitter:image"]', set(image))
     .on('meta[property="og:url"]', set(url.href))
+    // So the page builds the occasion's scenery first (a frozen lake, not a beach and then a swap).
+    .on('head', { element(element) { element.append(`<meta name="sg-occasion" content="${occasion}">`, { html: true }); } })
     .transform(page);
   // A greeting is private: search engines leave it out (the home page is what they index).
   const response = new Response(rewritten.body, rewritten);

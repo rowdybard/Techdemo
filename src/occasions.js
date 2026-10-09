@@ -11,7 +11,7 @@
 // right then). A shell cue may name a `palette` (one of config.palettes) to be coloured with. A cue for a Deluxe
 // effect, or marked deluxe: true, plays only in a Deluxe greeting; otherwise a shell or
 // ground effect it names is swapped for the occasion's stand-in (`fallback`).
-import { applyPreset } from './presets.js';
+import { PRESETS, applyPreset } from './presets.js';
 
 export const PRICE = '$4.99';
 
@@ -157,10 +157,10 @@ export const OCCASIONS = {
       { zero: 1.6, ground: 'mines', deluxe: true },
       // The year takes the clock's place; gold falls at the sides.
       { zero: 2.9, text: 'year', width: 215 },
-      ...salvo(3.2, [['willow', -150, 150], ['willow', 150, 150], ['willow', -195, 140], ['willow', 195, 140]]),
+      ...salvo(3.2, [['willow', -170, 150], ['willow', 170, 150], ['willow', -215, 140], ['willow', 215, 140]]),
       // Then the words, and the name under them.
       { zero: 6.8, text: 'message' },
-      ...salvo(7.6, [['peony', -165, 130], ['peony', 165, 130]]),
+      ...salvo(7.6, [['peony', -180, 130], ['peony', 180, 130]]),
       { zero: 10.8, text: 'to' },
       ...salvo(11.2, [['ring', -150, 120], ['ring', 150, 120]]),
       // The rest of the night.
@@ -197,6 +197,12 @@ export const OCCASIONS = {
 };
 
 export const DEFAULT_OCCASION = 'halloween';
+
+/** The place an occasion is set in (its preset's), 'beach' unless the preset says otherwise. */
+export function placeOf(name) {
+  const preset = PRESETS[(OCCASIONS[name] || {}).preset];
+  return (preset && preset.place && preset.place.environment) || 'beach';
+}
 
 /**
  * Sets up the scene and the background show for an occasion. Without Deluxe, the

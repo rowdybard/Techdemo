@@ -11,7 +11,7 @@ import { PLACES } from './places.js';
 const PRESET_CARDS = [
   ['Default', '🎆', 'Classic'], ['Halloween', '🎃', 'Halloween'], ['Fourth of July', '🇺🇸', 'Fourth of July'],
   ['Gold Willows', '✨', 'Gold willows'], ['Lake Michigan', '🗼', 'Lake Michigan'], ['Neon', '💜', 'Neon'],
-  ['Calm', '🌙', 'Calm'], ['Winter', '❄️', 'Winter'], ['Finale', '💥', 'Big finale'],
+  ['Calm', '🌙', 'Calm'], ['Winter', '❄️', 'Frozen lake'], ['Finale', '💥', 'Big finale'],
 ];
 const PALETTES = [['classic', 'Classic'], ['usa', 'Red, white & blue'], ['gold', 'Gold'], ['neon', 'Neon'], ['pastel', 'Pastel'], ['halloween', 'Halloween']];
 const SHELLS = {
@@ -222,8 +222,8 @@ export function create(ctx) {
   sendBar.append(sendShow);
 
   sheet.append(head, making, actions,
-    section('Style', presets), section('Colours', swatches), section('Fireworks', shellGroups),
-    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('Place', places), section('View', cameras), footer, sendBar);
+    section('Style', presets), section('Place', places), section('Colours', swatches), section('Fireworks', shellGroups),
+    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('View', cameras), footer, sendBar);
   container.append(open, sheet);
 
   // Opened from the greeting builder, Done goes back to it.

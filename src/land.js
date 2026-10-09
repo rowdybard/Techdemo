@@ -65,6 +65,12 @@ const fragmentShader = /* glsl */ `
     vec3 n = vNormal;
     n.xz += (vec2(valueNoise(p * 0.45), valueNoise(p * 0.45 + 31.0)) - 0.5) * 0.28 * near;
     n.xz += (vec2(valueNoise(p * 0.07 + 5.0), valueNoise(p * 0.07 + 17.0)) - 0.5) * 0.22 * mid;
+    // On the far mountains, broken up so the big faces don't read as flat sheets.
+    n.xz += (vec2(valueNoise(p * 0.02 + 9.0), valueNoise(p * 0.02 + 51.0)) - 0.5) * 0.5 * smoothstep(150.0, 1500.0, distance);
+    n.xz += (vec2(valueNoise(p * 0.006 + 3.0), valueNoise(p * 0.006 + 29.0)) - 0.5) * 0.45 * smoothstep(400.0, 2500.0, distance);
+    // Close up, the wind has carved the snow into ridges that run with it.
+    float ridge = sin(p.y * 2.6 + fbm(p * 0.6) * 5.0);
+    n.z += ridge * 0.12 * near;
     n = normalize(n);
 
     // What it is: snow on gentle slopes and high up, bare rock on the steep faces, forest on the
@@ -81,6 +87,7 @@ const fragmentShader = /* glsl */ `
     vec3 rockAlbedo = vec3(0.045, 0.05, 0.065) * (0.7 + 0.6 * fbm(p * 0.03));
     vec3 forestAlbedo = mix(vec3(0.008, 0.016, 0.015), snowAlbedo, 0.08 + 0.2 * valueNoise(p * 0.5));
     vec3 albedo = mix(rockAlbedo, snowAlbedo, snow);
+    albedo *= 1.0 - 0.09 * (ridge * 0.5 + 0.5) * near * snow;
     albedo = mix(albedo, forestAlbedo, trees * (1.0 - snow * 0.15));
 
     // Light: the moon, a cold fill from the sky, and the bursts.
@@ -90,6 +97,7 @@ const fragmentShader = /* glsl */ `
     float farSide = smoothstep(60.0, 220.0, LAKE_CENTER.y - p.y);
     float village = (1.0 - smoothstep(0.0, 120.0, abs(lakeDistance(p) - 30.0))) * (1.0 - smoothstep(430.0, 620.0, abs(p.x))) * farSide;
     vec3 light = moonColor * max(dot(n, uMoon.xyz), 0.0) + fill + vec3(1.0, 0.5, 0.2) * 0.1 * village + burstDiffuse(vWorld, n) * 0.22;
+    light *= mix(1.0, 0.62, near); // the snow at your feet is the darkest, so the eye goes to the lights across the lake
     vec3 color = albedo * light;
 
     // Sparkle: the odd crystal of snow catching the moon, near the eye.

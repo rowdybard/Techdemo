@@ -72,10 +72,16 @@ export function readLink(config) {
   const make = !embed && !autoshow && !gift && !paid && /^[a-z]{3,12}$/.test(params.get('make') || '')
     ? { occasion: params.get('make'), text: greetingBlocked({ message: makeText }) ? '' : makeText }
     : null;
+  // The greeting's occasion, known before the scene is built: a long link carries it, and for a
+  // short one the worker puts it in a meta tag (worker/index.js), so the place is right from the start.
+  const tag = document.querySelector('meta[name="sg-occasion"]');
+  const occasion = autoshow || embed ? '' : (gift && gift.occasion) || (paid && tag ? tag.content : '');
   return {
     embed,
     autoshow,
     make,
+    occasion,
+    look: gift ? gift.look : null,
     gift: autoshow ? null : paid || gift,
     hero: !autoshow && !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero'),
   };

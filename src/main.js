@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { config as defaultConfig } from './config.js';
 import { readLink } from './link.js';
+import { OCCASIONS, placeOf } from './occasions.js';
+import { PLACE_NAMES } from './places.js';
 import * as wind from './wind.js';
 import * as sky from './sky.js';
 import * as burstlights from './burstlights.js';
@@ -66,6 +68,10 @@ export function createApp(container, config = defaultConfig) {
   const phone = matchMedia('(pointer: coarse)').matches;
   // Remembered settings, then whatever a client link carries, before anything reads them.
   const link = readLink(config);
+  // A greeting opens in its own place from the first frame (not the beach, then a swap): its design
+  // may name one, or else its occasion does.
+  if (link.occasion && OCCASIONS[link.occasion]) config.place.environment = placeOf(link.occasion);
+  if (link.look && PLACE_NAMES.includes(link.look.a)) config.place.environment = link.look.a;
 
   const renderer = new THREE.WebGLRenderer({
     antialias: config.renderer.antialias,

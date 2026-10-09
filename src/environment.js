@@ -18,11 +18,12 @@ import * as lake from './lake.js';
 import * as land from './land.js';
 import * as pines from './pines.js';
 import * as village from './village.js';
+import * as reeds from './reeds.js';
 import * as mirror from './mirror.js';
 
 const BUILDERS = {
   beach: () => [ocean, beach, landmarks, lighthouse, walk],
-  lake: () => [land, pines, village, mirror, lake],
+  lake: () => [land, pines, village, reeds, mirror, lake],
 };
 
 export function create(ctx) {

@@ -93,11 +93,19 @@ export const iceFragment = /* glsl */ `
     vec2 bumps = (vec2(valueNoise(p * 0.35), valueNoise(p * 0.35 + 19.0)) - 0.5) * 0.02 * (0.3 + 0.7 * near);
     vec3 crackCell = cells(p * 0.055);
     float crack = (1.0 - smoothstep(0.0, 0.035 + 0.02 * (1.0 - near), crackCell.y)) * smoothstep(0.1, 0.9, valueNoise(p * 0.02 + 3.0));
+    if (near > 0.02) { // up close, a finer net of cracks too
+      // Wandering cracks: the cell walls warped by noise, broken into stretches, thin.
+      vec2 warped = p * 0.28 + (vec2(valueNoise(p * 0.6), valueNoise(p * 0.6 + 40.0)) - 0.5) * 1.1;
+      vec3 fine = cells(warped);
+      float stretch = smoothstep(0.45, 0.75, valueNoise(p * 0.17 + 8.0));
+      crack = max(crack, (1.0 - smoothstep(0.0, 0.028, fine.y)) * near * 0.45 * stretch);
+    }
     // Frost: blown snow in streaks along the wind, patches, a thick band along the shore.
     float blotch = smoothstep(0.58, 0.8, fbm(p * 0.018 + 13.0));
     float drift = smoothstep(0.6, 0.84, fbm(vec2(p.x * 0.006, p.y * 0.05) + 4.0));
-    float shoreBand = smoothstep(7.0, 1.5, -lakeDistance(p));
-    float frost = max(max(blotch * 0.8, drift * 0.7), shoreBand);
+    float shoreBand = smoothstep(4.0, 1.0, -lakeDistance(p));
+    float away = smoothstep(8.0, 70.0, distance); // the ice at your feet is clear
+    float frost = max(max(blotch * 0.8, drift * 0.7) * away, shoreBand);
     frost = max(frost, rim * 0.8); // the ice around a patch of water is thin, white where it is dusted
 
     vec2 slope = mix(bumps, ripples(p, uTime), water);

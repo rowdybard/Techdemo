@@ -32,7 +32,7 @@ const JOBS = {
   love: { o: 'love', msg: 'I LOVE YOU', at: 7.3 },
   congrats: { o: 'congrats', msg: 'CONGRATULATIONS', at: 7 },
   thanks: { o: 'thanks', msg: 'THANK YOU', at: 10.2 },
-  newyear: { o: 'newyear', msg: 'HAPPY NEW YEAR', at: 10.2, sky: 0.9 },
+  newyear: { o: 'newyear', msg: 'HAPPY NEW YEAR', at: 15.6 }, // the clock at 3, shells climbing
   names: { o: 'birthday', msg: 'HAPPY BIRTHDAY', to: 'SOPHIE', at: 11.6 },
   gift: { o: 'love', msg: 'FOR YOU', at: 10.6 },
   calm: { o: 'birthday', msg: 'HAPPY BIRTHDAY', at: 8 },
