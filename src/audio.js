@@ -258,6 +258,38 @@ export function create(ctx) {
     }
   }
 
+  // The countdown clock: a wooden tick each second, higher as zero nears (with a low thump on
+  // the last three), then at zero a boom, and a bell struck under it.
+  function tick(when, second) {
+    const near = 1 - second / 10;
+    tone(when, { from: 900 + 900 * near, to: 500 + 400 * near, peak: 0.2 + 0.2 * near, attack: 0.002, decay: 0.09, type: 'triangle' });
+    noise(page.white, when, { peak: 0.08, decay: 0.03, type: 'highpass', from: 3500 });
+    if (second <= 3) tone(when, { from: 150, to: 60, peak: 0.45, decay: 0.3 });
+  }
+
+  function midnight(when) {
+    boom(when, 1, 1, 0, 1.5);
+    for (const [ratio, peak, decay] of [[1, 0.3, 3.4], [2, 0.2, 2.6], [2.76, 0.16, 2], [5.4, 0.09, 1.2], [8.9, 0.05, 0.7]]) {
+      tone(when, { from: 196 * ratio, to: 195 * ratio, peak, attack: 0.003, decay });
+    }
+    noise(page.white, when + 0.02, { peak: 0.3, attack: 0.1, decay: 1.6, type: 'bandpass', from: 1500, to: 6000, q: 0.5 });
+  }
+
+  let tickedSecond = Infinity; // the number the clock last sounded
+  function clockSounds(time, when, muted) {
+    const clock = ctx.countdown;
+    if (!clock || !clock.active) {
+      tickedSecond = Infinity;
+      return;
+    }
+    const shown = Math.ceil(clock.remaining(time));
+    if (shown >= tickedSecond) return;
+    tickedSecond = shown;
+    if (muted) return;
+    if (shown >= 1 && shown <= 10) tick(when, shown);
+    else if (shown <= 0) midnight(when);
+  }
+
   function launchSound(b, loud, air, pan, when) {
     tone(when, { from: 120, to: 55, peak: 0.35 * loud, decay: 0.35, pan });
     noise(page.white, when, { peak: 0.18 * loud * air, decay: 0.22, from: 900, to: 300, pan });
@@ -331,6 +363,7 @@ export function create(ctx) {
       const ground = ctx.fountains ? ctx.fountains.lights : null;
       // Muted: skip the sounds, but keep up, so turning it up doesn't play a backlog.
       if (!settings.enabled || settings.volume <= 0) {
+        clockSounds(time, 0, true);
         if (bursts) {
           heardBurst = latest(bursts, 'time', time);
           heardLaunch = latest(bursts, 'launch', time);
@@ -339,6 +372,7 @@ export function create(ctx) {
         return;
       }
       const now = audio.currentTime;
+      clockSounds(time, now, false);
       const [, by, bz] = config.show.bargePosition;
       if (bursts) {
         for (let i = 0; i < bursts.length; i++) {

@@ -27,7 +27,7 @@ const GROUND_SHARE = 0.25;
 const GROUND_EVERY = { desktop: 2, phone: 3.2 }; // seconds between puffs from each burning tube
 const RAYS = { desktop: 8, phone: 5 }; // star trails per burst that leave smoke
 const ALONG = { desktop: 3, phone: 2 }; // puffs along each trail
-const SHELL_RECORDS = 64; // fireworks.js keeps this many burst records
+const SHELL_RECORDS = 96; // fireworks.js keeps this many burst records (its SHELLS)
 const FOUNTAIN_RECORDS = 22; // the main barge's tubes and the two side barges' (fountains.js)
 const HANGING = { willow: true, palm: true }; // sparks that fall a long way, leaving curtains
 // How each type's stars fly (bursts.js): drag, launch speed as a share of burst size ×

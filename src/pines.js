@@ -70,7 +70,9 @@ const fragmentShader = /* glsl */ `
 
     vec3 moonColor = vec3(0.3, 0.39, 0.62) * uMoon.w;
     vec3 fill = (vec3(0.035, 0.05, 0.09) * uMoon.w + skyZenith() * 2.0) * (0.5 + 0.5 * n.y) * (0.45 + 0.55 * vShade.x);
-    vec3 light = moonColor * max(dot(n, uMoon.xyz), 0.0) + fill + burstDiffuse(vWorld, n) * 0.22;
+    // Snow rides the branch tips; up by the trunk, under the skirt above, it's shadow.
+    float shelter = mix(1.0, 0.5, vShade.x * (1.0 - smoothstep(0.88, 0.96, vShade.y)));
+    vec3 light = (moonColor * max(dot(n, uMoon.xyz), 0.0) + fill + burstDiffuse(vWorld, n) * 0.22) * shelter;
     vec3 color = albedo * light;
 
     vec3 haze = skyGradient(normalize(vec3(-toEye.x, 0.03, -toEye.z))) + vec3(0.016, 0.024, 0.045) * uMoon.w;

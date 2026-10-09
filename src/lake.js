@@ -11,6 +11,7 @@ export function create(ctx) {
     ...ctx.sky.uniforms,
     ...ctx.burstLights.uniforms,
     ...ctx.mirror.uniforms,
+    ...ctx.countdown.uniforms,
     uTime: { value: 0 },
     uOpen: { value: settings.open },
   };

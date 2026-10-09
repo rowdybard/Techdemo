@@ -22,7 +22,7 @@ import { greetingBlocked } from '../src/moderate.js';
 import { showcase } from './showcase.js';
 import { resend } from './resend.js';
 
-const OCCASIONS = new Set(['halloween', 'birthday', 'love', 'congrats', 'thanks']);
+const OCCASIONS = new Set(['halloween', 'birthday', 'love', 'congrats', 'thanks', 'newyear']);
 const LIMITS = { message: 24, message2: 24, to: 16, from: 24 };
 const PENDING_SECONDS = 2 * 24 * 3600; // unpaid greetings are forgotten after two days
 const WEBHOOK_TOLERANCE = 300; // seconds a Stripe signature stays valid
@@ -294,7 +294,7 @@ async function sha256(text) {
 // its title, description and picture. The page is served with those filled in for the
 // greeting: who made it, the occasion's emoji and picture. Never the message itself (the
 // recipient should see that in the sky first).
-const EMOJI = { halloween: '🎃', birthday: '🎂', love: '❤️', congrats: '🎉', thanks: '🙏' };
+const EMOJI = { halloween: '🎃', birthday: '🎂', love: '❤️', congrats: '🎉', thanks: '🙏', newyear: '🎆' };
 
 async function preview(request, env, url) {
   const page = await env.ASSETS.fetch(new Request(new URL('/', url), request));

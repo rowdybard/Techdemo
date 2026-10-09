@@ -5,7 +5,10 @@
 // entry here, plus any new shells or ground effects it needs.
 //
 // Cues: { at: seconds, shell: type, x: metres across from the barge's middle, h: burst
-// height } or { at, ground: style } or { at, text: 'message' | 'to' }. A cue for a Deluxe
+// height } or { at, ground: style } or { at, text: 'message' | 'to' | 'year' }, or { at,
+// countdown: seconds } to hang the giant clock in the sky. A cue with `zero: s` in place of `at`
+// happens s seconds after the clock reaches zero (director.js sends a shell up early so it bursts
+// right then). A shell cue may name a `palette` (one of config.palettes) to be coloured with. A cue for a Deluxe
 // effect, or marked deluxe: true, plays only in a Deluxe greeting; otherwise a shell or
 // ground effect it names is swapped for the occasion's stand-in (`fallback`).
 import { applyPreset } from './presets.js';
@@ -27,6 +30,17 @@ export const GROUND = new Set(['fountains', 'shooters', 'candles', 'mines', 'fan
 
 const finale = (start, types) => types.map((shell, k) => ({
   at: start + k * 0.35, shell, x: ((k * 53) % 180) - 90, h: 95 + ((k * 37) % 45), deluxe: true,
+}));
+
+// New Year's midnight. Shells that burst together at the clock's zero (director.js sends them up
+// early): [type, x, burst height] for each. Spread across the whole sky, centre highest.
+const salvo = (zero, shells, deluxe = false, palette) => shells.map(([shell, x, h], k) => ({
+  zero: zero + k * 0.1, shell, x, h, ...(deluxe ? { deluxe: true } : {}), ...(palette ? { palette } : {}),
+}));
+// A run of shells, one every `step` seconds from `zero + from`, wandering across the sky (in the
+// named palette, if given: the opening is gold and the barrage goes multicoloured).
+const barrage = (from, count, step, types, deluxe = true, palette) => Array.from({ length: count }, (_, k) => ({
+  zero: from + k * step, shell: types[k % types.length], x: ((k * 67) % 380) - 190, h: 86 + ((k * 43) % 110), ...(deluxe ? { deluxe: true } : {}), ...(palette ? { palette } : {}),
 }));
 
 export const OCCASIONS = {
@@ -113,6 +127,52 @@ export const OCCASIONS = {
       { at: 10.3, shell: 'palm', x: 90, h: 100 },
       { at: 11, ground: 'mines' },
       ...finale(13, ['multibreak', 'crackle', 'strobe', 'crossette', 'multibreak', 'star', 'crackle', 'palm']),
+    ],
+  },
+
+  newyear: {
+    label: 'New Year',
+    preset: 'Winter',
+    message: 'HAPPY NEW YEAR',
+    free: ['willow', 'peony', 'ring', 'fountains', 'candles'],
+    deluxe: ['chrysanthemum', 'crackle', 'strobe', 'mines', 'fans', 'finale'],
+    fallback: { chrysanthemum: 'peony', crackle: 'willow', strobe: 'ring', mines: 'candles', fans: 'fountains' },
+    // A calm few seconds to take in the lake, the clock appears, ten seconds, and at zero the sky
+    // goes off. Zero is at 18 s. The middle of the sky is kept clear while the year and the words
+    // are up. Free gets the break, the year, the words and a short barrage; Deluxe gets a long
+    // barrage and a crescendo on top.
+    ending: [
+      { at: 0, ground: 'fountains' },
+      { at: 1.2, shell: 'willow', x: -70, h: 120 },
+      { at: 2.6, shell: 'willow', x: 70, h: 126 },
+      { at: 4.4, shell: 'peony', x: 0, h: 112 },
+      { at: 5.6, ground: 'candles' },
+      { at: 8, countdown: 10 },
+      // Midnight: seven shells, the middle highest, and the ground goes up.
+      ...salvo(0, [['willow', -150, 108], ['peony', -100, 126], ['willow', -50, 142], ['peony', 0, 162], ['willow', 50, 142], ['peony', 100, 126], ['willow', 150, 108]]),
+      { zero: 0, ground: 'fountains' },
+      ...salvo(0.9, [['ring', -70, 150], ['ring', 70, 150]]),
+      { zero: 0.9, ground: 'candles' },
+      ...salvo(1.6, [['chrysanthemum', -120, 135], ['crackle', 0, 175], ['chrysanthemum', 120, 135]], true),
+      { zero: 1.6, ground: 'mines', deluxe: true },
+      // The year takes the clock's place; gold falls at the sides.
+      { zero: 2.9, text: 'year', width: 215 },
+      ...salvo(3.2, [['willow', -150, 150], ['willow', 150, 150], ['willow', -195, 140], ['willow', 195, 140]]),
+      // Then the words, and the name under them.
+      { zero: 6.8, text: 'message' },
+      ...salvo(7.6, [['peony', -165, 130], ['peony', 165, 130]]),
+      { zero: 10.8, text: 'to' },
+      ...salvo(11.2, [['ring', -150, 120], ['ring', 150, 120]]),
+      // The rest of the night.
+      ...barrage(14.5, 16, 0.4, ['willow', 'peony', 'ring', 'peony'], false, 'classic'),
+      { zero: 13, ground: 'fans', deluxe: true },
+      ...barrage(20.8, 50, 0.26, ['chrysanthemum', 'willow', 'crackle', 'peony', 'strobe', 'ring', 'crackle', 'willow'], true, 'classic'),
+      { zero: 20, ground: 'mines', deluxe: true },
+      { zero: 25, ground: 'fountains', deluxe: true },
+      // The crescendo: everything at once.
+      ...salvo(35, [['strobe', -170, 120], ['chrysanthemum', -130, 150], ['crackle', -90, 130], ['willow', -50, 170], ['peony', -15, 140], ['strobe', 15, 185], ['chrysanthemum', 50, 140],
+        ['willow', 90, 170], ['crackle', 130, 130], ['peony', 170, 150], ['ring', -60, 100], ['ring', 60, 100], ['crackle', 0, 120], ['strobe', 0, 100]], true, 'classic'),
+      { zero: 35, ground: 'fountains', deluxe: true },
     ],
   },
 

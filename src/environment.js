@@ -40,6 +40,7 @@ export function create(ctx) {
 
   let place = null;
   let parts = [];
+  let pieces = null; // an AbortController for the pieces now standing: whatever listens with their signal lets go when they go
 
   function build(name) {
     takeDown();
@@ -47,15 +48,25 @@ export function create(ctx) {
     ctx.place = name;
     const views = PLACES[name].cameras || startViews;
     for (const view in views) config.camera.presets[view] = JSON.parse(JSON.stringify(views[view]));
+    // The pieces listen with ctx.signal, which would outlive them (it ends with the whole app), so
+    // while they're made they get a signal of their own that ends with them, or with the app.
+    pieces = new AbortController();
+    const appSignal = ctx.signal;
+    appSignal.addEventListener('abort', () => pieces.abort(), { once: true, signal: pieces.signal });
+    ctx.signal = pieces.signal;
     try {
       for (const piece of BUILDERS[name]()) parts.push(piece.create(ctx));
     } catch (error) {
+      ctx.signal = appSignal;
       takeDown();
       throw error;
     }
+    ctx.signal = appSignal;
   }
 
   function takeDown() {
+    if (pieces) pieces.abort();
+    pieces = null;
     for (let i = parts.length - 1; i >= 0; i--) parts[i].dispose();
     parts = [];
   }

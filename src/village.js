@@ -55,6 +55,8 @@ const vertexShader = /* glsl */ `
 
 const fragmentShader = /* glsl */ `
   uniform vec4 uMoon;
+  uniform float uTime;
+  uniform float uCheer;         // 0..1: midnight has struck, every window is lit and flickering with joy
   varying vec3 vWorld;
   varying vec3 vNormal;
   varying vec2 vUV;
@@ -100,11 +102,11 @@ const fragmentShader = /* glsl */ `
       float resolved = 1.0 - smoothstep(0.2 * cell.x, 0.5 * cell.x, footprint);
       shape = mix(0.17, shape, resolved);
       float roll = hash12(id + vSeed * 91.0 + floor(vSize.x));
-      float lit = step(roll, vLook.w);
+      float lit = step(roll, vLook.w + uCheer * (1.0 - vLook.w));
       vec3 warm = mix(vec3(1.0, 0.55, 0.22), vec3(1.0, 0.78, 0.45), hash12(id + 7.0 + vSeed * 13.0));
       warm = mix(warm, vec3(0.62, 0.78, 1.0), step(0.93, hash12(id + 3.3 + vSeed * 5.0))); // the odd cold screen-light
       float glow = mix(lit, vLook.w, 1.0 - resolved) * fits;
-      color += warm * shape * glow * 2.6 * (0.75 + 0.5 * hash12(id + 1.9));
+      color += warm * shape * glow * 2.6 * (0.75 + 0.5 * hash12(id + 1.9)) * (1.0 + uCheer * (0.5 + 0.5 * sin(uTime * 8.0 + hash12(id + 5.5) * 40.0)));
     }
 
     gl_FragColor = vec4(color, 1.0);
@@ -204,7 +206,7 @@ export function create(ctx) {
 
   const material = new THREE.ShaderMaterial({
     name: 'Village',
-    uniforms: { ...ctx.sky.uniforms, ...ctx.burstLights.uniforms },
+    uniforms: { ...ctx.sky.uniforms, ...ctx.burstLights.uniforms, uTime: { value: 0 }, uCheer: { value: 0 } },
     vertexShader,
     fragmentShader,
     side: THREE.DoubleSide,
@@ -215,7 +217,10 @@ export function create(ctx) {
   scene.add(mesh);
 
   return {
-    update() {},
+    update(dt, time) {
+      material.uniforms.uTime.value = time;
+      material.uniforms.uCheer.value = ctx.countdown ? ctx.countdown.cheer : 0;
+    },
 
     dispose() {
       scene.remove(mesh);

@@ -5,6 +5,7 @@ import { readLink } from './link.js';
 import * as wind from './wind.js';
 import * as sky from './sky.js';
 import * as burstlights from './burstlights.js';
+import * as countdown from './countdown.js';
 import * as environment from './environment.js';
 import * as fireworks from './fireworks.js';
 import * as fountains from './fountains.js';
@@ -24,7 +25,7 @@ import * as viewlock from './viewlock.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [wind, sky, burstlights, environment, fireworks, fountains, smoke, snow, audio, post, debug, ui, director, video, builder, studio, viewlock, gift, autoshow];
+const MODULES = [wind, sky, burstlights, countdown, environment, fireworks, fountains, smoke, snow, audio, post, debug, ui, director, video, builder, studio, viewlock, gift, autoshow];
 
 const DEG = Math.PI / 180;
 

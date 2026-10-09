@@ -10,6 +10,7 @@
 import { noiseGLSL, skyGLSL } from './glsl.js';
 import { lakeGLSL } from './lake.glsl.js';
 import { burstLightGLSL } from './burstlights.js';
+import { clockGLSL } from './clock.glsl.js';
 
 export const iceVertex = /* glsl */ `
   varying vec3 vWorld;
@@ -26,12 +27,14 @@ export const iceFragment = /* glsl */ `
   uniform samplerCube uEnv;     // the scenery, photographed (mirror.js)
   uniform vec3 uEnvCentre;
   uniform float uEnvRadius;
+  uniform vec4 uClockBox;       // where the countdown clock hangs: x, y, z, half the quad's size
   varying vec3 vWorld;
 
   ${noiseGLSL}
   ${skyGLSL}
   ${lakeGLSL}
   ${burstLightGLSL}
+  ${clockGLSL}
 
   // How open the water is here: 1 in the middle of a patch, 0 under ice, with a ragged edge
   // (the ice comes back thicker toward the shore). The open water lies where the show shows it
@@ -69,6 +72,13 @@ export const iceFragment = /* glsl */ `
     return textureCubeLodEXT(uEnv, vec3(-dir.x, dir.y, dir.z), lod);
   }
 
+  // The countdown clock, mirrored: where the reflected ray crosses the plane the clock hangs in.
+  vec3 clockReflection(vec3 P, vec3 r) {
+    if (uClock.y <= 0.001 || r.z > -0.02) return vec3(0.0);
+    vec3 hit = P + r * ((uClockBox.z - P.z) / r.z);
+    return clockLight((hit.xy - uClockBox.xy) / (uClockBox.w / 2.0));
+  }
+
   void main() {
     vec2 p = vWorld.xz;
     vec3 toEye = cameraPosition - vWorld;
@@ -86,7 +96,7 @@ export const iceFragment = /* glsl */ `
     // Frost: blown snow in streaks along the wind, patches, a thick band along the shore.
     float blotch = smoothstep(0.58, 0.8, fbm(p * 0.018 + 13.0));
     float drift = smoothstep(0.6, 0.84, fbm(vec2(p.x * 0.006, p.y * 0.05) + 4.0));
-    float shoreBand = smoothstep(14.0, 2.5, -lakeDistance(p));
+    float shoreBand = smoothstep(7.0, 1.5, -lakeDistance(p));
     float frost = max(max(blotch * 0.8, drift * 0.7), shoreBand);
     frost = max(frost, rim * 0.8); // the ice around a patch of water is thin, white where it is dusted
 
@@ -116,6 +126,7 @@ export const iceFragment = /* glsl */ `
     float glossy = mix((1.0 - frost) * 0.9, 1.0, water);
     vec3 mirrored = scenery(vWorld, r, mix(mix(1.6, 6.0, frost), 0.3, water)).rgb; // sky, moon, land, village
     mirrored += vec3(0.8, 0.88, 1.0) * uMoon.w * pow(max(dot(r, uMoon.xyz), 0.0), 30.0) * 0.05 * (1.0 - water);
+    mirrored += clockReflection(vWorld, r) * mix(0.35, 1.0, water);
     vec3 color = surface * (1.0 - fresnel * glossy) + mirrored * fresnel * glossy;
 
     // The burst glints: tight streaks on water, a broad sheen on ice.

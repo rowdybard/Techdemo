@@ -100,6 +100,16 @@ export function create(ctx) {
     topRecord[slot] = record;
   }
 
+  function place(lamp) {
+    if (!lamp || lamp.intensity <= 0) return;
+    let weakest = 0;
+    for (let i = 1; i < BURST_LIGHTS; i++) if (positions[i].w < positions[weakest].w) weakest = i;
+    if (lamp.intensity > positions[weakest].w) {
+      positions[weakest].set(lamp.x, lamp.y, lamp.z, lamp.intensity);
+      colors[weakest].set(lamp.r, lamp.g, lamp.b);
+    }
+  }
+
   return {
     update(dt, time) {
       topStrength.fill(0);
@@ -118,13 +128,10 @@ export function create(ctx) {
         positions[i].set(record.x, record.y, record.z, topStrength[i] * scale);
         colors[i].set(record.r, record.g, record.b);
       }
-      // The lighthouse lamp takes the dimmest slot when it outshines what's there.
-      const lamp = ctx.lighthouse ? ctx.lighthouse.lamp : null;
-      const last = BURST_LIGHTS - 1;
-      if (lamp && lamp.intensity > positions[last].w) {
-        positions[last].set(lamp.x, lamp.y, lamp.z, lamp.intensity);
-        colors[last].set(lamp.r, lamp.g, lamp.b);
-      }
+      // Steady lamps (the lighthouse, the countdown clock) take the dimmest slot when they
+      // outshine what's there.
+      place(ctx.lighthouse ? ctx.lighthouse.lamp : null);
+      place(ctx.countdown ? ctx.countdown.lamp : null);
     },
 
     dispose() {

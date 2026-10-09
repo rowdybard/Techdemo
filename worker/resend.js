@@ -10,7 +10,7 @@ const SITE = 'https://skygreeting.com';
 const FROM = 'SkyGreeting <hello@skygreeting.com>';
 const PER_CONNECTION_HOUR = 5;
 const PER_EMAIL_DAY = 3;
-const NAMES = { halloween: 'Halloween', birthday: 'Birthday', love: 'Love', congrats: 'Congrats', thanks: 'Thank you' };
+const NAMES = { halloween: 'Halloween', birthday: 'Birthday', love: 'Love', congrats: 'Congrats', thanks: 'Thank you', newyear: 'New Year' };
 
 /** POST /api/resend { email }. `h` is the worker's helpers: json, sha256, stripe, load. */
 export async function resend(request, env, h) {

@@ -2,7 +2,8 @@
 // Headless check for the scene. It serves the repo, opens the page in Chromium at a
 // desktop and a phone size, reports console problems and the debug overlay's numbers,
 // saves screenshots, then presses Shift+R over and over and compares memory counters
-// with the first start.
+// with the first start. It then does the same on the frozen lake (the other place), and
+// switches between the two places over and over to check that nothing is left behind.
 //
 //   npm install                   once; then `npx playwright install chromium` if Chromium is missing
 //   npm run check                 20 rebuilds, screenshots in .check/
@@ -93,9 +94,15 @@ try {
   if (soakSeconds > 0) leaks.push(...(await soak(desktop.page)));
   await desktop.context.close();
 
-  const problems = [...desktop.problems, ...phone.problems, ...(await preloadProblems())];
+  // The frozen lake, opened as a visitor who chose it would: the saved settings say so.
+  const lake = await open('lake', { viewport: { width: 1280, height: 720 } }, { place: { environment: 'lake' }, snow: { amount: 0.5 }, sky: { timeOfDay: 0.9 } });
+  leaks.push(...(await rebuild(lake, { name: 'lake', warm: 2, count: Math.min(cycles, 6) })));
+  leaks.push(...(await swapPlaces(lake)));
+  await lake.context.close();
+
+  const problems = [...desktop.problems, ...phone.problems, ...lake.problems, ...(await preloadProblems())];
   console.log(problems.length ? `\nConsole problems:\n  ${problems.join('\n  ')}` : '\nConsole: clean');
-  console.log(`Screenshots: ${['desktop', 'phone', 'rebuilt'].map((name) => relative(ROOT, join(OUT, `${name}.png`))).join(', ')}`);
+  console.log(`Screenshots: ${['desktop', 'phone', 'rebuilt', 'lake', 'lake-rebuilt'].map((name) => relative(ROOT, join(OUT, `${name}.png`))).join(', ')}`);
   failed = problems.length > 0 || leaks.length > 0;
   console.log(failed ? '\nFAIL' : '\nPASS');
 } finally {
@@ -129,8 +136,10 @@ async function preloadProblems() {
   return out;
 }
 
-async function open(name, contextOptions) {
+async function open(name, contextOptions, saved = null) {
   const context = await browser.newContext(contextOptions);
+  // Settings a visitor would have saved (the page reads them as it starts).
+  if (saved) await context.addInitScript((json) => localStorage.setItem('beach-fireworks-settings', json), JSON.stringify(saved));
   // Google Analytics is answered here, so a test run never reaches it (or counts as a visit).
   await context.route(/googletagmanager\.com|google-analytics\.com/, (route) => route.fulfill({ status: 204, body: '' }));
   const page = await context.newPage();
@@ -152,22 +161,22 @@ async function open(name, contextOptions) {
 // Shift+R destroys the app and builds a new one. After many rebuilds, every counter
 // should be back where it started. A few warm-up rebuilds come first (WARM_UP), so V8
 // compiling the rebuild code isn't mistaken for a leak.
-async function rebuild({ page, overlay }) {
+async function rebuild({ page, overlay }, { name = 'desktop', warm = WARM_UP, count = cycles } = {}) {
   const cdp = await page.context().newCDPSession(page);
-  for (let i = 0; i < WARM_UP; i++) {
+  for (let i = 0; i < warm; i++) {
     await page.keyboard.press('Shift+R');
     await page.waitForTimeout(400);
   }
   await page.waitForTimeout(waitMs);
   const before = await counters(page, cdp);
-  for (let i = 0; i < cycles; i++) {
+  for (let i = 0; i < count; i++) {
     await page.keyboard.press('Shift+R');
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(name === 'lake' ? 2500 : 400); // the lake photographs itself on its first frame
   }
   await page.waitForTimeout(waitMs);
   const after = await counters(page, cdp);
   const overlayAfter = await readOverlay(page);
-  await page.screenshot({ path: join(OUT, 'rebuilt.png') });
+  await page.screenshot({ path: join(OUT, name === 'lake' ? 'lake-rebuilt.png' : 'rebuilt.png') });
 
   const leaks = [];
   if (after.canvases !== 1) leaks.push(`${after.canvases} canvases on the page`);
@@ -178,7 +187,7 @@ async function rebuild({ page, overlay }) {
     if (overlayAfter[key] !== overlay[key]) leaks.push(`${key} ${overlay[key]} at start, ${overlayAfter[key]} after rebuilding`);
   }
 
-  console.log(`\nRebuilt ${cycles} times with Shift+R after ${WARM_UP} warm-up rebuilds (memory read after forced GC):`);
+  console.log(`\nRebuilt ${count} times with Shift+R after ${warm} warm-up rebuilds${name === 'lake' ? ' (on the lake)' : ''} (memory read after forced GC):`);
   console.log(`  canvases         ${before.canvases} → ${after.canvases}`);
   console.log(`  event listeners  ${before.listeners} → ${after.listeners}`);
   console.log(`  DOM nodes        ${before.nodes} → ${after.nodes}`);
@@ -186,6 +195,53 @@ async function rebuild({ page, overlay }) {
   console.log(`  overlay          ${formatOverlay(overlayAfter)}`);
   console.log(leaks.length ? `  Leaks: ${leaks.join('; ')}` : '  No leaks: every count is back to its startup value');
   return leaks;
+}
+
+// Switches the place from the lake to the beach and back through Customize, a few times: the
+// scenery of each is built and taken down in the middle of a show, and every count must come
+// back to what it was on the lake.
+async function swapPlaces({ page, overlay }) {
+  const cdp = await page.context().newCDPSession(page);
+  await page.click('.studio-open');
+  const choose = async (label) => {
+    await page.click(`.studio-segment:has-text("${label}")`);
+    await page.waitForTimeout(2500);
+  };
+  await choose('Beach'); // once first, so the memory baseline is a settled one
+  await choose('Frozen lake');
+  const before = await counters(page, cdp);
+  for (let i = 0; i < 3; i++) {
+    await choose('Beach');
+    await choose('Frozen lake');
+  }
+  await settled(page); // a new place compiles its shaders and photographs itself first, slowly in software
+  const after = await counters(page, cdp);
+  const overlayAfter = await readOverlay(page);
+  await page.click('.studio-done');
+  const leaks = [];
+  if (after.listeners > before.listeners) leaks.push(`${after.listeners - before.listeners} extra event listeners after switching places`);
+  if (after.nodes > before.nodes + 10) leaks.push(`${after.nodes - before.nodes} extra DOM nodes after switching places`);
+  if (after.heapMB > before.heapMB + 1) leaks.push(`JS heap grew ${(after.heapMB - before.heapMB).toFixed(2)} MB switching places`);
+  for (const key of STABLE) {
+    if (overlayAfter[key] !== overlay[key]) leaks.push(`${key} ${overlay[key]} on the lake at start, ${overlayAfter[key]} after switching places`);
+  }
+  console.log(`\nSwitched beach ↔ lake 3 times: heap ${before.heapMB.toFixed(2)} → ${after.heapMB.toFixed(2)} MB, listeners ${before.listeners} → ${after.listeners}`);
+  console.log(`  overlay          ${formatOverlay(overlayAfter)}`);
+  console.log(leaks.length ? `  Leaks: ${leaks.join('; ')}` : '  No leaks: the places come and go cleanly');
+  return leaks;
+}
+
+// Waits until the draw counts stop changing (three looks in a row, two seconds apart).
+async function settled(page) {
+  let last = '';
+  let same = 0;
+  for (let i = 0; i < 40 && same < 3; i++) {
+    await page.waitForTimeout(2000);
+    const o = await readOverlay(page);
+    const now = [o.calls, o.geometries, o.programs].join('/');
+    same = now === last ? same + 1 : 0;
+    last = now;
+  }
 }
 
 // Runs the Finale preset (chosen in Customize, as a person would) and samples the counts

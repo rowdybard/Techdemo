@@ -49,17 +49,17 @@ export const PRESETS = {
     physics: { windSpeed: 3 },
     bloom: { strength: 0.7 },
   },
-  // A cold, snowy night on the lake: falling snow, a quiet lake, gold willows. The New Year occasion's look.
+  // A frozen mountain lake at midnight: snow falling, gold willows, a village across the ice. The
+  // New Year occasion's look.
   Winter: {
+    place: { environment: 'lake' },
     look: { palette: 'gold', lifetime: 3.2, trailLength: 1.3, mix: mixOf({ willow: 3.5, peony: 2, chrysanthemum: 1.5, ring: 1, star: 0.6, crackle: 1, text: 0.5 }) },
     show: { shellsPerMinute: 26, maxShells: 6 },
     fountains: { color: 'gold', every: 22 },
-    sky: { timeOfDay: 0.82, cloudCoverage: 0.85 },
-    ocean: { waveHeight: 0.35, choppiness: 0.3, surf: 0.3 },
-    landmarks: { pier: true, light: 0.8 },
+    sky: { timeOfDay: 0.9, cloudCoverage: 0.2, starBrightness: 0.5 },
     smoke: { amount: 0.08 },
     physics: { windSpeed: 1.6 },
-    snow: { amount: 0.7 },
+    snow: { amount: 0.5 },
   },
   Neon: {
     look: { palette: 'neon', brightness: 3, glitter: 0.6, mix: mixOf({ ring: 2, peony: 2, chrysanthemum: 2, strobe: 1.2, multibreak: 1 }) },

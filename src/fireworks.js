@@ -7,7 +7,7 @@ import { mergeParts } from './lighthouse.js';
 import { createPool } from './particles.js';
 import { fireShell, planShell } from './shells.js';
 
-const SHELLS = 64; // shell records kept for counting shells in the air and lighting
+const SHELLS = 96; // shell records kept for counting shells in the air, lighting and sound
 const FINALE_SECONDS = 7;
 const FINALE_MAX_SHELLS = 24;
 const TAP_PIXELS = 8; // a press that moves further than this is a drag, not a tap
@@ -58,7 +58,9 @@ export function create(ctx) {
     return false;
   }
 
-  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false) {
+  // `burstAt`, if given, is the moment the shell must burst: it leaves the barge a fuse earlier
+  // (so a shell can be sent off ahead of time and burst exactly on a beat).
+  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false, burstAt = NaN, paletteName = null) {
     plan.launch = time;
     planShell(plan, config, phone, aimX, aimY, type);
     if (random && plan.type !== 'text' && wordsUp(time)) {
@@ -68,11 +70,12 @@ export function create(ctx) {
       const { heightMin, heightMax } = config.physics;
       planShell(plan, config, phone, bx + side * (90 + Math.random() * 70), heightMin + Math.random() * (heightMax - heightMin), plan.type);
     }
+    if (!Number.isNaN(burstAt)) plan.launch = burstAt - plan.fuse;
     const record = bursts[next];
     next = (next + 1) % SHELLS;
-    fireShell(pool, plan, config, config.palettes[config.look.palette], record);
+    fireShell(pool, plan, config, config.palettes[paletteName] || config.palettes[config.look.palette], record);
     record.end = record.time + config.look.lifetime * 1.2;
-    record.launch = time;
+    record.launch = plan.launch;
   }
 
   function inTheAir(time) {
@@ -170,9 +173,9 @@ export function create(ctx) {
       launch(uniforms.uTime.value, NaN, NaN, type);
     },
 
-    /** Fires one shell of `type` from the barge to burst at (x, height). */
-    launchAt(type, x, height) {
-      launch(uniforms.uTime.value, x, height, type);
+    /** Fires one shell of `type` from the barge to burst at (x, height), at `burstAt` if given, in a named palette if given. */
+    launchAt(type, x, height, burstAt = NaN, palette = null) {
+      launch(uniforms.uTime.value, x, height, type, false, burstAt, palette);
     },
 
     /** A few seconds of shells as fast as the pool allows. */
