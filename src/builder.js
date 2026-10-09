@@ -233,6 +233,10 @@ export function create(ctx) {
   }
 
   function show(which) {
+    if (which === 'closed' && state.view && state.view !== 'closed' && state.ownWords) {
+      [config.look.text, config.look.mix.text] = state.ownWords;
+      state.ownWords = null;
+    }
     sheet.hidden = which !== 'sheet';
     bar.hidden = which !== 'bar';
     soon.hidden = which !== 'soon';
@@ -345,6 +349,8 @@ export function create(ctx) {
   }
 
   open.addEventListener('click', () => {
+    // The builder spells the message while it's open; closing gives back the person's own words.
+    if (!state.view || state.view === 'closed') state.ownWords = [config.look.text, config.look.mix.text];
     guessOccasion();
     choose(state.occasion);
     status.textContent = '';

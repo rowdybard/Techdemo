@@ -9,7 +9,7 @@ import { config as defaults } from './config.js';
 const SAVED = ['place', 'sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains', 'smoke', 'snow', 'lake', 'look', 'physics', 'bloom', 'sound', 'hero'];
 const STORAGE_KEY = 'beach-fireworks-settings';
 // [section, key, the old default] for defaults changed since launch (see recall).
-const UPGRADES = [['physics', 'heightMin', 85], ['physics', 'heightMax', 135]];
+const UPGRADES = [['physics', 'heightMin', 85], ['physics', 'heightMax', 135], ['look', 'text', 'SUNSET COVE']];
 const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text',
   'pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'];
 
@@ -86,9 +86,31 @@ export const PRESETS = {
 
 export function applyPreset(config, name) {
   const header = { ...config.hero }; // a client's header text survives a change of preset
+  const words = config.look.text; // and so do the words in the sky: they're the person's, not the style's
   merge(config, DEFAULTS);
   merge(config, PRESETS[name] || {});
   Object.assign(config.hero, header);
+  config.look.text = words;
+  if (words.trim() && !(config.look.mix.text > 0)) config.look.mix.text = 0.5; // a style without words still spells theirs now and then
+}
+
+// A place's setting, as opposed to the show: where it is, its sky, its ice and its snow.
+export const SCENE = ['place', 'sky', 'lake', 'snow'];
+
+/** A copy of the setting, to put back later with putScene. */
+export function takeScene(config) {
+  const scene = {};
+  for (const key of SCENE) scene[key] = JSON.parse(JSON.stringify(config[key]));
+  return scene;
+}
+
+export function putScene(config, scene) {
+  for (const key of SCENE) merge(config[key], scene[key]);
+}
+
+/** The default setting (the beach at dusk), as takeScene would give it. */
+export function defaultScene() {
+  return takeScene(DEFAULTS);
 }
 
 /** Applies only these sections of a preset (a place's sky and snow, say), leaving the rest of the show as it is. */

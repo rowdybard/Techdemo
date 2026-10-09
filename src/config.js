@@ -131,7 +131,7 @@ export const config = {
     // Weight per burst type: how often each one is picked.
     mix: { peony: 2, chrysanthemum: 2, willow: 1.5, palm: 1, ring: 1, crossette: 1, strobe: 0.7, crackle: 1, multibreak: 1, heart: 0.35, star: 0.35, text: 0.5,
       pumpkin: 0, skull: 0, bat: 0, ghost: 0, web: 0, brew: 0, eyes: 0, wisp: 0 },
-    text: 'SUNSET COVE', // what text shells spell; a client's name is the point
+    text: '', // what text shells spell, now and then, like any other shell; empty: none (Customize's Words box)
     textWidth: 230, // metres across
     particles: 420, // sparks per shell (about half on phones)
     burstSize: 79, // metres a spark coasts before drag holds it (Customize's Size at 70%)

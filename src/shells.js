@@ -29,7 +29,7 @@ export function planShell(shell, config, phone, aimX = NaN, aimY = NaN, type = n
   const { physics, look, show } = config;
   const g = 9.81 * physics.gravity;
   const [bx, by, bz] = show.bargePosition;
-  shell.type = type || pickType(look.mix);
+  shell.type = type || pickType(look.mix, look.text.trim() !== '');
   // Text reads best straight ahead, from the middle of the barge, at a middle height.
   if (shell.type === 'text' && Number.isNaN(aimX)) {
     aimX = bx;
@@ -105,12 +105,13 @@ export function fireShell(pool, shell, config, palette, out) {
   return out;
 }
 
-// Weighted pick from the shell mix, e.g. { peony: 2, willow: 1 }.
-function pickType(mix) {
+// Weighted pick from the shell mix, e.g. { peony: 2, willow: 1 }. Words only if there are any.
+function pickType(mix, words) {
   let total = 0;
-  for (const name in mix) total += mix[name];
+  for (const name in mix) if (words || name !== 'text') total += mix[name];
   let roll = Math.random() * total;
   for (const name in mix) {
+    if (!words && name === 'text') continue;
     roll -= mix[name];
     if (roll <= 0) return name;
   }

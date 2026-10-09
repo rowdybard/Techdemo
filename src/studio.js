@@ -3,15 +3,17 @@
 // Smoke) that each move one or two real settings. A bottom sheet on phones, a card on
 // the right on larger screens. The full developer panel (ui.js) is behind "Advanced
 // settings". Every change writes the config the modules read each frame, so it's live.
-import { PRESETS, applyPreset, remember } from './presets.js';
+import { PRESETS, SCENE, applyPreset, applyPresetSections, defaultScene, putScene, remember, takeScene } from './presets.js';
 import { LABELS } from './occasions.js';
 import { LIGHT_COLORS } from './lighthouse.js';
 import { PLACES } from './places.js';
+import { MESSAGE_LIMIT, cleanText } from './link.js';
+import { isBlocked } from './moderate.js';
 
 const PRESET_CARDS = [
   ['Default', '🎆', 'Classic'], ['Halloween', '🎃', 'Halloween'], ['Fourth of July', '🇺🇸', 'Fourth of July'],
   ['Gold Willows', '✨', 'Gold willows'], ['Lake Michigan', '🗼', 'Lake Michigan'], ['Neon', '💜', 'Neon'],
-  ['Calm', '🌙', 'Calm'], ['Winter', '❄️', 'Frozen lake'], ['Finale', '💥', 'Big finale'],
+  ['Calm', '🌙', 'Calm'], ['Finale', '💥', 'Big finale'],
 ];
 const PALETTES = [['classic', 'Classic'], ['usa', 'Red, white & blue'], ['gold', 'Gold'], ['neon', 'Neon'], ['pastel', 'Pastel'], ['halloween', 'Halloween']];
 const SHELLS = {
@@ -80,7 +82,11 @@ export function create(ctx) {
     if (!PRESETS[name]) continue;
     const card = button('studio-card', '', () => {
       currentPreset = name;
+      // Away from the beach a style changes the fireworks, not the place: the frozen lake keeps
+      // its own midnight sky and snow (Place picks those).
+      const scene = config.place.environment !== 'beach' ? takeScene(config) : null;
       applyPreset(config, name);
+      if (scene) putScene(config, scene);
       changed();
     });
     card.append(el('span', 'studio-card-icon', icon), el('span', '', label));
@@ -131,6 +137,38 @@ export function create(ctx) {
     shellGroups.append(el('p', 'studio-sub', group), chips);
   }
 
+  // Words in the sky: spelled now and then, like any other shell. Empty is none. While a
+  // greeting is being made its message is what goes up, so the box steps aside then.
+  const wordsRow = el('label', 'send-field builder-loud studio-words');
+  const wordsInput = el('input');
+  wordsInput.maxLength = MESSAGE_LIMIT;
+  wordsInput.placeholder = 'Empty: no words';
+  wordsInput.autocomplete = 'off';
+  wordsInput.enterKeyHint = 'done';
+  const wordsNote = el('span', 'studio-words-note');
+  wordsRow.append(el('span', '', 'Words in the sky'), wordsInput, wordsNote);
+  let wordsTimer = 0;
+  wordsInput.addEventListener('input', () => {
+    clearTimeout(wordsTimer);
+    const words = cleanText(wordsInput.value, MESSAGE_LIMIT).toUpperCase();
+    if (words && isBlocked(words)) {
+      wordsNote.textContent = 'Those words can’t go in the sky.';
+      return;
+    }
+    wordsNote.textContent = '';
+    config.look.text = words;
+    if (words && !(config.look.mix.text > 0)) config.look.mix.text = 0.5;
+    // A moment after they stop typing, the sky spells it once, so they see it.
+    wordsTimer = setTimeout(() => { if (words && ctx.fireworks) ctx.fireworks.launch('text'); }, 900);
+  }, { signal });
+  wordsInput.addEventListener('change', () => remember(config), { signal });
+  wordsInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') wordsInput.blur(); }, { signal });
+  refreshers.push(() => {
+    if (document.activeElement !== wordsInput) wordsInput.value = config.look.text;
+    wordsRow.hidden = Boolean(ctx.builder && ctx.builder.summary);
+  });
+  shellGroups.append(wordsRow);
+
   // Ground show.
   const ground = el('div', 'studio-chips');
   for (const [style, label] of GROUND) {
@@ -175,11 +213,26 @@ export function create(ctx) {
     ...beachOnly,
   );
 
-  // Where the show is set, and the camera views, which the place names.
+  // Where the show is set, and the camera views, which the place names. A place with a look of
+  // its own (the frozen lake: midnight, falling snow) brings it, and going back to the beach gives
+  // back the sky and snow it had (or the beach's own, if the page opened on the lake).
+  let beachScene = null;
+  function choosePlace(name) {
+    if (config.place.environment === name) return;
+    const look = PLACES[name].look;
+    if (look) {
+      if (config.place.environment === 'beach') beachScene = takeScene(config);
+      applyPresetSections(config, look, SCENE);
+    } else {
+      putScene(config, beachScene || defaultScene());
+      beachScene = null;
+    }
+    config.place.environment = name;
+  }
   const places = el('div', 'studio-segments');
   for (const name in PLACES) {
     const segment = button('studio-segment', `${PLACES[name].icon} ${PLACES[name].label}`, () => {
-      config.place.environment = name;
+      choosePlace(name);
       changed();
     });
     refreshers.push(() => segment.setAttribute('aria-pressed', String(config.place.environment === name)));
@@ -207,7 +260,7 @@ export function create(ctx) {
 
   const footer = el('div', 'studio-footer');
   footer.append(
-    button('studio-link', 'Start over', () => { currentPreset = 'Default'; applyPreset(config, 'Default'); changed(); }),
+    button('studio-link', 'Start over', () => { currentPreset = 'Default'; config.look.text = ''; applyPreset(config, 'Default'); changed(); }),
     button('studio-link', 'Advanced settings', () => { onDone = null; show(false); if (ctx.advanced) ctx.advanced.open(); }),
   );
 

@@ -2,6 +2,7 @@
 // environment host (environment.js) can all name them without loading any scenery.
 // A place picks which scenery modules exist; the fireworks, smoke, snow and sky are shared.
 //
+// `look` names a preset whose setting (sky, snow) comes with the place when it's picked in Customize.
 // `moon` is how bright the moon is (0 is none; sky.js draws it, and the land and ice are lit by it).
 // `views` names the three camera presets for that place (the preset keys stay sand, drone and
 // water so links and the autoshow keep working); `cameras` replaces config.camera.presets
@@ -19,6 +20,7 @@ export const PLACES = {
     label: 'Frozen lake',
     icon: '🏔️',
     moon: 1, // a full moon in the sky, lighting the snow
+    look: 'Winter', // the preset whose sky and snow it takes when picked in Customize (midnight, falling snow)
     views: { sand: 'On the shore', drone: 'From above', water: 'On the ice' },
     cameras: {
       // Standing on the snowy bank, the ice at your feet and the village across the water.

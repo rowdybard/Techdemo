@@ -76,6 +76,9 @@ export function readLink(config) {
   // short one the worker puts it in a meta tag (worker/index.js), so the place is right from the start.
   const tag = document.querySelector('meta[name="sg-occasion"]');
   const occasion = autoshow || embed ? '' : (gift && gift.occasion) || (paid && tag ? tag.content : '');
+  const hero = !autoshow && !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero');
+  // A client's header spells their business name if nothing else was set.
+  if (hero && !config.look.text.trim()) config.look.text = String(config.hero.business).toUpperCase().slice(0, MESSAGE_LIMIT);
   return {
     embed,
     autoshow,
@@ -83,7 +86,7 @@ export function readLink(config) {
     occasion,
     look: gift ? gift.look : null,
     gift: autoshow ? null : paid || gift,
-    hero: !autoshow && !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero'),
+    hero,
   };
 }
 
