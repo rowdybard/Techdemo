@@ -16,12 +16,12 @@
 // an ending's cue marked `layer` (midnight's eruption) plays over what's running.
 import { KIND } from './fireworks.glsl.js';
 import { BARGE_LENGTH, SIDE_BARGE_LENGTH, SIDE_BARGE_OFFSET } from './fireworks.js';
-import { candles, fans, mines, shooters } from './ground.js';
+import { candles, fans, mines, shooters, waterfall } from './ground.js';
 import { cauldron, lanterns, lightning, wisps } from './haunt.js';
 
-const STYLES = ['fountains', 'shooters', 'candles', 'mines', 'fans'];
+const STYLES = ['fountains', 'shooters', 'candles', 'mines', 'fans', 'waterfall'];
 const HALLOWEEN = ['cauldron', 'wisps', 'lightning', 'lanterns']; // style 'halloween' rotates these
-const EFFECTS = { shooters, candles, mines, fans, cauldron, wisps, lightning, lanterns };
+const EFFECTS = { shooters, candles, mines, fans, waterfall, cauldron, wisps, lightning, lanterns };
 
 const MAX_NOZZLES = 14;
 const SIDE_TUBES = 4; // on each side barge

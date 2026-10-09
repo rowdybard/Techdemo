@@ -19,9 +19,10 @@ const PALETTES = [['classic', 'Classic'], ['usa', 'Red, white & blue'], ['gold',
 const SHELLS = {
   Classic: ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star'],
   Halloween: ['pumpkin', 'ghost', 'bat', 'skull', 'web', 'brew', 'eyes', 'wisp'],
+  Showpieces: ['kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'],
 };
 const GROUND = [['off', 'Off'], ['mixed', 'A bit of everything'], ['halloween', 'Halloween mix'], ['fountains', 'Fountains'], ['shooters', 'Shooters'],
-  ['candles', 'Roman candles'], ['mines', 'Mines'], ['fans', 'V fans'], ['cauldron', 'Cauldrons'], ['wisps', 'Wisps'], ['lightning', 'Lightning'], ['lanterns', 'Lanterns']];
+  ['candles', 'Roman candles'], ['mines', 'Mines'], ['fans', 'V fans'], ['waterfall', 'Waterfall'], ['cauldron', 'Cauldrons'], ['wisps', 'Wisps'], ['lightning', 'Lightning'], ['lanterns', 'Lanterns']];
 const CAMERAS = ['sand', 'drone', 'water']; // named by the place (places.js)
 
 // Sliders: what they show, and how they map to settings (value 0..1 both ways).

@@ -11,7 +11,7 @@ const STORAGE_KEY = 'beach-fireworks-settings';
 // [section, key, the old default] for defaults changed since launch (see recall).
 const UPGRADES = [['physics', 'heightMin', 85], ['physics', 'heightMax', 135], ['look', 'text', 'SUNSET COVE']];
 const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text',
-  'pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'];
+  'pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp', 'kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'];
 
 const DEFAULTS = snapshot(defaults);
 
@@ -25,11 +25,11 @@ function mixOf(weights) {
 export const PRESETS = {
   Default: {},
   'Fourth of July': {
-    look: { palette: 'usa', particles: 480, mix: mixOf({ peony: 3, chrysanthemum: 2, crossette: 1.5, strobe: 1.5, ring: 1, multibreak: 1.5, star: 1 }) },
+    look: { palette: 'usa', particles: 480, mix: mixOf({ peony: 3, chrysanthemum: 2, crossette: 1.5, strobe: 1.5, ring: 1, multibreak: 1.5, star: 1, dahlia: 1.5, saturn: 0.8, whirl: 1 }) },
     show: { shellsPerMinute: 46, maxShells: 9 },
   },
   'Gold Willows': {
-    look: { palette: 'gold', lifetime: 3.2, trailLength: 1.4, mix: mixOf({ willow: 5, palm: 2, crackle: 1.5 }) },
+    look: { palette: 'gold', lifetime: 3.2, trailLength: 1.4, mix: mixOf({ willow: 5, palm: 2, crackle: 1.5, kamuro: 2.5, leaves: 1 }) },
     show: { shellsPerMinute: 24, maxShells: 6 },
     sky: { timeOfDay: 0.55 },
   },
@@ -37,11 +37,11 @@ export const PRESETS = {
     // Freshwater: smaller, calmer waves and a short run-up, a pier and lighthouse, dune grass.
     ocean: { waveHeight: 0.45, choppiness: 0.35, surf: 0.4 },
     landmarks: { pier: true, grass: true },
-    look: { mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1.5, ring: 1, crossette: 1, crackle: 1, multibreak: 1, text: 0.5 }) },
+    look: { mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1.5, ring: 1, crossette: 1, crackle: 1, multibreak: 1, text: 0.5, fish: 0.6, saturn: 0.5 }) },
     show: { shellsPerMinute: 30 },
   },
   Halloween: {
-    look: { palette: 'halloween', lifetime: 2.9, mix: mixOf({ pumpkin: 2, skull: 1.3, bat: 1.5, ghost: 1.5, web: 1.1, brew: 1.6, eyes: 1.2, wisp: 1.6, crackle: 0.6, strobe: 0.4 }) },
+    look: { palette: 'halloween', lifetime: 2.9, mix: mixOf({ pumpkin: 2, skull: 1.3, bat: 1.5, ghost: 1.5, web: 1.1, brew: 1.6, eyes: 1.2, wisp: 1.6, crackle: 0.6, strobe: 0.4, leaves: 0.8 }) },
     show: { shellsPerMinute: 30, maxShells: 7 },
     fountains: { style: 'halloween', every: 20, duration: 9 },
     sky: { timeOfDay: 0.9, cloudCoverage: 0.6 },
@@ -53,7 +53,7 @@ export const PRESETS = {
   // New Year occasion's look.
   Winter: {
     place: { environment: 'lake' },
-    look: { palette: 'gold', lifetime: 3.2, trailLength: 1.3, mix: mixOf({ willow: 3.5, peony: 2, chrysanthemum: 1.5, ring: 1, star: 0.6, crackle: 1, text: 0.5 }) },
+    look: { palette: 'gold', lifetime: 3.2, trailLength: 1.3, mix: mixOf({ willow: 3.5, peony: 2, chrysanthemum: 1.5, ring: 1, star: 0.6, crackle: 1, text: 0.5, kamuro: 2, saturn: 0.6 }) },
     show: { shellsPerMinute: 26, maxShells: 6 },
     fountains: { color: 'gold', every: 22 },
     sky: { timeOfDay: 0.9, cloudCoverage: 0.2, starBrightness: 0.5 },
@@ -62,12 +62,12 @@ export const PRESETS = {
     snow: { amount: 0.5 },
   },
   Neon: {
-    look: { palette: 'neon', brightness: 3, glitter: 0.6, mix: mixOf({ ring: 2, peony: 2, chrysanthemum: 2, strobe: 1.2, multibreak: 1 }) },
+    look: { palette: 'neon', brightness: 3, glitter: 0.6, mix: mixOf({ ring: 2, peony: 2, chrysanthemum: 2, strobe: 1.2, multibreak: 1, dahlia: 2, saturn: 1.2, whirl: 1 }) },
     bloom: { strength: 0.85 },
     sky: { timeOfDay: 0.8 },
   },
   Calm: {
-    look: { palette: 'pastel', mix: mixOf({ peony: 2, willow: 2, chrysanthemum: 1, heart: 0.5 }) },
+    look: { palette: 'pastel', mix: mixOf({ peony: 2, willow: 2, chrysanthemum: 1, heart: 0.5, leaves: 1.2, kamuro: 0.6 }) },
     show: { shellsPerMinute: 12, maxShells: 3 },
     fountains: { every: 40, color: 'silver', height: 20, sideBarges: false },
     physics: { windSpeed: 1 },
@@ -76,7 +76,7 @@ export const PRESETS = {
     sky: { timeOfDay: 0.12 },
   },
   Finale: {
-    look: { particles: 520, mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1, palm: 1, ring: 1, crossette: 1.5, strobe: 1, crackle: 1.5, multibreak: 2, text: 0.6 }) },
+    look: { particles: 520, mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1, palm: 1, ring: 1, crossette: 1.5, strobe: 1, crackle: 1.5, multibreak: 2, text: 0.6, kamuro: 1.5, dahlia: 1.5, whirl: 1, fish: 1 }) },
     show: { shellsPerMinute: 95, maxShells: 16 },
     fountains: { every: 14, nozzles: 12 },
     smoke: { amount: 0.18 },

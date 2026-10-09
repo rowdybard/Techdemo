@@ -8,7 +8,7 @@ import { LIGHT_COLORS } from './lighthouse.js';
 import { PLACE_NAMES } from './places.js';
 
 const MIXES = {
-  mixed: ['fountains', 'shooters', 'candles', 'mines', 'fans'],
+  mixed: ['fountains', 'shooters', 'candles', 'mines', 'fans', 'waterfall'],
   halloween: ['cauldron', 'wisps', 'lightning', 'lanterns'],
 };
 const CAMERAS = new Set(['sand', 'drone', 'water']);

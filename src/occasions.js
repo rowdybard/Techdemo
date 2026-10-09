@@ -26,10 +26,12 @@ export const LABELS = {
   heart: 'Hearts', star: 'Stars', ring: 'Rings', peony: 'Peonies', willow: 'Gold willows', palm: 'Palms',
   crossette: 'Crossettes', strobe: 'Strobes', crackle: 'Crackle', multibreak: 'Double breaks', chrysanthemum: 'Chrysanthemums',
   fountains: 'Fountains', candles: 'Roman candles', shooters: 'Sweeping shooters', mines: 'Mines', fans: 'V fans',
+  kamuro: 'Gold crowns', dahlia: 'Colour-changing dahlias', saturn: 'Saturns', fish: 'Swimming fish', whirl: 'Whirlwinds',
+  leaves: 'Falling leaves', waterfall: 'Waterfall',
   finale: 'Grand finale',
 };
 
-export const GROUND = new Set(['fountains', 'shooters', 'candles', 'mines', 'fans', 'cauldron', 'wisps', 'lightning', 'lanterns']);
+export const GROUND = new Set(['fountains', 'shooters', 'candles', 'mines', 'fans', 'waterfall', 'cauldron', 'wisps', 'lightning', 'lanterns']);
 
 // Deluxe's grand finale, about 22 seconds timed by when each shell breaks (`zero` cues: with no
 // clock, zero is the ending's start). The camera lifts and glides toward the show (crane.js); shells
@@ -79,9 +81,9 @@ export const OCCASIONS = {
     label: 'Halloween',
     preset: 'Halloween',
     message: 'HAPPY HALLOWEEN',
-    free: ['pumpkin', 'ghost', 'lanterns'],
-    deluxe: ['skull', 'bat', 'web', 'brew', 'eyes', 'wisp', 'cauldron', 'wisps', 'lightning', 'finale'],
-    fallback: { bat: 'ghost', skull: 'pumpkin', web: 'chrysanthemum', brew: 'crackle', eyes: 'strobe', wisp: 'willow', lightning: 'lanterns', cauldron: 'lanterns', wisps: 'lanterns' },
+    free: ['pumpkin', 'ghost', 'lanterns', 'strobe'],
+    deluxe: ['skull', 'bat', 'web', 'brew', 'eyes', 'wisp', 'cauldron', 'wisps', 'lightning', 'leaves', 'kamuro', 'finale'],
+    fallback: { bat: 'ghost', skull: 'pumpkin', web: 'ring', brew: 'multibreak', eyes: 'strobe', wisp: 'willow', lightning: 'lanterns', cauldron: 'lanterns', wisps: 'lanterns' },
     ending: [
       { at: 0, ground: 'lightning' },
       { at: 1.0, shell: 'bat', x: -90, h: 120 },
@@ -95,7 +97,7 @@ export const OCCASIONS = {
       { at: 12.9, shell: 'pumpkin', x: 0, h: 125 },
       { at: 13.3, shell: 'pumpkin', x: 95, h: 100 },
       { at: 13.6, ground: 'lanterns' },
-      ...grandFinale(18, ['skull', 'bat', 'brew', 'ghost', 'web', 'pumpkin', 'eyes', 'wisp', 'crackle'], ['cauldron', 'wisps', 'lightning'], ['wisp', 'pumpkin', 'wisp'], 'halloween'),
+      ...grandFinale(18, ['skull', 'bat', 'brew', 'leaves', 'ghost', 'web', 'pumpkin', 'eyes', 'wisp', 'crackle'], ['cauldron', 'wisps', 'lightning'], ['wisp', 'kamuro', 'wisp'], 'halloween'),
     ],
   },
 
@@ -103,9 +105,9 @@ export const OCCASIONS = {
     label: 'Birthday',
     preset: 'Default',
     message: 'HAPPY BIRTHDAY',
-    free: ['peony', 'ring', 'star', 'candles'],
-    deluxe: ['multibreak', 'crossette', 'strobe', 'mines', 'finale'],
-    fallback: { multibreak: 'peony', crossette: 'chrysanthemum', strobe: 'ring', mines: 'candles' },
+    free: ['peony', 'ring', 'star', 'candles', 'multibreak', 'strobe', 'mines'],
+    deluxe: ['crossette', 'dahlia', 'saturn', 'whirl', 'kamuro', 'finale'],
+    fallback: { crossette: 'peony' },
     ending: [
       { at: 0, ground: 'candles' },
       { at: 1.2, shell: 'peony', x: -80, h: 110 },
@@ -116,7 +118,7 @@ export const OCCASIONS = {
       { at: 8.9, shell: 'ring', x: 60, h: 115 },
       { at: 10, shell: 'star', x: 0, h: 125 },
       { at: 11, ground: 'mines' },
-      ...grandFinale(15.5, ['multibreak', 'crossette', 'peony', 'strobe', 'ring', 'star', 'chrysanthemum'], ['fans', 'candles', 'mines'], ['willow', 'crossette', 'willow']),
+      ...grandFinale(15.5, ['dahlia', 'crossette', 'saturn', 'whirl', 'multibreak', 'star', 'chrysanthemum', 'fish'], ['fans', 'waterfall', 'mines'], ['kamuro', 'crossette', 'kamuro']),
     ],
   },
 
@@ -124,9 +126,9 @@ export const OCCASIONS = {
     label: 'Love you',
     preset: 'Calm',
     message: 'I LOVE YOU',
-    free: ['heart', 'willow', 'fountains'],
-    deluxe: ['ring', 'strobe', 'fans', 'finale'],
-    fallback: { ring: 'heart', strobe: 'willow', fans: 'fountains' },
+    free: ['heart', 'willow', 'fountains', 'strobe', 'fans'],
+    deluxe: ['ring', 'dahlia', 'leaves', 'kamuro', 'waterfall', 'finale'],
+    fallback: { ring: 'heart' },
     ending: [
       { at: 0, ground: 'fountains' },
       { at: 1.5, shell: 'heart', x: 0, h: 110 },
@@ -136,7 +138,7 @@ export const OCCASIONS = {
       { at: 9.4, shell: 'heart', x: 80, h: 105 },
       { at: 10.5, ground: 'fans' },
       { at: 11, shell: 'willow', x: 0, h: 130 },
-      ...grandFinale(16, ['heart', 'ring', 'willow', 'strobe', 'heart', 'peony', 'chrysanthemum'], ['fountains', 'fans', 'mines'], ['willow', 'heart', 'willow']),
+      ...grandFinale(16, ['heart', 'dahlia', 'leaves', 'ring', 'heart', 'saturn', 'chrysanthemum'], ['fountains', 'waterfall', 'mines'], ['kamuro', 'heart', 'kamuro']),
     ],
   },
 
@@ -144,9 +146,9 @@ export const OCCASIONS = {
     label: 'Congrats',
     preset: 'Fourth of July',
     message: 'CONGRATULATIONS',
-    free: ['crossette', 'star', 'palm', 'shooters'],
-    deluxe: ['multibreak', 'strobe', 'crackle', 'mines', 'finale'],
-    fallback: { multibreak: 'crossette', strobe: 'star', crackle: 'palm', mines: 'shooters' },
+    free: ['crossette', 'star', 'palm', 'shooters', 'multibreak', 'strobe', 'mines'],
+    deluxe: ['crackle', 'dahlia', 'saturn', 'whirl', 'fish', 'finale'],
+    fallback: { crackle: 'palm' },
     ending: [
       { at: 0, ground: 'shooters' },
       { at: 1.5, shell: 'crossette', x: -70, h: 115 },
@@ -157,7 +159,7 @@ export const OCCASIONS = {
       { at: 10, shell: 'palm', x: -90, h: 100 },
       { at: 10.3, shell: 'palm', x: 90, h: 100 },
       { at: 11, ground: 'mines' },
-      ...grandFinale(15.5, ['multibreak', 'crackle', 'strobe', 'crossette', 'star', 'palm', 'chrysanthemum'], ['shooters', 'fans', 'mines'], ['willow', 'crackle', 'willow']),
+      ...grandFinale(15.5, ['dahlia', 'crackle', 'saturn', 'crossette', 'whirl', 'fish', 'chrysanthemum', 'star'], ['shooters', 'waterfall', 'mines'], ['kamuro', 'crackle', 'kamuro']),
     ],
   },
 
@@ -165,9 +167,9 @@ export const OCCASIONS = {
     label: 'New Year',
     preset: 'Winter',
     message: 'HAPPY NEW YEAR',
-    free: ['willow', 'peony', 'ring', 'fountains', 'candles'],
-    deluxe: ['chrysanthemum', 'crackle', 'strobe', 'mines', 'fans', 'finale'],
-    fallback: { chrysanthemum: 'peony', crackle: 'willow', strobe: 'ring', mines: 'candles', fans: 'fountains' },
+    free: ['willow', 'peony', 'ring', 'fountains', 'candles', 'strobe', 'mines', 'fans'],
+    deluxe: ['chrysanthemum', 'crackle', 'kamuro', 'dahlia', 'saturn', 'waterfall', 'finale'],
+    fallback: { chrysanthemum: 'peony', crackle: 'willow' },
     // A calm few seconds to take in the lake, the clock appears, ten seconds, and at zero the sky
     // goes off. Zero is at 18 s. The middle of the sky is kept clear while the year and the words
     // are up. Free gets the break, the year, the words and a short barrage; Deluxe gets a long
@@ -198,12 +200,12 @@ export const OCCASIONS = {
       ...barrage(14.5, 16, 0.4, ['willow', 'peony', 'ring', 'peony'], false, 'classic'),
       { zero: 13, ground: 'fans', deluxe: true },
       { zero: 19, crane: 22, deluxe: true },
-      ...barrage(20.8, 50, 0.26, ['chrysanthemum', 'willow', 'crackle', 'peony', 'strobe', 'ring', 'crackle', 'willow'], true, 'classic'),
+      ...barrage(20.8, 50, 0.26, ['chrysanthemum', 'kamuro', 'dahlia', 'saturn', 'crackle', 'whirl', 'fish', 'willow'], true, 'classic'),
       { zero: 20, ground: 'mines', deluxe: true },
-      { zero: 25, ground: 'fountains', deluxe: true },
+      { zero: 25, ground: 'waterfall', deluxe: true },
       // The crescendo: everything at once.
-      ...salvo(35, [['strobe', -170, 120], ['chrysanthemum', -130, 150], ['crackle', -90, 130], ['willow', -50, 170], ['peony', -15, 140], ['strobe', 15, 185], ['chrysanthemum', 50, 140],
-        ['willow', 90, 170], ['crackle', 130, 130], ['peony', 170, 150], ['ring', -60, 100], ['ring', 60, 100], ['crackle', 0, 120], ['strobe', 0, 100]], true, 'classic'),
+      ...salvo(35, [['kamuro', -170, 120], ['chrysanthemum', -130, 150], ['crackle', -90, 130], ['willow', -50, 170], ['peony', -15, 140], ['saturn', 15, 185], ['chrysanthemum', 50, 140],
+        ['kamuro', 90, 170], ['crackle', 130, 130], ['peony', 170, 150], ['ring', -60, 100], ['ring', 60, 100], ['crackle', 0, 120], ['strobe', 0, 100]], true, 'classic'),
       { zero: 35, ground: 'fountains', deluxe: true },
       { zero: 39, text: 'from', palette: 'signature', deluxe: true },
       { zero: 43.2, keepsake: true, h: 150, deluxe: true },
@@ -214,8 +216,8 @@ export const OCCASIONS = {
     label: 'Thank you',
     preset: 'Gold Willows',
     message: 'THANK YOU',
-    free: ['willow', 'palm', 'fountains'],
-    deluxe: ['crackle', 'chrysanthemum', 'candles', 'finale'],
+    free: ['willow', 'palm', 'fountains', 'strobe', 'multibreak'],
+    deluxe: ['crackle', 'chrysanthemum', 'candles', 'kamuro', 'leaves', 'waterfall', 'finale'],
     fallback: { crackle: 'willow', chrysanthemum: 'palm', candles: 'fountains' },
     ending: [
       { at: 0, ground: 'fountains' },
@@ -225,7 +227,7 @@ export const OCCASIONS = {
       { at: 9, shell: 'palm', x: -80, h: 105 },
       { at: 9.4, shell: 'palm', x: 80, h: 105 },
       { at: 10.5, ground: 'candles' },
-      ...grandFinale(15, ['crackle', 'willow', 'chrysanthemum', 'palm', 'peony', 'willow', 'crackle'], ['fountains', 'candles', 'mines'], ['willow', 'willow', 'willow']),
+      ...grandFinale(15, ['crackle', 'kamuro', 'chrysanthemum', 'leaves', 'palm', 'dahlia', 'willow'], ['fountains', 'waterfall', 'mines'], ['kamuro', 'kamuro', 'kamuro']),
     ],
   },
 };

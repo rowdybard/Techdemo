@@ -21,8 +21,8 @@ import { makeNoiseSoon, noiseNow } from './noise.js';
 
 const SPEED_OF_SOUND = 343;
 const MAX_VOICES = 32;
-const SHAPES = new Set(['heart', 'star', 'text', 'pumpkin', 'skull', 'bat', 'ghost', 'web']);
-const HISSERS = new Set(['willow', 'palm', 'wisp', 'chrysanthemum']);
+const SHAPES = new Set(['heart', 'star', 'text', 'initials', 'pumpkin', 'skull', 'bat', 'ghost', 'web']);
+const HISSERS = new Set(['willow', 'palm', 'wisp', 'chrysanthemum', 'kamuro', 'fish', 'leaves']);
 
 let shared = null; // { audio, brown, white, crackle, room } for the page's lifetime
 let lastInput = 0; // when the person last touched the page (ms), for the idle sleep
@@ -257,6 +257,12 @@ export function create(ctx) {
       noise(page.crackle, when + 0.2, { peak: 0.25 * loud, attack: 0.05, decay: 2.2, type: 'bandpass', from: 1800, q: 1.2, pan, rate: 0.45 });
     } else if (HISSERS.has(type)) {
       noise(page.white, when + 0.15, { peak: 0.06 * loud, attack: 0.4, decay: 2.6, type: 'bandpass', from: 5200 * air + 800, q: 0.6, pan });
+    } else if (type === 'whirl') {
+      // Whirlwinds whistle as they spin: a few rising, wavering whistles.
+      for (let k = 0; k < 4; k++) {
+        const start = 1400 + Math.random() * 900;
+        tone(when + 0.1 + k * 0.12, { from: start, to: start * (1.6 + Math.random() * 0.6), peak: 0.035 * loud, attack: 0.05, decay: 1.4 + Math.random() * 0.6, pan: pan + (k - 1.5) * 0.1, type: 'triangle' });
+      }
     } else if (type === 'multibreak') {
       boom(when + 0.9, loud * 0.7, air, pan, 0.8);
     } else if (type === 'crossette') {

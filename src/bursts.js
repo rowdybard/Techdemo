@@ -6,6 +6,7 @@ import { KIND } from './fireworks.glsl.js';
 import { positionAt, velocityAt } from './particles.js';
 import { SHAPE_TYPES } from './shapes.js';
 import { HALLOWEEN_TYPES } from './halloween.js';
+import { PREMIUM_TYPES } from './premium.js';
 
 const GOLDEN_ANGLE = 2.399963;
 const GOLD = [1, 0.55, 0.16];
@@ -79,13 +80,31 @@ function peony(pool, shell, config, palette, born, at, velocity, out) {
   fillLight(out, born, at, a, shell.size);
 }
 
+// A sphere of long-tailed stars (a peony's are short) whose tips turn another colour as they
+// slow; one in three ends in a ring of crackling pops where every tail runs out.
 function chrysanthemum(pool, shell, config, palette, born, at, velocity, out) {
   const { look, physics } = config;
+  const g = 9.81 * physics.gravity;
   const drag = 1.3 * physics.drag;
   const a = pick(palette);
-  const b = Math.random() < 0.4 ? pick(palette) : a;
-  sphereBurst(pool, shell.count, born, at, velocity, shell.size * drag, drag, a, b, null,
-    look.lifetime * 1.1, 0.35 * look.sparkSize, 0.4, KIND.spark);
+  let b = pick(palette);
+  if (b === a) b = palette.length > 1 ? palette[(palette.indexOf(a) + 1) % palette.length] : SILVER;
+  const life = look.lifetime * 1.25;
+  sphereBurst(pool, shell.count, born, at, velocity, shell.size * drag, drag, a, a, b,
+    life, 0.33 * look.sparkSize, 0.6, KIND.spark, 0.8);
+  if (Math.random() < 0.35) {
+    const tips = Math.round(shell.count * 0.5);
+    const speed = shell.size * drag;
+    const spin = Math.random() * 6.28;
+    let i = pool.begin(tips);
+    for (let k = 0; k < tips; k++) {
+      sphere(k, tips, spin);
+      const delay = life * (0.72 + Math.random() * 0.12);
+      positionAt(p, at[0], at[1], at[2], dir[0] * speed, dir[1] * speed, dir[2] * speed, drag, delay, g, physics.windX, physics.windZ);
+      pool.set(i++, p[0], p[1], p[2], born + delay, 0, -1, 0, 3, 1, 0.95, 0.85, 1, 0.95, 0.85, 99, 0.2, 0.7 * look.sparkSize, 0, KIND.pop);
+    }
+    pool.end();
+  }
   fillLight(out, born, at, a, shell.size);
 }
 
@@ -253,7 +272,7 @@ function multibreak(pool, shell, config, palette, born, at, velocity, out) {
   fillLight(out, born, at, a, shell.size);
 }
 
-export const BURST_TYPES = { peony, chrysanthemum, willow, palm, ring, crossette, strobe, crackle, multibreak, ...SHAPE_TYPES, ...HALLOWEEN_TYPES };
+export const BURST_TYPES = { peony, chrysanthemum, willow, palm, ring, crossette, strobe, crackle, multibreak, ...SHAPE_TYPES, ...HALLOWEEN_TYPES, ...PREMIUM_TYPES };
 
 export function burst(pool, shell, config, palette, born, at, velocity, out) {
   (BURST_TYPES[shell.type] || peony)(pool, shell, config, palette, born, at, velocity, out);

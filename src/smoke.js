@@ -29,12 +29,13 @@ const RAYS = { desktop: 8, phone: 5 }; // star trails per burst that leave smoke
 const ALONG = { desktop: 3, phone: 2 }; // puffs along each trail
 const SHELL_RECORDS = 96; // fireworks.js keeps this many burst records (its SHELLS)
 const FOUNTAIN_RECORDS = 22; // the main barge's tubes and the two side barges' (fountains.js)
-const HANGING = { willow: true, palm: true }; // sparks that fall a long way, leaving curtains
+const HANGING = { willow: true, palm: true, kamuro: true, leaves: true }; // sparks that fall a long way, leaving curtains
 // How each type's stars fly (bursts.js): drag, launch speed as a share of burst size ×
 // drag, and burn time as a share of the lifetime. Shapes and Halloween shells fly as peonies.
 const STARS = {
   peony: [1.4, 1, 1], chrysanthemum: [1.3, 1, 1.1], willow: [1.1, 0.75, 1.9], strobe: [1.5, 1, 1.3], palm: [0.9, 1.1, 1.2],
   ring: [1.4, 1, 1], crossette: [1.1, 0.8, 0.8], crackle: [1.6, 0.8, 0.73], multibreak: [1.4, 1, 1],
+  kamuro: [1.25, 1.05, 2.3], dahlia: [1.35, 1, 1.2], saturn: [1.4, 0.8, 1.35], fish: [0.8, 0.7, 1.3], whirl: [1, 1, 1.4], leaves: [1.5, 0.6, 3.2],
 };
 const spot = [0, 0, 0];
 const vel = [0, 0, 0];

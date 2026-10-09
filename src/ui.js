@@ -28,6 +28,12 @@ const TYPE_LABELS = {
   brew: "Witch's brew",
   eyes: 'Eyes in the dark',
   wisp: "Will-o'-the-wisp",
+  kamuro: 'Gold crown',
+  dahlia: 'Colour-changing dahlia',
+  saturn: 'Saturn',
+  fish: 'Swimming fish',
+  whirl: 'Whirlwind',
+  leaves: 'Falling leaves',
 };
 
 export function create(ctx) {
@@ -83,7 +89,7 @@ export function create(ctx) {
   const ground = gui.addFolder('Ground show').close();
   ground.add(state, 'fountains').name('Ground show now');
   ground.add(config.fountains, 'enabled').name('Ground show on');
-  ground.add(config.fountains, 'style', { 'Mix of everything': 'mixed', Fountains: 'fountains', 'Sweeping shooters': 'shooters', 'Roman candles': 'candles', Mines: 'mines', 'V fans': 'fans', 'Halloween mix': 'halloween', 'Bubbling cauldrons': 'cauldron', "Will-o'-the-wisps": 'wisps', Lightning: 'lightning', 'Floating lanterns': 'lanterns' }).name('Style');
+  ground.add(config.fountains, 'style', { 'Mix of everything': 'mixed', Fountains: 'fountains', 'Sweeping shooters': 'shooters', 'Roman candles': 'candles', Mines: 'mines', 'V fans': 'fans', Waterfall: 'waterfall', 'Halloween mix': 'halloween', 'Bubbling cauldrons': 'cauldron', "Will-o'-the-wisps": 'wisps', Lightning: 'lightning', 'Floating lanterns': 'lanterns' }).name('Style');
   ground.add(config.fountains, 'every', 8, 90, 1).name('Every (s)');
   ground.add(config.fountains, 'duration', 3, 20, 0.5).name('Run time (s)');
   ground.add(config.fountains, 'height', 8, 50, 1).name('Height (m)');

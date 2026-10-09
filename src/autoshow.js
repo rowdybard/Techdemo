@@ -12,10 +12,11 @@
 // It only writes config (as Customize does) and never saves it, so nobody's own design
 // is touched. No words ever go up.
 
-const CLASSIC = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star'];
+const CLASSIC = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star',
+  'kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'];
 const SPOOKY = ['pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'];
 const PALETTES = ['classic', 'usa', 'gold', 'neon', 'pastel'];
-const GROUND = ['fountains', 'shooters', 'candles', 'mines', 'fans', 'mixed'];
+const GROUND = ['fountains', 'shooters', 'candles', 'mines', 'fans', 'waterfall', 'mixed'];
 const SPOOKY_GROUND = ['cauldron', 'wisps', 'lightning', 'lanterns', 'halloween'];
 const LIGHT_COLORS = ['warm', 'white', 'red', 'green'];
 const CAMERAS = ['sand', 'sand', 'sand', 'drone', 'water'];

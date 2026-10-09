@@ -103,7 +103,7 @@ export const config = {
     sideBarges: true, // two small barges either side, four tubes each, almost always playing the main barge's style
     color: 'gold', // fountains: 'gold' or 'silver'; the other effects use the palette
     style: 'mixed', // 'mixed' rotates through the five below; 'halloween' through the four spooky ones
-    // Single styles: 'fountains', 'shooters', 'candles', 'mines', 'fans', 'cauldron', 'wisps', 'lightning', 'lanterns'
+    // Single styles: 'fountains', 'shooters', 'candles', 'mines', 'fans', 'waterfall', 'cauldron', 'wisps', 'lightning', 'lanterns'
   },
 
   // Smoke left by the bursts and the ground show, lit by later bursts.
@@ -130,7 +130,9 @@ export const config = {
     palette: 'classic',
     // Weight per burst type: how often each one is picked.
     mix: { peony: 2, chrysanthemum: 2, willow: 1.5, palm: 1, ring: 1, crossette: 1, strobe: 0.7, crackle: 1, multibreak: 1, heart: 0.35, star: 0.35, text: 0.5,
-      pumpkin: 0, skull: 0, bat: 0, ghost: 0, web: 0, brew: 0, eyes: 0, wisp: 0 },
+      pumpkin: 0, skull: 0, bat: 0, ghost: 0, web: 0, brew: 0, eyes: 0, wisp: 0,
+      // Deluxe's showpieces (premium.js), now and then in the free-running show so people see them.
+      kamuro: 0.5, dahlia: 0.5, saturn: 0.35, fish: 0.35, whirl: 0.35, leaves: 0.3 },
     text: '', // what text shells spell, now and then, like any other shell; empty: none (Customize's Words box)
     textWidth: 230, // metres across
     particles: 420, // sparks per shell (about half on phones)

@@ -6,8 +6,12 @@
 // The vertex shader evaluates p(t) for the head and p(t - trail) for the tail and
 // stretches a camera-facing quad between them, so trails and round sparks are the same
 // quad. Dead and unborn particles collapse to nothing.
+//
+// Three kinds add a closed-form wobble to that path, still with no CPU simulation: `swim` (the
+// fish) wriggles across the way it's heading, wider as it goes; `whirl` circles round its own
+// path; `flutter` (falling leaves) sways side to side as it drifts down, and glints as it turns.
 
-export const KIND = { spark: 0, glitter: 1, strobe: 2, comet: 3, pop: 4 };
+export const KIND = { spark: 0, glitter: 1, strobe: 2, comet: 3, pop: 4, swim: 5, whirl: 6, flutter: 7 };
 
 export const fireworksVertex = /* glsl */ `
   uniform float uTime;
@@ -35,13 +39,35 @@ export const fireworksVertex = /* glsl */ `
   varying float vGround;
   varying float vRamp;        // 0..1 brightness while the burst is still tight
 
+  float seed;  // per spark, 0..1 (set first thing in main)
+  vec3 sideways; // two directions across the spark's launch heading (for the wobbling kinds)
+  vec3 upways;
+
+  vec3 wobble(float t) {
+    float kind = aShape.w;
+    float phase = seed * 6.2832;
+    if (kind < 5.5) return sideways * sin(t * (8.0 + 5.0 * seed) + phase) * min(t, 1.2) * 4.0;
+    if (kind < 6.5) {
+      float turn = t * (7.0 + 4.0 * seed) + phase;
+      return (sideways * cos(turn) + upways * sin(turn)) * (3.0 + 6.0 * min(t, 1.5));
+    }
+    return vec3(sin(t * 2.3 + phase) * 6.0, 0.0, cos(t * 1.6 + phase) * 3.0) * min(t, 1.0);
+  }
+
   vec3 positionAt(float t) {
     float k = aMotion.w;
     vec3 terminal = uGravity / k + uWind;
-    return aStart.xyz + terminal * t + (aMotion.xyz - terminal) * (1.0 - exp(-k * t)) / k;
+    vec3 p = aStart.xyz + terminal * t + (aMotion.xyz - terminal) * (1.0 - exp(-k * t)) / k;
+    return aShape.w > 4.5 ? p + wobble(t) : p;
   }
 
   void main() {
+    seed = fract(aStart.x * 0.1731 + aStart.z * 0.0937 + aStart.w * 7.13 + aMotion.x * 0.37);
+    if (aShape.w > 4.5) {
+      vec3 heading = normalize(aMotion.xyz + vec3(0.0, 0.0001, 0.0));
+      sideways = normalize(cross(heading, abs(heading.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
+      upways = cross(heading, sideways);
+    }
     float age = uTime - aStart.w;
     float life = aShape.x;
     if (age < 0.0 || age > life) {
@@ -91,7 +117,7 @@ export const fireworksVertex = /* glsl */ `
     float anchored = mix(held, 1.0, smoothstep(trail * 0.9, trail * 1.5 + 0.001, age)); // + 0.001: never equal edges (NaN)
     vRamp = opening * (aColor.w > 0.5 ? 1.0 : anchored);
     vKind = aShape.w;
-    vSeed = fract(aStart.x * 0.1731 + aStart.z * 0.0937 + aStart.w * 7.13 + aMotion.x * 0.37);
+    vSeed = seed;
     vGround = aColor.w;
 
     float change = smoothstep(aColor2.w, aColor2.w + 0.25, age);
@@ -151,9 +177,16 @@ export const fireworksFragment = /* glsl */ `
     } else if (vKind > 2.5 && vKind < 3.5) { // comet (the rising shell only): hot white core
       color = mix(color, vec3(1.0, 0.9, 0.75), core * 0.6);
       brightness *= 1.4;
-    } else if (vKind > 3.5) {                // crackle pop: one sharp flash
+    } else if (vKind > 3.5 && vKind < 4.5) { // crackle pop: one sharp flash
       brightness = 3.0 * exp(-vAge * 5.0);
       color = mix(vec3(1.0, 0.95, 0.85), color, 0.3);
+    } else if (vKind > 4.5 && vKind < 5.5) { // fish: a shimmer as they swim
+      brightness *= 0.75 + 0.5 * step(0.5, hash(vSeed * 53.0 + floor(vSeconds * 18.0)));
+    } else if (vKind > 5.5 && vKind < 6.5) { // whirl: a hot, bright head
+      color = mix(color, vec3(1.0, 0.92, 0.8), core * 0.35);
+      brightness *= 1.25;
+    } else if (vKind > 6.5) {                // leaf: glints each time it turns to face you
+      brightness *= 0.5 + 1.6 * pow(abs(sin(vSeconds * (3.5 + 2.5 * vSeed) + vSeed * 6.2832)), 8.0);
     }
 
     // Hundreds of fountain sparks overlap in one place, so they're capped below where they

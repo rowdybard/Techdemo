@@ -156,7 +156,7 @@ The goal is zero per-frame CPU work per particle and zero allocation after start
 
 ### Burst types
 
-Peony, chrysanthemum (peony with trails), willow (gold, slow, long droop), palm (a few thick comets), ring (random tilt), crossette (comets that split in four), strobe/glitter, crackle (tiny delayed pops), multi-break.
+Peony, chrysanthemum (long tails whose tips turn another colour; one in three ends in crackle), willow (gold, slow, long droop), palm (a few thick comets), ring (random tilt), crossette (comets that split in four), strobe/glitter, crackle (tiny delayed pops), multi-break. Deluxe showpieces (`premium.js`): gold crown (kamuro: a dense, long-hanging gold glitter crown that drips), colour-changing dahlia (a pistil core inside big stars that change colour top-down), Saturn (planet and flat ring), swimming fish, whirlwinds, falling leaves; the last three use the shader's wobbling kinds (`KIND.swim`, `whirl`, `flutter`: a closed-form offset added to the path). Ground: fountains, shooters, candles, mines, fans, waterfall (a curtain of strands pouring from 46 m into the water).
 
 Stretch: shape bursts (heart, star, and text or a logo sampled from a canvas). This is the money feature for business demos: the client's name in fireworks over the beach.
 
