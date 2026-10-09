@@ -166,6 +166,7 @@ export const config = {
     pastel: [[1, 0.6, 0.75], [0.6, 0.85, 1], [0.8, 1, 0.7], [1, 0.9, 0.6]],
     halloween: [[1, 0.4, 0.04], [0.6, 0.18, 1], [0.3, 1, 0.2], [1, 0.82, 0.25]],
     custom: [[1, 0.3, 0.1], [0.2, 0.6, 1], [1, 0.85, 0.4]], // the panel's colour pickers edit these
+    signature: [[1, 0.96, 0.9]], // the sender's name closing a Deluxe show: warm white, so it reads over the gold (not a Customize choice)
   },
 
   fireworks: {

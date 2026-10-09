@@ -6,7 +6,7 @@
 //
 // Cues: { at: seconds, shell: type, x: metres across from the barge's middle, h: burst
 // height } or { at, ground: style } (it stops the ground effect before it; with layer: true it
-// plays over it) or { at, text: 'message' | 'to' | 'year' }, or { at,
+// plays over it) or { at, text: 'message' | 'to' | 'year' | 'from' (the sender, signed) }, or { at,
 // countdown: seconds } to hang the giant clock in the sky, or { at, crane: seconds } to lift the
 // camera toward the show for that long (crane.js). A cue with `zero: s` in place of `at`
 // happens s seconds after the clock reaches zero (director.js sends a shell up early so it bursts
@@ -34,8 +34,9 @@ export const GROUND = new Set(['fountains', 'shooters', 'candles', 'mines', 'fan
 // clock, zero is the ending's start). The camera lifts and glides toward the show (crane.js); shells
 // build across the whole sky with the ground show joining in, quicken into mirrored pairs, a breath,
 // then a crescendo of sixteen across the sky inside a second and a half, and a last high break in
-// gold over everything. `shells` are the types it cycles through, `ground` three ground effects (the
-// third layered on the crescendo), `last` the three of the last break.
+// gold over everything, and the sender's name signed under it. `shells` are the types it cycles
+// through, `ground` three ground effects (the third layered on the crescendo), `last` the three of
+// the last break.
 function grandFinale(from, shells, ground, last, lastPalette = 'gold') {
   const cues = [{ zero: from - 1.5, crane: 24, deluxe: true }];
   const shell = (zero, type, x, h, palette) => cues.push({ zero, shell: type, x, h, deluxe: true, ...(palette ? { palette } : {}) });
@@ -48,10 +49,11 @@ function grandFinale(from, shells, ground, last, lastPalette = 'gold') {
     shell(from + 9.32 + k * 0.5, type, x, h);
   }
   for (let k = 0; k < 16; k++) shell(from + 16.4 + k * 0.09, shells[k % shells.length], -210 + k * 28, 110 + ((k * 41) % 80));
-  shell(from + 19, last[0], -120, 150, lastPalette);
-  shell(from + 19.15, last[1], 0, 190, lastPalette);
-  shell(from + 19.3, last[2], 120, 150, lastPalette);
+  shell(from + 19, last[0], -160, 165, lastPalette);
+  shell(from + 19.15, last[1], 0, 205, lastPalette);
+  shell(from + 19.3, last[2], 160, 165, lastPalette);
   cues.push(
+    { zero: from + 22.4, text: 'from', palette: 'signature', deluxe: true },
     { zero: from - 0.4, ground: ground[0], deluxe: true },
     { zero: from + 8, ground: ground[1], deluxe: true },
     { zero: from + 16.2, ground: ground[2], deluxe: true, layer: true },
@@ -201,6 +203,7 @@ export const OCCASIONS = {
       ...salvo(35, [['strobe', -170, 120], ['chrysanthemum', -130, 150], ['crackle', -90, 130], ['willow', -50, 170], ['peony', -15, 140], ['strobe', 15, 185], ['chrysanthemum', 50, 140],
         ['willow', 90, 170], ['crackle', 130, 130], ['peony', 170, 150], ['ring', -60, 100], ['ring', 60, 100], ['crackle', 0, 120], ['strobe', 0, 100]], true, 'classic'),
       { zero: 35, ground: 'fountains', deluxe: true },
+      { zero: 39, text: 'from', palette: 'signature', deluxe: true },
     ],
   },
 

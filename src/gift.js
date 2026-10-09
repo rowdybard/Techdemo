@@ -34,6 +34,7 @@ export function create(ctx) {
   let playAt = 0;
   let now = 0;
   let watching = false; // the card steps aside while the ending plays
+  let wrapped = false; // a Deluxe greeting waits, gift-wrapped, until it's opened
   let busyUntil = -Infinity; // and stays aside this long after, while the last shells burst
 
   const card = el('div', 'gift-card');
@@ -97,11 +98,53 @@ export function create(ctx) {
     applyLook(config, data.look);
     if (!deluxe) keepFree(config, occasion);
     if (ctx.setCameraPreset) ctx.setCameraPreset(config.camera.preset);
-    words = { message: data.message, message2: data.message2 || '', to: data.to };
+    words = { message: data.message, message2: data.message2 || '', to: data.to, from: data.from || '' };
     config.look.text = data.message;
-    title.textContent = `✨ ${data.from ? `${data.from} made you a SkyGreeting` : 'Someone made you a SkyGreeting'}`;
+    const kind = deluxe ? 'a Deluxe SkyGreeting' : 'a SkyGreeting';
+    title.textContent = `${deluxe ? '✦' : '✨'} ${data.from ? `${data.from} made you ${kind}` : `Someone made you ${kind}`}`;
+    card.classList.toggle('gift-deluxe', deluxe);
+    // The buyer back from checkout sees their link at once; a recipient unwraps theirs.
+    if (deluxe && !gift.sent) {
+      wrap(data.from);
+      return;
+    }
     pending = true;
     playAt = now + FIRST_PLAY;
+  }
+
+  // A Deluxe greeting arrives gift-wrapped: a gold seal over the dimmed sky, and nothing plays
+  // until it's opened. The tap is the gesture browsers want before sound, so it opens with the
+  // sound on (or quietly, if they'd rather).
+  function wrap(from) {
+    wrapped = true;
+    const box = el('div', 'gift-wrap');
+    const seal = el('div', 'gift-seal', '✦');
+    seal.setAttribute('aria-hidden', 'true');
+    const who = el('p', 'gift-wrap-from', from ? `${from} sent you` : 'Someone sent you');
+    const what = el('p', 'gift-wrap-what', 'a Deluxe SkyGreeting');
+    const open = el('button', 'gift-wrap-open', 'Tap to open');
+    open.type = 'button';
+    const quiet = el('button', 'gift-wrap-quiet', 'Open without sound');
+    quiet.type = 'button';
+    box.append(seal, who, what, open, quiet);
+    container.append(box);
+    const unwrap = (sound) => {
+      if (!wrapped) return;
+      wrapped = false;
+      if (sound) {
+        config.sound.enabled = true;
+        config.sound.volume = Math.max(config.sound.volume, 0.6);
+      }
+      track('open_gift', { content_type: occasionName, method: sound ? 'sound' : 'quiet' });
+      box.classList.add('is-open');
+      setTimeout(() => box.remove(), 1000);
+      pending = true;
+      playAt = now + 0.6;
+    };
+    open.addEventListener('click', () => unwrap(true), { signal });
+    quiet.addEventListener('click', () => unwrap(false), { signal });
+    signal.addEventListener('abort', () => box.remove());
+    open.focus({ preventScroll: true });
   }
 
   function takenDown() {
@@ -274,7 +317,7 @@ export function create(ctx) {
       // Out of the way while the show plays (on a phone it covers half the screen), and
       // back with its buttons once it's over.
       if (occasion && (pending || (ctx.director && ctx.director.active))) busyUntil = time + CARD_BACK;
-      const playing = time < busyUntil;
+      const playing = wrapped || time < busyUntil;
       if (playing !== watching) {
         watching = playing;
         card.classList.toggle('gift-watching', playing);

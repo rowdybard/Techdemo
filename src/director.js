@@ -13,7 +13,15 @@ const LEAD = 6.3; // how long before it bursts a timed shell must leave (the lon
 // An optional second line gets its own cue, a moment after the message and a little lower.
 const SECOND_LINE = 1.6;
 // Burst heights: the message, the second line, the recipient's name.
-const HEIGHT = { message: 132, message2: 104, to: 76, year: 132 };
+const HEIGHT = { message: 132, message2: 104, to: 76, year: 132, from: 112 };
+const SKY_LIMIT = 24; // characters a text shell spells
+
+// How the sender signs a Deluxe show: FROM SAM, or the name alone if that's too long.
+function signature(name) {
+  const upper = (name || '').trim().toUpperCase();
+  if (!upper) return '';
+  return `FROM ${upper}`.length <= SKY_LIMIT ? `FROM ${upper}` : upper.slice(0, SKY_LIMIT);
+}
 
 // Cues timed from the clock's zero get their real times (a copy, so the occasion's own list is
 // left as it was), and everything is put in the order it fires.
@@ -65,7 +73,7 @@ export function create(ctx) {
       occasion = nextOccasion;
       deluxe = withDeluxe;
       allowed = allowedEffects(occasion, deluxe);
-      words = { ...nextWords, year: String(newYear()) };
+      words = { ...nextWords, year: String(newYear()), from: signature(nextWords.from) };
       cues = withWords(timed(occasion.ending.filter((cue) => deluxe || !cue.deluxe)), words);
       next = 0;
       start = now + 0.3;
@@ -115,7 +123,7 @@ export function create(ctx) {
       config.look.text = text;
       config.look.textWidth = cue.width || Math.min(250, Math.max(100, 60 + text.length * 10));
       // The name goes well below the message, which is still sinking when it bursts.
-      fireworks.launchAt('text', middle, HEIGHT[cue.text] || 132, burstAt);
+      fireworks.launchAt('text', middle, HEIGHT[cue.text] || 132, burstAt, cue.palette);
     } else if (cue.ground) {
       if (ctx.fountains) ctx.fountains.play(resolve(cue.ground), Boolean(cue.layer));
     } else if (cue.shell) {
