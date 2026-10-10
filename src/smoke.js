@@ -108,20 +108,33 @@ export function create(ctx) {
   const seenFountain = new Float64Array(FOUNTAIN_RECORDS).fill(NaN);
   const skyCount = Math.round(size * (1 - GROUND_SHARE));
   const cursors = [0, skyCount]; // sky puffs in [0, skyCount), ground puffs after
+  const owners = new Uint8Array(size);
+  const sources = new Int16Array(size).fill(-1);
+  const sourceTimes = new Float64Array(size);
+  let writingOwner = 0;
+  let writingSource = -1;
+  let writingTime = 0;
   let dirtyFrom = size;
   let dirtyTo = -1;
   let now = 0;
 
-  // Claims the next slot of the sky or ground part if its puff has mostly faded (or is
-  // still waiting to appear). Returns -1 when that part is busy.
+  // Search the whole bounded partition. Future puffs reserve their slot, but one
+  // long-lived puff at the cursor must not block all the free slots behind it.
   function claim(ground) {
     const which = ground ? 1 : 0;
-    const slot = cursors[which];
-    const o = slot * 4;
-    if (now - origin.array[o + 3] < shape.array[o + 2] * 0.75) return -1;
-    const next = slot + 1;
-    cursors[which] = ground ? (next >= size ? skyCount : next) : (next >= skyCount ? 0 : next);
-    return slot;
+    const from = ground ? skyCount : 0;
+    const to = ground ? size : skyCount;
+    let slot = cursors[which];
+    for (let checked = 0; checked < to - from; checked++) {
+      const o = slot * 4;
+      const next = slot + 1 >= to ? from : slot + 1;
+      if (now - origin.array[o + 3] >= shape.array[o + 2] * 0.75) {
+        cursors[which] = next;
+        return slot;
+      }
+      slot = next;
+    }
+    return -1;
   }
 
   // One puff: where and when it appears, its starting radius, how fast it spreads (metres
@@ -134,6 +147,9 @@ export function create(ctx) {
     const slot = claim(ground);
     if (slot < 0) return;
     const o = slot * 4;
+    owners[slot] = writingOwner;
+    sources[slot] = ground ? writingSource : -1;
+    sourceTimes[slot] = writingTime;
     // Stored minus where the air will have got to when it's born (the wind now, carried
     // forward), scaled for its height; the shader adds the air's travel back on.
     const ahead = born - now;
@@ -246,11 +262,13 @@ export function create(ctx) {
     const count = Math.max(1, Math.min(6, Math.ceil(record.hold / every)));
     const output = 0.6 + Math.random() * 0.7; // tubes smoke unevenly
     for (let k = 0; k < count; k++) {
+      const born = record.time + 0.3 + k * every + Math.random() * 0.4;
+      if (born > record.time + record.hold) break;
       puff(
         record.x + (Math.random() - 0.5) * 3,
         by + 2 + Math.random() * 2,
         record.z + (Math.random() - 0.5) * 3,
-        record.time + 0.3 + k * every + Math.random() * 0.4,
+        born,
         2 + Math.random() * 0.8,
         2 + Math.random() * 0.6,
         settings.linger * (0.45 + Math.random() * 0.25),
@@ -265,16 +283,47 @@ export function create(ctx) {
     }
   }
 
+  function cancelPuff(slot) {
+    origin.array[slot * 4 + 3] = -1e6;
+    sources[slot] = -1;
+    dirtyFrom = Math.min(dirtyFrom, slot);
+    dirtyTo = Math.max(dirtyTo, slot);
+  }
+  ctx.smoke = {
+    cutDirected(time) {
+      for (let slot = 0; slot < skyCount; slot++) {
+        if (owners[slot] === 3 && origin.array[slot * 4 + 3] > time) cancelPuff(slot);
+      }
+    },
+    cutGround(owner, time) {
+      for (let slot = skyCount; slot < size; slot++) {
+        if (owners[slot] === owner && origin.array[slot * 4 + 3] > time) cancelPuff(slot);
+      }
+    },
+  };
+
   return {
     update(dt, time) {
       now = time;
       const bursts = ctx.fireworks ? ctx.fireworks.bursts : null;
       const fountains = ctx.fountains ? ctx.fountains.lights : null;
+      // A shortened or replaced tube record also cancels its unborn smoke. This
+      // covers callers changing a hold directly as well as explicit barge stops.
+      if (fountains) {
+        for (let slot = skyCount; slot < size; slot++) {
+          const source = sources[slot];
+          const born = origin.array[slot * 4 + 3];
+          if (source < 0 || born <= time) continue;
+          const record = fountains[source];
+          if (!record || record.time !== sourceTimes[slot] || born > record.time + record.hold) cancelPuff(slot);
+        }
+      }
       if (bursts) {
         for (let i = 0; i < bursts.length && i < SHELL_RECORDS; i++) {
           const record = bursts[i];
           if (record.time === seenShell[i]) continue;
           seenShell[i] = record.time;
+          writingOwner = record.owner || 0;
           if (settings.enabled && record.time > time - 1) shellSmoke(record);
         }
       }
@@ -283,6 +332,9 @@ export function create(ctx) {
           const record = fountains[i];
           if (record.time === seenFountain[i]) continue;
           seenFountain[i] = record.time;
+          writingOwner = record.owner || (i < 14 ? 1 : 2);
+          writingSource = i;
+          writingTime = record.time;
           if (settings.enabled && record.time > time - 1) groundSmoke(record);
         }
       }
@@ -310,6 +362,7 @@ export function create(ctx) {
       scene.remove(mesh);
       quad.dispose();
       material.dispose();
+      ctx.smoke = null;
     },
   };
 }

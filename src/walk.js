@@ -135,6 +135,7 @@ export function create(ctx) {
     },
 
     dispose() {
+      stop();
       clearTimeout(hideHint);
       hint.remove();
       ctx.walk = null;

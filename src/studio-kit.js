@@ -51,7 +51,7 @@ export function controls({ config, signal, refreshers, changed, sync, remember }
     ends.append(el('span', '', def.low), el('span', '', def.high));
     row.append(el('span', 'studio-slider-name', def.name), input, ends);
     input.addEventListener('input', () => { def.set(config, Number(input.value)); sync(); }, { signal });
-    input.addEventListener('change', () => remember(config), { signal });
+    input.addEventListener('change', changed, { signal });
     refreshers.push(() => { input.value = String(Math.min(1, Math.max(0, def.get(config)))); });
     return row;
   }

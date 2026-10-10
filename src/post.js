@@ -3,9 +3,8 @@
 // threshold, and OutputPass applies the renderer's tone mapping and sRGB conversion.
 //
 // Tiers set the pixel-ratio cap, multisampling and the bloom's resolution. On 'auto' the
-// app measures frame time over the first two seconds and steps down a tier if frames
-// average more than about 20 ms, then measures again. A change of place (the frozen lake costs
-// more than the beach) starts the measuring over.
+// app keeps measuring frame time and steps down if sustained work is too slow. This
+// includes later finales and scene changes, not only a quiet opening.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -41,6 +40,50 @@ const ORDER = ['low', 'medium', 'high'];
 const WARM_UP = 700; // ms of shader compiling and first uploads, not counted
 const WINDOW = 2000; // ms per measurement
 const SLOW = 20; // ms per frame that counts as too slow
+
+/** Bounded, allocation-free frame monitor; exported for deterministic clock tests. */
+export function createQualityMonitor(downshift, clock = () => performance.now()) {
+  let mode = null;
+  let place = null;
+  let last = clock();
+  let windowStart = last + WARM_UP;
+  let total = 0;
+  let largest = 0;
+  let frames = 0;
+  function reset(warmup = WARM_UP) {
+    last = clock();
+    windowStart = last + warmup;
+    total = largest = frames = 0;
+  }
+  return {
+    reset,
+    update(nextMode, nextPlace, tier) {
+      if (nextMode !== mode || nextPlace !== place) {
+        const changedPlace = place !== null && nextPlace !== place;
+        mode = nextMode;
+        place = nextPlace;
+        reset(changedPlace ? WARM_UP * 2 : WARM_UP);
+      }
+      const now = clock();
+      const frame = now - last;
+      last = now;
+      if (mode !== 'auto' || now < windowStart || !(frame > 0)) return;
+      total += frame;
+      largest = Math.max(largest, frame);
+      frames++;
+      if (now - windowStart < WINDOW || frames < 4) return;
+      // Ignore one isolated stall, but keep sustained 300 ms (or slower) frames.
+      const average = (total - largest) / (frames - 1);
+      const index = ORDER.indexOf(tier);
+      if (average > SLOW && index > 0) {
+        downshift(ORDER[index - 1]);
+        reset();
+      } else {
+        reset(0); // keep watching for a later, heavier workload
+      }
+    },
+  };
+}
 
 export function create(ctx) {
   const { renderer, scene, camera, config, phone, stats } = ctx;
@@ -100,16 +143,9 @@ export function create(ctx) {
     stats.quality = tierName;
     ctx.resize();
   }
-  ctx.post = { setTier, get tier() { return tierName; } };
+  const monitor = createQualityMonitor(setTier);
+  ctx.post = { setTier, remeasure: monitor.reset, get tier() { return tierName; } };
   stats.quality = tierName;
-
-  // Auto quality: average real frame times, skipping the warm-up and any long stall.
-  let measuring = settings.tier === 'auto';
-  let windowStart = performance.now() + WARM_UP;
-  let last = 0;
-  let total = 0;
-  let frames = 0;
-  let measuredPlace = ctx.place;
 
   function makeTarget(samples) {
     return new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples });
@@ -125,31 +161,7 @@ export function create(ctx) {
       bloom.radius = config.bloom.radius;
       bloom.threshold = config.bloom.threshold;
 
-      if (settings.tier === 'auto' && ctx.place !== measuredPlace) {
-        measuredPlace = ctx.place;
-        measuring = true;
-        windowStart = performance.now() + WARM_UP * 2; // the new place's shaders compile first
-        total = 0;
-        frames = 0;
-      }
-      if (!measuring) return;
-      const now = performance.now();
-      const frame = now - last;
-      last = now;
-      if (now < windowStart || frame > 250) return;
-      total += frame;
-      frames++;
-      if (now - windowStart < WINDOW) return;
-      const average = total / frames;
-      const index = ORDER.indexOf(tierName);
-      if (average > SLOW && index > 0) {
-        setTier(ORDER[index - 1]);
-        windowStart = now + WARM_UP;
-        total = 0;
-        frames = 0;
-      } else {
-        measuring = false;
-      }
+      monitor.update(settings.tier, ctx.place, tierName);
     },
 
     dispose() {

@@ -57,6 +57,7 @@
     var view = query.get('g') || query.get('msg') ? 'greeting' : query.get('hero') === '1' ? 'hero' : '';
     gtag('js', new Date());
     gtag('config', 'G-BTBT8MCNPJ', {
+      page_referrer: document.referrer ? new URL(document.referrer).origin + new URL(document.referrer).pathname : '',
       page_location: location.origin + location.pathname + (view ? '?view=' + view : ''),
       // The worker puts the sender's name in a greeting's title, so Analytics gets a plain one.
       page_title: view === 'greeting' ? 'SkyGreeting greeting' : document.title,
@@ -315,6 +316,13 @@
 <link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/shaders/LuminosityHighPassShader.js">
 <link rel="modulepreload" href="./vendor/three-0.186.1/examples/jsm/shaders/OutputShader.js">
 <link rel="modulepreload" href="./vendor/lil-gui-0.21.0/dist/lil-gui.esm.min.js">
+<link rel="modulepreload" href="./src/audio-recipes.js">
+<link rel="modulepreload" href="./src/builder-draft.js">
+<link rel="modulepreload" href="./src/catalog.js">
+<link rel="modulepreload" href="./src/design.js">
+<link rel="modulepreload" href="./src/navigation.js">
+<link rel="modulepreload" href="./src/offer-ui.js">
+<link rel="modulepreload" href="./src/place-settings.js">
 <link rel="modulepreload" href="./src/audio.js">
 <link rel="modulepreload" href="./src/autoshow.js">
 <link rel="modulepreload" href="./src/beach.js">
@@ -385,7 +393,7 @@
 </head>
 <body>
 <h1 class="sr-only">SkyGreeting: send a fireworks show with their name in the sky</h1>
-<p class="sr-only">Sky Greeting lets you design a fireworks show over a beach at dusk or a frozen lake at midnight, write your own words to spell out in the sky, and send it to someone as a link that plays in their browser. Free to make and send; Deluxe greetings are $4.99 and add a grand finale, a gift-wrapped opening, your name signed in the sky and your initials in a heart. Contact: hello@skygreeting.com.</p>
+<p class="sr-only">Sky Greeting lets you design a fireworks show over a beach at night or a frozen lake at midnight, write your own words to spell out in the sky, and send it to someone as a link that plays in their browser. The Free version costs $0. A full Deluxe show costs <span data-sg-price>$4.99</span> <span data-sg-promotion></span> and includes Deluxe effects, side-barge fountains, a grand finale, a gift-wrapped opening, your name signed in the sky and your initials in a heart. Contact: hello@skygreeting.com.</p>
 <div id="app"></div>
 <nav class="site-links" aria-label="About SkyGreeting"><a href="/about">About &amp; pricing</a><a href="/ideas">Ideas</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/find">Lost a link?</a></nav>
 <div class="loader" id="loader" role="status" aria-live="polite">

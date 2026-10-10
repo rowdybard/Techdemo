@@ -4,17 +4,18 @@
 // packed small enough to ride in a free link or be stored with a paid greeting. Also
 // what a free send may use: an occasion's Deluxe effects are taken back out.
 import { GROUND, paidItems } from './occasions.js';
-import { LIGHT_COLORS } from './lighthouse.js';
 import { PLACE_NAMES } from './places.js';
+import { takeDesign, putDesign } from './design.js';
+import { deluxeFeatures, freeDesign, GROUND_MIXES } from './catalog.js';
 
-const MIXES = {
-  mixed: ['fountains', 'shooters', 'candles', 'mines', 'fans', 'waterfall'],
-  halloween: ['cauldron', 'wisps', 'lightning', 'lanterns'],
-};
+const MIXES = GROUND_MIXES;
 const CAMERAS = new Set(['sand', 'drone', 'water']);
 
 /** The designed parts of the config, as a small plain object. */
-export function lookOf(config) {
+export function lookOf(config) { return { ver: 2, design: takeDesign(config) }; }
+
+// Retained only as the documented shape of versionless published links.
+export function legacyLookOf(config) {
   const mix = {};
   for (const type in config.look.mix) if (type !== 'text' && config.look.mix[type] > 0) mix[type] = Math.round(config.look.mix[type] * 10) / 10;
   const look = {
@@ -47,6 +48,11 @@ export function lookOf(config) {
 /** Applies a look (from a link or the server: untrusted, so every value is checked). */
 export function applyLook(config, look) {
   if (!look || typeof look !== 'object') return;
+  if (look.ver === 2) {
+    if (look.design && typeof look.design === 'object' && !Array.isArray(look.design)) putDesign(config, look.design);
+    return;
+  }
+  if (look.ver != null && look.ver !== 1) return;
   const number = (value, min, max, fallback) => (typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback);
   if (typeof look.p === 'string' && config.palettes[look.p] && look.p !== 'custom') config.look.palette = look.p;
   if (look.m && typeof look.m === 'object') {
@@ -79,7 +85,7 @@ export function applyLook(config, look) {
   if (look.d === 0 || look.d === 1) config.landmarks.grass = look.d === 1;
   config.landmarks.light = number(look.h, 0, 2, config.landmarks.light);
   config.landmarks.sweep = number(look.v, 0, 20, config.landmarks.sweep);
-  if (typeof look.u === 'string' && Object.hasOwn(LIGHT_COLORS, look.u)) config.landmarks.lightColor = look.u;
+  if (['warm', 'white', 'red', 'green'].includes(look.u)) config.landmarks.lightColor = look.u;
   if (CAMERAS.has(look.c)) config.camera.preset = look.c;
   if (PLACE_NAMES.includes(look.a)) config.place.environment = look.a;
 }
@@ -89,13 +95,7 @@ export function applyLook(config, look) {
  * count: it's the default, and a free send quietly uses only its free effects.
  */
 export function deluxeInUse(config, occasion) {
-  const used = [];
-  const ground = chosenGround(config);
-  for (const item of paidItems(occasion)) {
-    if (item === 'finale') continue;
-    if (GROUND.has(item) ? ground.includes(item) : config.look.mix[item] > 0) used.push(item);
-  }
-  return used;
+  return deluxeFeatures(config);
 }
 
 // The ground effects someone picked by name (a single style, a list, or the Halloween mix).
@@ -105,8 +105,12 @@ function chosenGround(config) {
 }
 
 /** Takes an occasion's Deluxe effects back out, for a free send. */
-export function keepFree(config, occasion) {
-  const paid = paidItems(occasion);
+export function keepFree(config, occasion, { legacy = false } = {}) {
+  if (!legacy) {
+    putDesign(config, freeDesign(takeDesign(config)));
+    return;
+  }
+  const paid = paidItems(occasion, { legacy: true });
   for (const item of paid) if (!GROUND.has(item) && item in config.look.mix) config.look.mix[item] = 0;
   let any = false;
   for (const type in config.look.mix) if (type !== 'text' && config.look.mix[type] > 0) any = true;

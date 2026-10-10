@@ -17,6 +17,16 @@ export function create(ctx) {
   const toward = new THREE.Vector3();
   const expectTarget = new THREE.Vector3().copy(controls.target);
   let amount = 0; // 0 at rest, 1 at the top
+  function reset() {
+    if (controls.target.distanceToSquared(expectTarget) <= 0.01) {
+      camera.position.sub(applied);
+      controls.target.sub(applied);
+    }
+    applied.set(0, 0, 0);
+    amount = 0;
+    expectTarget.copy(controls.target);
+  }
+  ctx.crane = { reset, get remaining() { return amount * SETTLE; } };
 
   return {
     update(dt, time) {
@@ -43,6 +53,6 @@ export function create(ctx) {
       expectTarget.copy(controls.target);
     },
 
-    dispose() {},
+    dispose() { reset(); ctx.crane = null; },
   };
 }

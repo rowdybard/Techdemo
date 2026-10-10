@@ -6,6 +6,8 @@ import { PRESETS, applyPreset, loadSettings, remember, settingsJSON } from './pr
 import { clientLink, embedCode } from './link.js';
 import { createHero } from './hero.js';
 import { isTyping } from './debug.js';
+import { PLACES } from './places.js';
+import { isDeluxe, groundStyles } from './catalog.js';
 
 const TYPE_LABELS = {
   peony: 'Peony',
@@ -37,7 +39,7 @@ const TYPE_LABELS = {
 };
 
 export function create(ctx) {
-  const { config, container, phone, signal } = ctx;
+  const { config, container, phone, signal, navigation: nav } = ctx;
   // Remembered settings and anything in the link were applied in main.js (link.js).
 
   const gui = new GUI({ container, title: 'Show designer', width: phone ? 280 : 300 });
@@ -45,18 +47,19 @@ export function create(ctx) {
   ctx.gui = gui; // main.js destroys it early in teardown
   // The friendly Customize drawer (studio.js) is the everyday panel. This one is
   // "Advanced settings": hidden unless asked for, or opened from the link with #advanced.
-  if (!location.hash.includes('advanced')) gui.hide();
+  gui.hide();
+  const unregister = nav.register('advanced', { element: gui.domElement,
+    show() { gui.show(); gui.open(); refresh(); }, hide() { gui.hide(); } });
   ctx.advanced = {
     open() {
-      gui.show();
-      gui.open();
-      refresh();
+      nav.open('advanced', { parent: 'studio' });
     },
     refresh() {
       for (const controller of gui.controllersRecursive()) controller.updateDisplay();
+      refreshScene();
     },
   };
-  gui.add({ back: () => { gui.hide(); if (ctx.studio) ctx.studio.open(); } }, 'back').name('← Back to Customize');
+  gui.add({ back: () => nav.back() }, 'back').name('← Back to Customize');
 
   const state = {
     preset: 'Default',
@@ -70,7 +73,7 @@ export function create(ctx) {
 
   // Presets and the big buttons.
   gui.add(state, 'preset', Object.keys(PRESETS)).name('Preset').onChange((name) => {
-    applyPreset(config, name);
+    if (ctx.studio) ctx.studio.pickLook(name); else applyPreset(config, name);
     refresh();
   });
   gui.add(state, 'finale').name('Finale!');
@@ -89,18 +92,24 @@ export function create(ctx) {
   const ground = gui.addFolder('Ground show').close();
   ground.add(state, 'fountains').name('Ground show now');
   ground.add(config.fountains, 'enabled').name('Ground show on');
-  ground.add(config.fountains, 'style', { 'Mix of everything': 'mixed', Fountains: 'fountains', 'Sweeping shooters': 'shooters', 'Roman candles': 'candles', Mines: 'mines', 'V fans': 'fans', Waterfall: 'waterfall', 'Halloween mix': 'halloween', 'Bubbling cauldrons': 'cauldron', "Will-o'-the-wisps": 'wisps', Lightning: 'lightning', 'Floating lanterns': 'lanterns' }).name('Style');
+  const groundNames = { 'Mix of everything': 'mixed', Fountains: 'fountains', 'Sweeping shooters': 'shooters',
+    'Roman candles': 'candles', Mines: 'mines', 'V fans': 'fans', Waterfall: 'waterfall', 'Halloween mix': 'halloween',
+    'Bubbling cauldrons': 'cauldron', "Will-o'-the-wisps": 'wisps', Lightning: 'lightning', 'Floating lanterns': 'lanterns' };
+  const groundOptions = Object.fromEntries(Object.entries(groundNames).map(([label, style]) =>
+    [`${label}${groundStyles(style).some(isDeluxe) ? ' · Deluxe' : ''}`, style]));
+  ground.add(config.fountains, 'style', groundOptions).name('Style');
   ground.add(config.fountains, 'every', 8, 90, 1).name('Every (s)');
   ground.add(config.fountains, 'duration', 3, 20, 0.5).name('Run time (s)');
   ground.add(config.fountains, 'height', 8, 50, 1).name('Height (m)');
   ground.add(config.fountains, 'nozzles', 2, 14, 1).name('Tubes');
-  ground.add(config.fountains, 'sideBarges').name('Side barges');
+  const width = gui.addFolder('Show width');
+  width.add(config.fountains, 'sideBarges').name('Side-barge fountains · Deluxe').onChange((on) => { if (on) config.fountains.enabled = true; });
   ground.add(config.fountains, 'color', { Gold: 'gold', Silver: 'silver' }).name('Fountain colour');
 
   const mix = gui.addFolder('Shell mix').close();
   for (const type in TYPE_LABELS) {
     if (typeof config.look.mix[type] !== 'number') config.look.mix[type] = 0; // a partial mix leaves the rest off
-    mix.add(config.look.mix, type, 0, 5, 0.1).name(TYPE_LABELS[type]);
+    mix.add(config.look.mix, type, 0, 5, 0.1).name(`${TYPE_LABELS[type]}${isDeluxe(type) ? ' · Deluxe' : ''}`);
   }
 
   const look = gui.addFolder('Look').close();
@@ -128,23 +137,29 @@ export function create(ctx) {
   physics.add(config.physics, 'angleVariance', 0, 25, 0.5).name('Launch lean (°)');
 
   const scene = gui.addFolder('Scene').close();
+  const beachControls = [], lakeControls = [];
+  const placeChoice = { place: config.place.environment };
+  scene.add(placeChoice, 'place', Object.fromEntries(Object.entries(PLACES).map(([id, place]) => [place.label, id]))).name('Place')
+    .onChange((name) => { ctx.studio?.choosePlace(name); refreshScene(); });
   scene.add(config.sky, 'timeOfDay', 0, 1, 0.01).name('Dusk → night');
   scene.add(config.sky, 'cloudCoverage', 0, 0.8, 0.01).name('Clouds');
   scene.add(config.sky, 'starBrightness', 0, 2, 0.05).name('Stars');
-  scene.add(config.ocean, 'waveHeight', 0, 2.5, 0.05).name('Wave height');
-  scene.add(config.ocean, 'choppiness', 0, 1.2, 0.05).name('Choppiness');
-  scene.add(config.ocean, 'surf', 0, 1.6, 0.01).name('Breakers (m)');
-  scene.add(config.landmarks, 'pier').name('Pier & lighthouse');
-  scene.add(config.landmarks, 'grass').name('Dune grass');
-  scene.add(config.landmarks, 'light', 0, 2, 0.05).name('Lighthouse light');
-  scene.add(config.landmarks, 'sweep', 0, 20, 0.5).name('Beam turns a minute');
-  scene.add(config.landmarks, 'lightColor', ['warm', 'white', 'red', 'green']).name('Lighthouse colour');
-  scene.add(config.beach, 'glints', 0, 2, 0.05).name('Sand glints');
+  beachControls.push(scene.add(config.ocean, 'waveHeight', 0, 2.5, 0.05).name('Wave height'));
+  beachControls.push(scene.add(config.ocean, 'choppiness', 0, 1.2, 0.05).name('Choppiness'));
+  beachControls.push(scene.add(config.ocean, 'surf', 0, 1.6, 0.01).name('Breakers (m)'));
+  beachControls.push(scene.add(config.landmarks, 'pier').name('Pier & lighthouse'));
+  beachControls.push(scene.add(config.landmarks, 'grass').name('Dune grass'));
+  beachControls.push(scene.add(config.landmarks, 'light', 0, 2, 0.05).name('Lighthouse light'));
+  beachControls.push(scene.add(config.landmarks, 'sweep', 0, 20, 0.5).name('Beam turns a minute'));
+  beachControls.push(scene.add(config.landmarks, 'lightColor', ['warm', 'white', 'red', 'green']).name('Lighthouse colour'));
+  beachControls.push(scene.add(config.beach, 'glints', 0, 2, 0.05).name('Sand glints'));
+  lakeControls.push(scene.add(config.snow, 'amount', 0, 1, 0.01).name('Snowfall'));
+  lakeControls.push(scene.add(config.lake, 'open', 0, 1, 0.01).name('Ice → open water'));
   scene.add(config.look, 'sceneLight', 0, 3, 0.05).name('Firework light');
   scene.add(config.smoke, 'enabled').name('Smoke');
   scene.add(config.smoke, 'amount', 0, 2, 0.05).name('Smoke amount');
   scene.add(config.smoke, 'linger', 8, 60, 1).name('Smoke lingers (s)');
-  scene.add(config.camera, 'preset', { 'On the sand': 'sand', Drone: 'drone', 'Water level': 'water' }).name('Camera')
+  const cameraChoice = scene.add(config.camera, 'preset', { 'On the sand': 'sand', 'From above': 'drone', 'In the water': 'water' }).name('View')
     .onChange((name) => ctx.setCameraPreset(name));
   scene.add(config.renderer, 'exposure', 0.3, 2, 0.01).name('Exposure');
   scene.add(config.bloom, 'strength', 0, 2, 0.01).name('Bloom strength');
@@ -153,7 +168,7 @@ export function create(ctx) {
   scene.add(state, 'quality', { Auto: 'auto', Low: 'low', Medium: 'medium', High: 'high' }).name('Quality')
     .onChange((tier) => {
       config.quality.tier = tier;
-      if (tier !== 'auto' && ctx.post) ctx.post.setTier(tier);
+      if (ctx.post) { if (tier === 'auto') ctx.post.remeasure(); else ctx.post.setTier(tier); }
     });
 
   const sound = gui.addFolder('Sound').close();
@@ -221,15 +236,24 @@ export function create(ctx) {
   box.querySelector('[data-action="load"]').addEventListener('click', () => {
     const error = loadSettings(config, text.value);
     status.textContent = error || 'Loaded.';
-    if (!error) refresh();
+    if (!error) { ctx.builder?.designChanged(); ctx.studio?.refresh(); refresh(); }
   }, { signal });
 
   function refresh() {
     for (const controller of gui.controllersRecursive()) controller.updateDisplay();
     hero.refresh();
+    refreshScene();
     remember(config);
   }
-  gui.onFinishChange(() => remember(config));
+  let namedPlace = null;
+  function refreshScene() {
+    const place = PLACES[config.place.environment] || PLACES.beach;
+    placeChoice.place = config.place.environment;
+    for (const controller of beachControls) { controller.show(place.capabilities.beach); controller.domElement.hidden = !place.capabilities.beach; }
+    for (const controller of lakeControls) { controller.show(place.capabilities.ice); controller.domElement.hidden = !place.capabilities.ice; }
+    if (namedPlace !== place) { cameraChoice.options(Object.fromEntries(Object.entries(place.views).map(([id, label]) => [label, id]))); namedPlace = place; }
+  }
+  gui.onFinishChange(() => { ctx.builder?.designChanged(); ctx.studio?.refresh(); refreshScene(); remember(config); });
 
   // Hero mode: from the panel, the H key, or a link ending in #hero.
   const hero = createHero(ctx, () => {
@@ -251,11 +275,13 @@ export function create(ctx) {
     for (const controller of gui.controllersRecursive()) controller.updateDisplay();
   }
   if (ctx.link.embed) container.classList.add('embed-mode');
+  if (location.hash.includes('advanced')) container.addEventListener('scene-ready', () => ctx.advanced.open(), { once: true, signal });
 
   return {
     update() {},
     dispose() {
       hero.dispose();
+      unregister();
       container.classList.remove('embed-mode');
       ctx.gui = null; // main.js has already destroyed it
       ctx.advanced = null;

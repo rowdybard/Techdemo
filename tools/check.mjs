@@ -52,7 +52,7 @@ const server = createServer(async (request, response) => {
   const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
   // The one server route the page calls on load (worker/index.js answers it live).
   if (path === '/api/config') {
-    return void response.writeHead(200, { 'content-type': 'application/json' }).end('{"priceCents":499}');
+    return void response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({priceCents:499,regularPriceCents:499,currency:'USD',serverNow:Date.now(),payments:true,promotion:{active:false,id:'launch-30days',start:null,end:null}}));
   }
   const file = resolve(ROOT, `.${path.endsWith('/') ? `${path}index.html` : path}`);
   if (!file.startsWith(ROOT)) return void response.writeHead(403).end();
@@ -151,6 +151,7 @@ async function open(name, contextOptions, saved = null) {
     throw new Error(`No canvas on the ${name} page after 20 s.\n  ${problems.join('\n  ') || 'No console output.'}`);
   }
   await page.waitForTimeout(waitMs);
+  await rendered(page);
   const overlay = await readOverlay(page);
   await page.screenshot({ path: join(OUT, `${name}.png`) });
   const { width, height } = contextOptions.viewport;
@@ -165,13 +166,13 @@ async function rebuild({ page, overlay }, { name = 'desktop', warm = WARM_UP, co
   const cdp = await page.context().newCDPSession(page);
   for (let i = 0; i < warm; i++) {
     await page.keyboard.press('Shift+R');
-    await page.waitForTimeout(400);
+    await rendered(page);
   }
   await page.waitForTimeout(waitMs);
   const before = await counters(page, cdp);
   for (let i = 0; i < count; i++) {
     await page.keyboard.press('Shift+R');
-    await page.waitForTimeout(name === 'lake' ? 2500 : 400); // the lake photographs itself on its first frame
+    await rendered(page);
   }
   await page.waitForTimeout(waitMs);
   const after = await counters(page, cdp);
@@ -205,7 +206,7 @@ async function swapPlaces({ page, overlay }) {
   await page.click('.studio-open');
   const choose = async (label) => {
     await page.click(`.studio-segment:has-text("${label}")`);
-    await page.waitForTimeout(2500);
+    await drawnFrames(page, 8);
   };
   await choose('Beach'); // once first, so the memory baseline is a settled one
   await choose('Frozen lake');
@@ -239,11 +240,7 @@ async function settled(page) {
   let same = 0;
   for (let i = 0; i < 40 && same < 3; i++) {
     await page.waitForTimeout(2000);
-    await page.evaluate(() => new Promise((done) => {
-      let frames = 0;
-      const step = () => (++frames >= 8 ? done() : requestAnimationFrame(step));
-      requestAnimationFrame(step);
-    }));
+    await drawnFrames(page, 8);
     const o = await readOverlay(page);
     const now = [o.calls, o.geometries, o.programs].join('/');
     same = now === last ? same + 1 : 0;
@@ -290,8 +287,18 @@ async function counters(page, cdp) {
   return { heapMB: usedSize / 1048576, nodes, listeners: jsEventListeners, canvases };
 }
 
-function readOverlay(page) {
-  return page.$$eval('[data-stat]', (cells) => Object.fromEntries(cells.map((cell) => [cell.dataset.stat, cell.textContent])));
+async function rendered(page) {
+  await page.waitForFunction(() => document.querySelector('canvas')?.sgRenderedFrames >= 3 &&
+    ['calls', 'geometries', 'textures', 'programs'].every((key) => Number(document.querySelector(`[data-stat="${key}"]`)?.textContent) > 0), null, { timeout: 120000 });
+}
+async function drawnFrames(page, count) {
+  const start = await page.evaluate(() => document.querySelector('canvas')?.sgRenderedFrames || 0);
+  await page.waitForFunction(({ start, count }) => document.querySelector('canvas')?.sgRenderedFrames >= start + count, { start, count }, { timeout: 120000 });
+}
+async function readOverlay(page) {
+  const result = await page.$$eval('[data-stat]', (cells) => Object.fromEntries(cells.map((cell) => [cell.dataset.stat, cell.textContent])));
+  if (STABLE.some((key) => !Number.isFinite(Number(result[key])) || Number(result[key]) <= 0)) throw new Error('Missing or unrendered debug measurements: ' + JSON.stringify(result));
+  return result;
 }
 
 function formatOverlay(o) {

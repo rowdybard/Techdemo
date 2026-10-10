@@ -3,6 +3,9 @@
 // Loading JSON only accepts keys and value types that already exist in the config, so a
 // pasted file can't add junk or break the scene.
 import { config as defaults } from './config.js';
+import { designError, takeDesign, putDesign } from './design.js';
+
+export const LANDING_PRESET = 'Galaxy';
 
 // The parts of the config a person designs. Everything else (resolutions, pool size,
 // camera geometry) belongs to the app.
@@ -151,10 +154,12 @@ export const PRESETS = {
 
 export function applyPreset(config, name) {
   const header = { ...config.hero }; // a client's header text survives a change of preset
+  const sound = { ...config.sound };
   const words = config.look.text; // and so do the words in the sky: they're the person's, not the style's
   merge(config, DEFAULTS);
   merge(config, PRESETS[name] || {});
   Object.assign(config.hero, header);
+  Object.assign(config.sound, sound);
   config.look.text = words;
   if (words.trim() && !(config.look.mix.text > 0)) config.look.mix.text = 0.5; // a style without words still spells theirs now and then
 }
@@ -175,7 +180,11 @@ export function putScene(config, scene) {
 
 /** The default setting (the beach at dusk), as takeScene would give it. */
 export function defaultScene() {
-  return takeScene(DEFAULTS);
+  const scene = takeScene(DEFAULTS);
+  for (const key of SCENE) if (PRESETS[LANDING_PRESET][key]) merge(scene[key], PRESETS[LANDING_PRESET][key]);
+  scene.place.environment = 'beach';
+  scene.snow.amount = 0;
+  return scene;
 }
 
 /** Applies only these sections of a preset (a place's sky and snow, say), leaving the rest of the show as it is. */
@@ -186,8 +195,12 @@ export function applyPresetSections(config, name, sections) {
 
 /** The designable settings as pretty JSON, including the custom palette. */
 export function settingsJSON(config) {
-  const data = snapshot(config);
-  data.palette = config.palettes.custom;
+  const data = takeDesign(config);
+  data.sound = { enabled: config.sound.enabled, volume: config.sound.volume };
+  data.hero = { ...config.hero };
+  data.look.text = config.look.text;
+  data.look.mix.text = config.look.mix.text;
+  data.show.autoLaunch = config.show.autoLaunch;
   return JSON.stringify(data, null, 1);
 }
 
@@ -200,10 +213,17 @@ export function loadSettings(config, text) {
     return 'That isn’t valid JSON. Paste the text from Copy settings.';
   }
   if (!data || typeof data !== 'object' || Array.isArray(data)) return 'Settings should be a JSON object.';
-  for (const key of SAVED) if (isObject(data[key])) merge(config[key], data[key]);
-  if (Array.isArray(data.palette) && data.palette.length === config.palettes.custom.length && data.palette.every(isColor)) {
-    config.palettes.custom = data.palette.map((c) => c.slice());
-  }
+  const error = designError(data);
+  if (error) return error;
+  if (data.sound?.volume != null && (typeof data.sound.volume !== 'number' || !Number.isFinite(data.sound.volume) || data.sound.volume < 0 || data.sound.volume > 1)) return 'Sound volume must be between 0 and 1.';
+  if (data.palette != null && !(Array.isArray(data.palette) && data.palette.length === 3 && data.palette.every(isColor))) return 'Custom colours must be three RGB colours from 0 to 4.';
+  putDesign(config, data);
+  if (typeof data.sound?.enabled === 'boolean') config.sound.enabled = data.sound.enabled;
+  if (typeof data.sound?.volume === 'number') config.sound.volume = data.sound.volume;
+  if (typeof data.show?.autoLaunch === 'boolean') config.show.autoLaunch = data.show.autoLaunch;
+  if (typeof data.look?.text === 'string') config.look.text = data.look.text.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 24);
+  if (typeof data.look?.mix?.text === 'number') config.look.mix.text = data.look.mix.text;
+  for (const [key, max] of Object.entries({ business: 48, headline: 90, copy: 160, button: 32 })) if (typeof data.hero?.[key] === 'string') config.hero[key] = data.hero[key].slice(0, max);
   return '';
 }
 
@@ -218,9 +238,10 @@ export function remember(config) {
 }
 
 export function recall(config) {
+  let found = false;
   try {
     const text = localStorage.getItem(STORAGE_KEY);
-    if (text) loadSettings(config, text);
+    if (text) found = !loadSettings(config, text);
   } catch {
     // Start from the defaults.
   }
@@ -229,6 +250,7 @@ export function recall(config) {
   for (const [section, key, before] of UPGRADES) {
     if (config[section][key] === before) config[section][key] = DEFAULTS[section][key];
   }
+  return found;
 }
 
 function snapshot(config) {

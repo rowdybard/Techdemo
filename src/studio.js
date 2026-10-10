@@ -5,13 +5,16 @@
 // bottom sheet on phones, a card on the right on larger screens; the full developer panel (ui.js)
 // is behind "Advanced settings". Every change writes the config the modules read each frame, so
 // it's live.
-import { PRESETS, SCENE, applyPreset, applyPresetSections, defaultScene, putScene, remember, takeScene } from './presets.js';
+import { PRESETS, LANDING_PRESET, applyPreset, remember } from './presets.js';
 import { LOOKS } from './looks.js';
 import { PLACES } from './places.js';
 import { MESSAGE_LIMIT, cleanText } from './link.js';
 import { isBlocked } from './moderate.js';
 import { controls, el, gradient, section, strip } from './studio-kit.js';
 import { buildMore } from './studio-more.js';
+import { createPlaceSettings } from './place-settings.js';
+import { isDeluxe } from './catalog.js';
+import { takeDesign } from './design.js';
 
 const PALETTES = [['classic', 'Classic'], ['rainbow', 'Rainbow'], ['gold', 'Gold'], ['royal', 'Royal'], ['ocean', 'Ocean'], ['cosmic', 'Cosmic'],
   ['rose', 'Rose'], ['sakura', 'Cherry blossom'], ['autumn', 'Autumn'], ['ice', 'Ice'], ['usa', 'Red, white & blue'], ['neon', 'Neon'],
@@ -27,12 +30,13 @@ const FEEL = [
 ];
 
 export function create(ctx) {
-  const { config, container, signal } = ctx;
+  const { config, container, signal, navigation: nav } = ctx;
+  const scenes = createPlaceSettings(config);
   const refreshers = [];
   const kit = controls({ config, signal, refreshers, changed, sync, remember });
-  const { button, slider } = kit;
+  const { button, slider, toggle } = kit;
 
-  const open = button('studio-open', '🎨 Customize', () => show(true));
+  const open = button('studio-open', '🎨 Customize', () => nav.open('studio'));
   const sheet = el('section', 'studio');
   sheet.hidden = true;
   sheet.setAttribute('aria-label', 'Customize the show');
@@ -40,37 +44,44 @@ export function create(ctx) {
   const head = el('div', 'studio-head');
   const finale = button('studio-finale', '💥 Finale', () => ctx.fireworks && ctx.fireworks.finale());
   finale.title = 'A few seconds of everything at once';
-  const done = button('studio-done', 'Done', () => show(false));
-  head.append(el('h2', '', 'Customize'), finale, done);
-  // While making a greeting: what it is and what sending it costs, and the ✦ key.
+  const done = button('studio-done', 'Done', () => nav.back());
+  const heading = el('h2', '', 'Customize'); heading.tabIndex = -1;
+  head.append(heading, finale, done);
+  // The preview is free; a send version is chosen explicitly in the greeting editor.
   const making = el('p', 'studio-making');
   refreshers.push(() => {
     const summary = ctx.builder ? ctx.builder.summary : '';
     making.hidden = !ctx.builder;
-    making.textContent = summary ? `${summary}. ✦ effects make it a Deluxe send.`
-      : ctx.builder ? `✦ marks Deluxe effects. Using any makes the send ${ctx.builder.price}; everything else sends free.` : '';
+    making.textContent = summary || `Free to preview. Full Deluxe shows cost ${ctx.builder?.priceLabel || 'the displayed checkout price'} to send. You can also choose a Free version.`;
   });
 
   // The Looks: a whole show in one tap, with its colours along the bottom of the card.
   const looks = el('div', 'studio-looks');
-  let currentPreset = 'Default';
+  const initialDesign = JSON.stringify(takeDesign(config));
+  let currentPreset = LOOKS.find(({ preset }) => {
+    const copy = structuredClone(config); applyPreset(copy, preset);
+    return JSON.stringify(takeDesign(copy)) === initialDesign;
+  })?.preset || null;
+  let candidatePreset;
   for (const look of LOOKS) {
     if (!PRESETS[look.preset]) continue;
     const card = button('studio-card', '', () => pickLook(look.preset));
     const palette = config.palettes[(PRESETS[look.preset].look || {}).palette || 'classic'];
     const colours = el('span', 'studio-card-strip');
     colours.style.background = strip(palette);
-    card.append(el('span', 'studio-card-icon', look.icon), el('span', 'studio-card-name', look.label), el('span', 'studio-card-line', look.line), colours);
-    refreshers.push(() => card.setAttribute('aria-pressed', String(currentPreset === look.preset)));
+    const price = el('span', 'studio-card-price');
+    card.append(el('span', 'studio-card-icon', look.icon), el('span', 'studio-card-name', look.label), el('span', 'studio-card-line', look.line), el('span', 'studio-card-preview', 'Free to preview'), price, colours);
+    refreshers.push(() => { card.setAttribute('aria-pressed', String(currentPreset === look.preset)); price.textContent = `Deluxe to send · ${ctx.builder?.priceLabel || 'Price unavailable'}`; });
     looks.append(card);
   }
   function pickLook(name) {
+    if (ctx.builder?.tier === 'free' && !ctx.builder.pending) candidatePreset = currentPreset;
     currentPreset = name;
     // Away from the beach a look changes the fireworks, not the place: the frozen lake keeps its
     // own midnight sky and snow (Place picks those).
-    const scene = config.place.environment !== 'beach' ? takeScene(config) : null;
-    applyPreset(config, name);
-    if (scene) putScene(config, scene);
+    const scene = config.place.environment === 'lake' ? scenes.capture() : null;
+    const change = () => { applyPreset(config, name); if (scene) scenes.restore(scene); };
+    if (ctx.builder) ctx.builder.previewChange(change); else change();
     changed();
     // Show it at once: a few of its shells break within a second or so and its ground show
     // starts, rather than whenever the next ones happen to.
@@ -83,28 +94,24 @@ export function create(ctx) {
   // Where the show is set. A place with a look of its own (the frozen lake: midnight, falling
   // snow) brings it, and going back to the beach gives back the sky and snow it had (or the
   // beach's own, if the page opened on the lake).
-  let beachScene = null;
-  function choosePlace(name) {
-    if (config.place.environment === name) return;
-    const look = PLACES[name].look;
-    if (look) {
-      if (config.place.environment === 'beach') beachScene = takeScene(config);
-      applyPresetSections(config, look, SCENE);
-    } else {
-      putScene(config, beachScene || defaultScene());
-      beachScene = null;
-    }
-    config.place.environment = name;
-  }
   const places = el('div', 'studio-segments');
   for (const name in PLACES) {
     const segment = button('studio-segment', `${PLACES[name].icon} ${PLACES[name].label}`, () => {
-      choosePlace(name);
+      scenes.choose(name);
       changed();
     });
     refreshers.push(() => segment.setAttribute('aria-pressed', String(config.place.environment === name)));
     places.append(segment);
   }
+
+  const lakeControls = el('div', 'studio-sliders');
+  lakeControls.append(slider({ name: 'Snowfall', low: 'None', high: 'Heavy snow', get: (c) => c.snow.amount, set: (c, value) => { c.snow.amount = value; } }),
+    slider({ name: 'Ice & water', low: 'Solid ice', high: 'More open water', get: (c) => c.lake.open, set: (c, value) => { c.lake.open = value; } }));
+  const lakeSection = section('Lake settings', lakeControls);
+  refreshers.push(() => { lakeSection.hidden = !PLACES[config.place.environment]?.capabilities.ice; });
+  const width = el('div', 'studio-switches');
+  width.append(toggle('Side-barge fountains · Deluxe', () => config.fountains.sideBarges, (on) => { config.fountains.sideBarges = on; if (on) config.fountains.enabled = true; }),
+    el('p', 'studio-help', 'Adds fountain displays on the left and right. Included with Deluxe.'));
 
   const swatches = el('div', 'studio-swatches');
   for (const [name, label] of PALETTES) {
@@ -156,53 +163,56 @@ export function create(ctx) {
 
   const more = buildMore(ctx, {
     kit, refreshers, changed, deluxeItem,
-    startOver: () => { currentPreset = 'Default'; config.look.text = ''; applyPreset(config, 'Default'); changed(); },
-    advanced: () => { onDone = null; show(false); if (ctx.advanced) ctx.advanced.open(); },
+    startOver: () => { currentPreset = LANDING_PRESET; candidatePreset = undefined; ctx.builder?.resetDesign(() => applyPreset(config, LANDING_PRESET)); if (!ctx.builder) applyPreset(config, LANDING_PRESET); changed(); },
+    advanced: () => ctx.advanced?.open(),
   });
 
   // Opened on its own (not from the builder): a way to send the show as it is now.
   const sendBar = el('div', 'studio-sendbar');
   const sendShow = button('studio-send', 'Send this show →', () => {
-    onDone = null;
-    show(false);
     if (ctx.builder) ctx.builder.open();
   });
-  sendShow.append(el('small', '', 'Add your words and send it. It plays just like this.'));
-  sendBar.append(sendShow);
+  sendShow.append(el('small', '', 'Add your words, then choose Free or Deluxe.'));
+  const candidate = el('div', 'studio-candidate');
+  const candidateText = el('p', 'studio-help');
+  const candidateDeluxe = button('studio-send', '', () => { candidatePreset = undefined; ctx.builder?.chooseVersion('deluxe'); });
+  const candidateFree = button('send-secondary', 'Use Free version', () => { candidatePreset = undefined; ctx.builder?.chooseVersion('free'); });
+  const candidateCancel = button('studio-link', 'Back to my chosen show', () => { cancelCandidate(); sync(); });
+  candidate.append(candidateText, candidateDeluxe, candidateFree, candidateCancel);
+  sendBar.append(candidate, sendShow);
+  refreshers.push(() => {
+    candidate.hidden = !ctx.builder?.pending;
+    candidateText.textContent = `Deluxe preview · ${ctx.builder?.priceLabel || 'Price unavailable'}. Choose the version you want to keep.`;
+    candidateDeluxe.textContent = `Use Deluxe · ${ctx.builder?.priceLabel || 'Price unavailable'}`;
+    sendShow.hidden = nav.parent === 'builder' || Boolean(ctx.builder?.pending);
+    sendBar.hidden = candidate.hidden && sendShow.hidden;
+  });
 
-  sheet.append(head, making, section('Looks', looks, 'studio-looks-section'), section('Place', places), section('Colours', swatches),
+  sheet.append(head, making, section('Looks', looks, 'studio-looks-section'), section('Place', places), lakeSection, section('Show width', width), section('Colours', swatches),
     section('Feel', feel), wordsRow, more, sendBar);
   container.append(open, sheet);
 
   // Opened from the greeting builder, Done goes back to it.
-  let onDone = null;
-  function show(on) {
-    if (on) refresh();
-    sendBar.hidden = Boolean(onDone) || !ctx.builder; // from the builder, Done goes back to it
-    sheet.hidden = !on;
-    open.hidden = on;
-    container.classList.toggle('customizing', on);
-    if (!on && onDone) {
-      const back = onDone;
-      onDone = null;
-      back();
-    }
+  const unregister = nav.register('studio', { element: sheet, show: refresh, initialFocus: () => heading, beforeBack() { if (ctx.builder?.pending) cancelCandidate(); } });
+  function cancelCandidate() {
+    ctx.builder?.cancelCandidate();
+    if (candidatePreset !== undefined) currentPreset = candidatePreset;
+    candidatePreset = undefined;
   }
+  container.addEventListener('panel-change', () => { open.hidden = nav.current !== null; }, { signal });
   function deluxeItem(item) {
-    const deluxe = ctx.builder && ctx.builder.deluxe;
-    return Boolean(deluxe && deluxe.includes(item));
+    return isDeluxe(item);
   }
-  sheet.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') show(false);
-  }, { signal });
 
   // After any change: redraw this drawer and the advanced panel, and remember it.
   function changed() {
-    if (ctx.builder) ctx.builder.refresh(); // the send price follows the design
     sync();
     remember(config);
+    scenes.remember();
   }
   function sync() {
+    if (ctx.builder) ctx.builder.designChanged();
+    scenes.remember();
     refresh();
     if (ctx.advanced) ctx.advanced.refresh();
   }
@@ -211,10 +221,10 @@ export function create(ctx) {
   }
 
   ctx.studio = {
-    open(then = null) {
-      onDone = then;
-      show(true);
-    },
+    open() { nav.open('studio'); },
+    refresh,
+    pickLook,
+    choosePlace(name) { scenes.choose(name); changed(); },
     /** Marks a Look as the one in use (the builder applies an occasion's look without a tap here). */
     get style() { return currentPreset; },
     setStyle(name) {
@@ -228,6 +238,7 @@ export function create(ctx) {
     update() {},
     dispose() {
       clearTimeout(wordsTimer);
+      unregister();
       open.remove();
       sheet.remove();
       container.classList.remove('customizing');

@@ -17,6 +17,7 @@ import * as audio from './audio.js';
 import * as post from './post.js';
 import * as debug from './debug.js';
 import * as ui from './ui.js';
+import * as navigation from './navigation.js';
 import * as director from './director.js';
 import * as crane from './crane.js';
 import * as video from './video.js';
@@ -29,7 +30,7 @@ import * as soundbutton from './soundbutton.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [wind, sky, burstlights, countdown, environment, fireworks, fountains, smoke, snow, audio, post, debug, ui, director, crane, video, builder, studio, viewlock, soundbutton, gift, autoshow];
+const MODULES = [wind, sky, burstlights, countdown, environment, fireworks, fountains, smoke, snow, audio, post, debug, navigation, ui, director, crane, video, builder, studio, viewlock, soundbutton, gift, autoshow];
 
 const DEG = Math.PI / 180;
 
@@ -73,7 +74,7 @@ export function createApp(container, config = defaultConfig) {
   // A greeting opens in its own place from the first frame (not the beach, then a swap): its design
   // may name one, or else its occasion does.
   if (link.occasion && OCCASIONS[link.occasion]) config.place.environment = placeOf(link.occasion);
-  if (link.look && PLACE_NAMES.includes(link.look.a)) config.place.environment = link.look.a;
+  if (PLACE_NAMES.includes(link.place)) config.place.environment = link.place;
 
   const renderer = new THREE.WebGLRenderer({
     antialias: config.renderer.antialias,
@@ -84,6 +85,7 @@ export function createApp(container, config = defaultConfig) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = config.renderer.exposure;
   const canvas = renderer.domElement;
+  canvas.sgRenderedFrames = 0; // actual draws, used by regression checks (not animation callbacks)
   container.append(canvas);
 
   const abort = new AbortController();
@@ -165,6 +167,7 @@ export function createApp(container, config = defaultConfig) {
     renderer.info.reset();
     if (ctx.render) ctx.render();
     else renderer.render(scene, camera);
+    canvas.sgRenderedFrames++;
     if (ctx.afterRender) ctx.afterRender(); // video.js copies the frame while it's recording
     if (!firstFrame) {
       firstFrame = true;

@@ -15,11 +15,13 @@ export const PLACES = {
     views: { sand: 'On the sand', drone: 'From above', water: 'In the water' },
     cameras: null,
     moon: 0,
+    capabilities: { beach: true, snow: false, ice: false },
   },
   lake: {
     label: 'Frozen lake',
     icon: '🏔️',
     moon: 1, // a full moon in the sky, lighting the snow
+    capabilities: { beach: false, snow: true, ice: true },
     look: 'Winter', // the preset whose sky and snow it takes when picked in Customize (midnight, falling snow)
     views: { sand: 'On the shore', drone: 'From above', water: 'On the ice' },
     cameras: {

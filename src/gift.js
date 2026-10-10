@@ -11,7 +11,7 @@
 // three reports from different people take a greeting down for everyone).
 //
 // The words only ever reach the page as textContent and the sky as canvas text.
-import { track, takePrice } from './track.js';
+import { track, trackPurchase } from './track.js';
 import { OCCASIONS, applyOccasion } from './occasions.js';
 import { paidLink } from './link.js';
 import { applyLook, keepFree } from './look.js';
@@ -30,6 +30,12 @@ export function create(ctx) {
   let occasion = null;
   let words = null;
   let deluxe = false;
+  let legacy = true;
+  let active = true;
+  let pollTimer = null;
+  let wrapBox = null;
+  let completed = false;
+  let reporting = false;
   let pending = false; // the ending is due to play
   let playAt = 0;
   let now = 0;
@@ -53,7 +59,7 @@ export function create(ctx) {
   // Save as video (video.js): the ending, recorded for posting. Clean for a paid greeting.
   const film = el('button', 'send-secondary gift-video');
   film.append('🎬 Save as video', document.createElement('small'));
-  film.lastChild.textContent = 'a clip to post on TikTok, Instagram or Stories';
+  film.lastChild.textContent = 'a video to keep or share';
   film.type = 'button';
   film.hidden = true;
   const links = el('div', 'gift-links');
@@ -64,11 +70,11 @@ export function create(ctx) {
   film.addEventListener('click', () => {
     if (!occasion || !ctx.video || !ctx.director) return;
     pending = false;
-    track('save_video', { content_type: occasionName, method: deluxe ? 'paid_greeting' : 'greeting' });
     ctx.video.capture({
       watermark: !deluxe,
       name: `skygreeting-${occasionName}`,
-      play: () => ctx.director.play(occasion, words, deluxe),
+      play: () => ctx.director.play(occasion, words, deluxe, { legacy }),
+      returnTo: () => { if (active) { busyUntil = -Infinity; card.classList.remove('gift-watching'); } },
     });
   }, { signal });
   container.append(card);
@@ -82,6 +88,7 @@ export function create(ctx) {
   explore.addEventListener('click', () => leave(false), { signal });
 
   function ready(data, isDeluxe) {
+    if (!active) return;
     // Words that can't go in the sky (link.js already caught them in a free link).
     if (data.blocked || greetingBlocked(data)) {
       title.textContent = 'This SkyGreeting can’t be shown.';
@@ -93,10 +100,11 @@ export function create(ctx) {
     occasionName = name;
     film.hidden = !(ctx.video && ctx.video.supported);
     deluxe = isDeluxe;
-    occasion = applyOccasion(config, name, deluxe);
+    legacy = data.look?.ver !== 2;
+    occasion = applyOccasion(config, name, deluxe, { legacy });
     // The sender's design, then (for a free greeting) only free effects.
     applyLook(config, data.look);
-    if (!deluxe) keepFree(config, occasion);
+    if (!deluxe) keepFree(config, occasion, { legacy });
     if (ctx.setCameraPreset) ctx.setCameraPreset(config.camera.preset);
     words = { message: data.message, message2: data.message2 || '', to: data.to, from: data.from || '' };
     config.look.text = data.message;
@@ -118,6 +126,7 @@ export function create(ctx) {
   function wrap(from) {
     wrapped = true;
     const box = el('div', 'gift-wrap');
+    wrapBox = box;
     const seal = el('div', 'gift-seal', '✦');
     seal.setAttribute('aria-hidden', 'true');
     const who = el('p', 'gift-wrap-from', from ? `${from} sent you` : 'Someone sent you');
@@ -129,12 +138,12 @@ export function create(ctx) {
     box.append(seal, who, what, open, quiet);
     container.append(box);
     const unwrap = (sound) => {
-      if (!wrapped) return;
+      if (!active || !wrapped) return;
       wrapped = false;
       if (sound) {
         config.sound.enabled = true;
         config.sound.volume = Math.max(config.sound.volume, 0.6);
-      }
+      } else config.sound.enabled = false;
       track('open_gift', { content_type: occasionName, method: sound ? 'sound' : 'quiet' });
       box.classList.add('is-open');
       setTimeout(() => box.remove(), 1000);
@@ -148,6 +157,15 @@ export function create(ctx) {
   }
 
   function takenDown() {
+    wrapBox?.remove();
+    wrapped = false;
+    ctx.director?.stop();
+    words = occasion = null;
+    watching = false;
+    busyUntil = -Infinity;
+    config.look.text = '';
+    config.look.mix.text = 0;
+    card.classList.remove('gift-watching');
     title.textContent = 'This SkyGreeting has been taken down.';
     note.textContent = 'People reported it. You can make a kind one of your own.';
     buttons.hidden = false;
@@ -168,7 +186,7 @@ export function create(ctx) {
     if (!gift.blocked && /^https?:$/.test(location.protocol)) {
       const query = new URLSearchParams({ o: gift.occasion || '', msg: gift.message, msg2: gift.message2 || '', to: gift.to || '', from: gift.from || '' });
       fetch(`/api/taken-down?${query}`, { signal }).then((response) => (response.ok ? response.json() : null)).then((data) => {
-        if (data && data.hidden) {
+        if (active && data && data.hidden) {
           if (ctx.director) ctx.director.stop();
           takenDown();
         }
@@ -178,16 +196,18 @@ export function create(ctx) {
 
   // A paid greeting: ask the server until Stripe has confirmed it (usually at once).
   async function loadPaid(tries) {
+    if (!active) return;
     let data = null;
     try {
       const response = await fetch(`/api/greeting?id=${encodeURIComponent(gift.id)}`, { signal });
       data = await response.json();
       if (!response.ok) data = null;
     } catch {
-      if (signal.aborted) return;
+      if (signal.aborted || !active) return;
     }
+    if (!active) return;
     if (data && data.status === 'pending' && tries < POLL_TRIES) {
-      setTimeout(() => { if (!signal.aborted) loadPaid(tries + 1); }, POLL_MS);
+      pollTimer = setTimeout(() => { if (active && !signal.aborted) loadPaid(tries + 1); }, POLL_MS);
       return;
     }
     if (data && data.status === 'hidden') {
@@ -202,14 +222,14 @@ export function create(ctx) {
       return;
     }
     buttons.hidden = false;
-    ready(data, Boolean(data.deluxe));
-    if (gift.sent) showShare();
+    ready(data, data.status === 'paid' && data.deluxe === true);
+    if (gift.sent && data.status === 'paid' && data.deluxe === true) showShare(data);
   }
 
   // The buyer, back from checkout: their private link, ready to send.
-  function showShare() {
+  function showShare(data) {
     const url = paidLink(gift.id);
-    track('purchase', { currency: 'USD', value: takePrice(499) / 100, items: [{ item_name: 'SkyGreeting Deluxe', item_category: occasionName }] });
+    trackPurchase(data, occasionName);
     title.textContent = '✓ Paid. Your SkyGreeting is ready to send';
     note.textContent = 'Anyone with this link sees the full Deluxe show.';
     const box = el('input', 'send-link');
@@ -221,16 +241,16 @@ export function create(ctx) {
     share.addEventListener('click', () => {
       box.select();
       if (navigator.share) {
-        navigator.share({ title: 'A SkyGreeting for you', text: 'I made you a SkyGreeting', url }).catch(() => {});
+        navigator.share({ title: 'A SkyGreeting for you', text: 'I made you a SkyGreeting', url }).then(() => track('share_success', { method: 'share', content_type: 'paid_greeting' }), () => {});
       } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(() => { note.textContent = 'Link copied. Paste it in a text or DM.'; }, () => {});
+        navigator.clipboard.writeText(url).then(() => { note.textContent = 'Link copied. Paste it in a text or DM.'; track('share_success', { method: 'copy', content_type: 'paid_greeting' }); }, () => {});
       }
     }, { signal });
     yours.hidden = true;
     buttons.prepend(share);
     card.insertBefore(box, buttons);
     // Their own visit keeps the link clean if they copy it from the address bar.
-    history.replaceState(null, '', `?g=${gift.id}`);
+    history.replaceState(history.state, '', `?g=${gift.id}`);
   }
 
   // Report: a reason, an optional note, and off it goes.
@@ -266,7 +286,7 @@ export function create(ctx) {
     row.append(cancel, send);
     node.append(el('p', 'gift-from', 'What’s wrong with it?'), chips, detail, row, status);
 
-    cancel.addEventListener('click', () => show(false), { signal });
+    cancel.addEventListener('click', () => ctx.navigation ? ctx.navigation.back() : show(false), { signal });
     send.addEventListener('click', async () => {
       if (!reason) {
         status.textContent = 'Pick a reason first.';
@@ -278,46 +298,67 @@ export function create(ctx) {
       try {
         const response = await fetch('/api/report', {
           method: 'POST',
+          signal,
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ ...body, reason, note: detail.value }),
         });
         const data = await response.json();
+        if (!active) return;
         if (!response.ok) throw new Error(data.error || 'failed');
-        node.replaceChildren(el('p', 'send-status', 'Thanks. We’ll look at it.'));
+        note.textContent = 'Thanks. We’ll look at your report.';
+        if (ctx.navigation?.current === 'gift-report') ctx.navigation.back();
+        else show(false);
         reportOpen.hidden = true;
       } catch (error) {
+        if (!active || signal.aborted) return;
         status.textContent = error.message && error.message !== 'failed' ? error.message : 'That didn’t send. Try again in a moment.';
         send.disabled = false;
       }
     }, { signal });
 
     function show(on) {
+      if (reporting === on) return;
+      reporting = on;
+      if (on) { pending = false; completed = true; busyUntil = -Infinity; ctx.director?.stop(); card.classList.remove('gift-watching'); }
       node.hidden = !on;
       buttons.hidden = on;
       links.hidden = on;
     }
-    reportOpen.addEventListener('click', () => show(true), { signal });
-    return { node };
+    const unregister = ctx.navigation?.register('gift-report', { element: node, canEnter: () => active, show: () => show(true), hide: () => show(false) });
+    reportOpen.addEventListener('click', () => ctx.navigation ? ctx.navigation.open('gift-report') : show(true), { signal });
+    return { node, unregister };
   }
 
   // Back to the full site: the builder, the panel and the hints.
   function leave(build) {
+    active = false;
+    pending = false;
+    wrapped = false;
+    clearTimeout(pollTimer);
+    wrapBox?.remove();
+    reportBox.unregister?.();
     container.classList.remove('gift-mode');
     card.remove();
     if (ctx.director) ctx.director.stop();
+    ctx.navigation?.close();
+    ctx.link.gift = null;
+    config.look.text = '';
+    config.look.mix.text = 0;
+    history.replaceState(history.state, '', location.pathname);
+    ctx.builder?.startFresh();
     if (build && ctx.builder) {
-      ctx.builder.startFresh(); // a new greeting, not the one just watched
       ctx.builder.open();
     }
   }
 
   return {
     update(dt, time) {
+      if (!active) return;
       now = time;
       // Out of the way while the show plays (on a phone it covers half the screen), and
       // back with its buttons once it's over.
       if (occasion && (pending || (ctx.director && ctx.director.active))) busyUntil = time + CARD_BACK;
-      const playing = wrapped || time < busyUntil;
+      const playing = !reporting && (wrapped || time < busyUntil);
       if (playing !== watching) {
         watching = playing;
         card.classList.toggle('gift-watching', playing);
@@ -325,13 +366,19 @@ export function create(ctx) {
         // during a replay, where it would spoil the reveal).
         config.look.mix.text = playing ? 0 : 0.5;
         if (!playing && words) config.look.text = words.message;
+        if (!playing && words && !completed) { completed = true; track('recipient_play_complete', { content_type: occasionName, method: deluxe ? 'deluxe' : 'free' }); }
       }
       if (!pending || !occasion || time < playAt) return;
       pending = false;
-      if (ctx.director) ctx.director.play(occasion, words, deluxe);
+      completed = false;
+      if (ctx.director) ctx.director.play(occasion, words, deluxe, { legacy });
     },
 
     dispose() {
+      active = false;
+      clearTimeout(pollTimer);
+      wrapBox?.remove();
+      reportBox.unregister?.();
       card.remove();
       container.classList.remove('gift-mode');
     },

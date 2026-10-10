@@ -18,9 +18,8 @@ import { KIND } from './fireworks.glsl.js';
 import { BARGE_LENGTH, SIDE_BARGE_LENGTH, SIDE_BARGE_OFFSET } from './fireworks.js';
 import { candles, fans, mines, shooters, waterfall } from './ground.js';
 import { cauldron, lanterns, lightning, wisps } from './haunt.js';
+import { groundStyles } from './catalog.js';
 
-const STYLES = ['fountains', 'shooters', 'candles', 'mines', 'fans', 'waterfall'];
-const HALLOWEEN = ['cauldron', 'wisps', 'lightning', 'lanterns']; // style 'halloween' rotates these
 const EFFECTS = { shooters, candles, mines, fans, waterfall, cauldron, wisps, lightning, lanterns };
 
 const MAX_NOZZLES = 14;
@@ -47,7 +46,7 @@ export function create(ctx) {
   // One light per nozzle, read by burstlights.js: steady while the fountain runs.
   const lights = [];
   for (let i = 0; i < MAX_NOZZLES; i++) {
-    lights.push({ time: -1e9, hold: 0, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, smoke: 0, sound: 'none' });
+    lights.push({ owner: MAIN, time: -1e9, hold: 0, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, smoke: 0, sound: 'none' });
   }
   // The side barges' tubes: their own lights (after the main barge's in the same list) and
   // where they stand.
@@ -55,7 +54,7 @@ export function create(ctx) {
   const sideTubes = [[], []];
   for (let s = 0; s < 2; s++) {
     for (let i = 0; i < SIDE_TUBES; i++) {
-      const record = { time: -1e9, hold: 0, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, smoke: 0, sound: 'none' };
+      const record = { owner: SIDES, time: -1e9, hold: 0, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, smoke: 0, sound: 'none' };
       lights.push(record);
       sideLights[s].push(record);
       const span = SIDE_BARGE_LENGTH * 0.8;
@@ -69,23 +68,23 @@ export function create(ctx) {
   let pattern = 0;
   let turn = 0;
   let now = 0;
+  let mainEnabled = settings.enabled;
+  let sidesEnabled = settings.enabled && settings.sideBarges;
   const tubes = []; // x of each tube along the barge, reused show to show
   let listFor = ''; // a style list, split once
   let list = [];
 
-  // The style a show plays: a mix or a list takes its next turn.
-  function resolve(style) {
-    if (style === 'mixed') return STYLES[turn++ % STYLES.length];
-    if (style === 'halloween') return HALLOWEEN[turn++ % HALLOWEEN.length];
-    if (style.includes(',')) {
-      // A list of styles (an occasion's ground effects) takes turns.
-      if (style !== listFor) {
-        listFor = style;
-        list = style.split(',');
-      }
-      return list[turn++ % list.length];
+  function stylesFor(style) {
+    if (style !== listFor) {
+      listFor = style;
+      list = groundStyles(style);
     }
-    return style;
+    return list;
+  }
+  // Rendering and entitlement labels expand mixed ground shows identically.
+  function resolve(style) {
+    const styles = stylesFor(style);
+    return styles.length > 1 ? styles[turn++ % styles.length] : styles[0] || 'fountains';
   }
 
   // `layer`: play over the show that's running instead of stopping it, and leave the side barges be.
@@ -93,8 +92,7 @@ export function create(ctx) {
     const pool = ctx.fireworks && ctx.fireworks.pool;
     if (!pool) return;
     if (!layer && start < mainUntil) {
-      pool.cut(MAIN, start);
-      stopLights(lights, 0, MAX_NOZZLES, start);
+      stopShow(MAIN, start);
     }
     pool.groundShow(MAIN);
     grow();
@@ -107,6 +105,14 @@ export function create(ctx) {
       if (record.time >= start - 0.01) until = Math.max(until, record.time + record.hold);
     }
     mainUntil = until;
+    return pool.latestDeath(MAIN);
+  }
+
+  function stopShow(owner, time) {
+    ctx.fireworks?.pool.cut(owner, time);
+    ctx.smoke?.cutGround(owner, time);
+    ctx.audio?.cutGround(owner);
+    stopLights(lights, owner === MAIN ? 0 : MAX_NOZZLES, owner === MAIN ? MAX_NOZZLES : lights.length, time);
   }
 
   // Ends the lights of a show that was stopped: a short fade, and none for tubes yet to fire.
@@ -131,8 +137,7 @@ export function create(ctx) {
       current = style;
       nextSide = start;
       if (sidesUntil > start) {
-        pool.cut(SIDES, start);
-        stopLights(lights, MAX_NOZZLES, lights.length, start);
+        stopShow(SIDES, start);
       }
     }
     if (EFFECTS[style]) {
@@ -209,10 +214,7 @@ export function create(ctx) {
 
   // Before the main barge has played: the style it will start with.
   function firstStyle() {
-    const style = settings.style;
-    if (style === 'mixed') return STYLES[0];
-    if (style === 'halloween') return HALLOWEEN[0];
-    return style.split(',')[0];
+    return stylesFor(settings.style)[0] || 'fountains';
   }
 
   // One fountain; rate scales how many sparks it throws (the side barges' are thinner).
@@ -268,9 +270,27 @@ export function create(ctx) {
   return {
     update(dt, time) {
       now = time;
+      const sidesOn = settings.enabled && settings.sideBarges;
+      if (!sidesOn && (sidesEnabled || sidesUntil > time)) {
+        stopShow(SIDES, time);
+        sidesUntil = time;
+        nextSide = time + SIDE_GAP;
+      }
+      sidesEnabled = sidesOn;
       if (!settings.enabled) {
+        if (mainEnabled || mainUntil > time) {
+          stopShow(MAIN, time);
+          mainUntil = time;
+        }
+        mainEnabled = false;
         nextShow = Math.max(nextShow, time + 2);
         nextSide = Math.max(nextSide, time + 2);
+        return;
+      }
+      mainEnabled = true;
+      if (ctx.recordingTail) {
+        nextShow = Math.max(nextShow, time + 2);
+        nextSide = Math.max(nextSide, time + SIDE_GAP);
         return;
       }
       // The side barges, almost without a break (endings included: they follow its style).

@@ -3,12 +3,10 @@
 // uploads only that run. Dead particles collapse to nothing in the shader until a later
 // run reuses them. A run is placed at a ring cursor, but never over particles that are
 // still alive (or not yet born): it skips past them to free space, and only when the
-// pool is genuinely full does it overwrite the oldest, as the ring always did. A run
+// pool has no sufficiently large gap does it overwrite at the cursor. A run
 // that would pass the end starts over at zero, so it never wraps.
 import * as THREE from 'three';
 import { fireworksFragment, fireworksVertex } from './fireworks.glsl.js';
-
-const RUNS = 2048; // spawn runs remembered for the live-particle count
 
 export function createPool(size, uniforms) {
   const quad = new THREE.InstancedBufferGeometry();
@@ -51,44 +49,38 @@ export function createPool(size, uniforms) {
 
   let cursor = 0;
   let ground = 0; // 1 while a ground show writes its sparks (their Sparkle is capped)
-  let owner = 0; // who the runs written now belong to (a ground show's barge), so they can be cut
+  let owner = 0; // 0 random shells, 1/2 barges, 3 director shells; cancellation never changes shading
   let runStart = 0;
   let runCount = 0;
-  const runFirst = new Float64Array(RUNS);
-  const runLast = new Float64Array(RUNS);
-  const runSize = new Uint32Array(RUNS);
-  const runAt = new Uint32Array(RUNS); // where each run starts in the pool
-  const runOwner = new Uint8Array(RUNS);
+  // Ownership and lifetime belong to individual slots: overwriting half a run must
+  // neither forget its surviving half nor let a later cut reach its replacement.
+  const bornAt = new Float64Array(size).fill(-Infinity);
+  const diesAt = new Float64Array(size).fill(-Infinity);
+  const owners = new Uint8Array(size);
   let squeezed = 0; // runs that had to overwrite live particles because the pool was full
-  let runIndex = 0;
-  let runFirstBorn = Infinity;
-  let runLastDeath = -Infinity;
+  let lastDeath = -Infinity;
 
   // Where `count` particles can go without covering any that are alive or still waiting to
   // be born at `now`: from the cursor on, skipping past each live run in the way, and
   // starting over at zero once. Falls back to the cursor (the oldest) if it's all full.
   function claim(count, now) {
-    let at = cursor + count > size ? 0 : cursor;
-    let wrapped = at === 0 && cursor !== 0;
-    for (let tries = 0; tries < 48; tries++) {
-      const end = at + count;
-      let blockedUntil = -1;
-      for (let i = 0; i < RUNS; i++) {
-        if (runLast[i] <= now || runSize[i] === 0) continue;
-        const from = runAt[i];
-        const to = from + runSize[i];
-        if (from < end && to > at && to > blockedUntil) blockedUntil = to;
-      }
-      if (blockedUntil < 0) return at;
-      at = blockedUntil;
-      if (at + count > size) {
-        if (wrapped) break;
-        wrapped = true;
-        at = 0;
-      }
-    }
+    const first = cursor + count > size ? 0 : cursor;
+    let at = freeRun(first, size, count, now);
+    // Include a gap beginning before the cursor and ending after it. A claim still
+    // never wraps past the physical buffer's end.
+    if (at < 0 && first > 0) at = freeRun(0, Math.min(size, first + count - 1), count, now);
+    if (at >= 0) return at;
     squeezed++;
-    return cursor + count > size ? 0 : cursor;
+    return first;
+  }
+
+  function freeRun(from, to, count, now) {
+    let available = 0;
+    for (let i = from; i < to; i++) {
+      available = diesAt[i] > now ? 0 : available + 1;
+      if (available === count) return i - count + 1;
+    }
+    return -1;
   }
 
   return {
@@ -101,39 +93,45 @@ export function createPool(size, uniforms) {
       owner = id;
     },
 
+    /** Shell ownership is independent of the shader's ground-spark flag. */
+    shellShow(id = 0) { ground = 0; owner = id; },
+
     /**
-     * Stops barge `id`'s ground show at `time`: its sparks not yet born never are. Those already
+     * Stops owner `id` at `time`: its sparks not yet born never are. Those already
      * in the air fly on and fall, so the show stops pouring rather than vanishing.
      */
     cut(id, time) {
-      for (let r = 0; r < RUNS; r++) {
-        if (runOwner[r] !== id || runSize[r] === 0 || runLast[r] <= time) continue;
-        const from = runAt[r];
-        const to = from + runSize[r];
-        let lastDeath = -Infinity;
-        for (let i = from; i < to; i++) {
-          const born = start[i * 4 + 3];
-          if (born > time) start[i * 4 + 3] = -1e6;
-          else lastDeath = Math.max(lastDeath, born + shape[i * 4]);
-        }
-        runLast[r] = lastDeath;
-        attributes.aStart.addUpdateRange(from * 4, runSize[r] * 4);
+      let from = size;
+      let to = -1;
+      for (let i = 0; i < size; i++) {
+        if (owners[i] !== id || bornAt[i] <= time) continue;
+        start[i * 4 + 3] = -1e6;
+        bornAt[i] = diesAt[i] = -Infinity;
+        from = Math.min(from, i);
+        to = i;
+      }
+      if (to >= from) {
+        attributes.aStart.addUpdateRange(from * 4, (to - from + 1) * 4);
         attributes.aStart.needsUpdate = true;
       }
     },
 
+    /** Track the actual last particle death across every run of the next shell. */
+    beginLifetime() { lastDeath = -Infinity; },
+    get lastDeath() { return lastDeath; },
+    /** Last actual death among the occupied slots; owner null includes all barges/shells. */
+    latestDeath(owner = null) {
+      let end = -Infinity;
+      for (let i = 0; i < size; i++) if (owner === null || owners[i] === owner) end = Math.max(end, diesAt[i]);
+      return end;
+    },
+
     /** Claims `count` particles and returns the index of the first. */
     begin(count) {
-      runStart = claim(count, uniforms.uTime.value);
-      // Runs that were there are over (or squeezed out): forget where they were, so a cut can't
-      // reach the sparks written over them.
-      for (let r = 0; r < RUNS; r++) {
-        if (runSize[r] > 0 && runAt[r] < runStart + count && runAt[r] + runSize[r] > runStart) runSize[r] = 0;
-      }
+      if (!Number.isInteger(count) || count < 0 || count > size) throw new RangeError('Particle claim exceeds the pool');
+      runStart = count ? claim(count, uniforms.uTime.value) : cursor;
       runCount = count;
       cursor = runStart + count;
-      runFirstBorn = Infinity;
-      runLastDeath = -Infinity;
       return runStart;
     },
 
@@ -159,22 +157,19 @@ export function createPool(size, uniforms) {
       shape[o + 1] = radius;
       shape[o + 2] = trail;
       shape[o + 3] = kind;
-      if (born < runFirstBorn) runFirstBorn = born;
-      if (born + life > runLastDeath) runLastDeath = born + life;
+      bornAt[i] = born;
+      diesAt[i] = born + life;
+      owners[i] = owner;
+      if (born + life > lastDeath) lastDeath = born + life;
     },
 
     /** Uploads the run claimed by the last begin(). */
     end() {
+      if (!runCount) return;
       for (let a = 0; a < attributeList.length; a++) {
         attributeList[a].addUpdateRange(runStart * 4, runCount * 4);
         attributeList[a].needsUpdate = true;
       }
-      runFirst[runIndex] = runFirstBorn;
-      runLast[runIndex] = runLastDeath;
-      runSize[runIndex] = runCount;
-      runAt[runIndex] = runStart;
-      runOwner[runIndex] = owner;
-      runIndex = (runIndex + 1) % RUNS;
     },
 
     /** How many runs overwrote live particles because the pool was full (0 is healthy). */
@@ -182,11 +177,11 @@ export function createPool(size, uniforms) {
       return squeezed;
     },
 
-    /** Particles in runs that are live now (an upper bound: a run counts whole). */
+    /** Particles born and still alive now, including survivors of a squeezed run. */
     liveCount(time) {
       let live = 0;
-      for (let i = 0; i < RUNS; i++) if (runFirst[i] <= time && runLast[i] >= time) live += runSize[i];
-      return Math.min(live, size);
+      for (let i = 0; i < size; i++) if (bornAt[i] <= time && diesAt[i] > time) live++;
+      return live;
     },
 
     dispose() {

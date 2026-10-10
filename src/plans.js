@@ -1,85 +1,48 @@
-// Free or Deluxe, as the builder offers them: two cards in its sheet (what each one gives and how
-// long its show runs) and a switch on the bar while a preview plays. Both pick the version that
-// will be sent; the switch also plays it, so the difference is seen before paying, and its Deluxe
-// side glows once a free preview is over, in case they haven't looked.
 import { endingLength } from './director.js';
+import { el } from './studio-kit.js';
 
-/** `pick(deluxe, fromPreview)` is called when either one is tapped. */
+// Cards commit a send choice. Preview tabs compare versions without choosing payment.
 export function createPlans(pick, signal) {
-  const cards = group('builder-plans', 'Free or Deluxe');
-  const freeCard = card(false);
-  const deluxeCard = card(true);
-  cards.append(freeCard.node, deluxeCard.node);
-
-  const bar = group('builder-versions', 'Which show');
-  const freeSide = side(false);
-  const deluxeSide = side(true);
-  bar.append(freeSide, deluxeSide);
-  let glowing = false;
-
-  function card(deluxe) {
-    const node = button(deluxe ? 'builder-plan is-deluxe' : 'builder-plan', () => pick(deluxe, false));
-    const name = el('strong', 'builder-plan-name');
-    const lines = el('ul', 'builder-plan-lines');
-    node.append(name, lines);
-    return { node, name, lines, said: '' };
+  const cards = group('builder-plans', 'Choose a version to send');
+  const bar = group('builder-versions', 'Compare free previews');
+  const options = [];
+  for (const deluxe of [false, true]) {
+    const card = button(deluxe ? 'builder-plan is-deluxe' : 'builder-plan', () => pick(deluxe, false));
+    const name = el('strong', 'builder-plan-name'), lines = el('ul', 'builder-plan-lines');
+    card.append(name, lines); cards.append(card);
+    const tab = button(deluxe ? 'builder-version is-deluxe' : 'builder-version', () => pick(deluxe, true));
+    bar.append(tab); options.push({ deluxe, card, name, lines, tab });
   }
-
-  function side(deluxe) {
-    return button(deluxe ? 'builder-version is-deluxe' : 'builder-version', () => pick(deluxe, true));
-  }
-
-  function button(className, onClick) {
-    const node = el('button', className);
-    node.type = 'button';
-    node.setAttribute('role', 'radio');
-    node.addEventListener('click', onClick, { signal });
+  function button(className, click) {
+    const node = el('button', className); node.type = 'button'; node.setAttribute('role', 'radio');
+    node.addEventListener('click', click, { signal });
+    node.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+      event.preventDefault();
+      const other = [...node.parentElement.children].find((item) => item !== node);
+      other?.focus(); other?.click();
+    }, { signal });
     return node;
   }
-
-  // Fills a card, only when its text changes (the builder refreshes on every keystroke).
-  function describe(target, name, lines) {
-    const said = name + lines.join('|');
-    if (said === target.said) return;
-    target.said = said;
-    target.name.textContent = name;
-    target.lines.replaceChildren(...lines.map((line) => el('li', '', line)));
-  }
-
   return {
-    cards,
-    bar,
-    /** Shows `occasion`'s two versions, `deluxe` the one picked, at `price`. */
-    show(occasion, deluxe, price) {
-      const free = Math.round(endingLength(occasion, false));
-      const paid = Math.round(endingLength(occasion, true));
-      describe(freeCard, 'Free', [`${free}-second show`, 'Your words and their name', 'Video with a small mark']);
-      describe(deluxeCard, `✦ Deluxe · ${price}`, [`${paid}-second show with a grand finale`, 'Opens gift-wrapped', 'Signed in the sky, your initials in a heart', 'Clean video, link never expires']);
-      freeSide.textContent = `Free · ${free} s`;
-      deluxeSide.textContent = `✦ Deluxe · ${paid} s`;
-      for (const [node, on] of [[freeCard.node, !deluxe], [deluxeCard.node, deluxe], [freeSide, !deluxe], [deluxeSide, deluxe]]) {
-        node.setAttribute('aria-checked', String(on));
+    cards, bar,
+    show(occasion, tier, price, previewTier = tier || 'deluxe') {
+      for (const item of options) {
+        const value = item.deluxe ? 'deluxe' : 'free';
+        const seconds = Math.round(endingLength(occasion, item.deluxe));
+        item.name.textContent = item.deluxe ? `Full Deluxe show · ${price}` : 'Free version · $0';
+        const lines = item.deluxe
+          ? [`${seconds}-second show and grand finale`, 'All effects and side-barge fountains', 'Gift-wrapped, with your signature', 'Clean video; private link never expires']
+          : [`${seconds}-second show`, 'Your colours, words and their name', 'Free effects; center-barge show', 'Video with a small mark'];
+        item.lines.replaceChildren(...lines.map((line) => el('li', '', line)));
+        item.tab.textContent = `${item.deluxe ? 'Deluxe' : 'Free'} preview · ${seconds} s`;
+        item.card.setAttribute('aria-checked', String(tier === value));
+        item.tab.setAttribute('aria-checked', String(previewTier === value));
+        item.card.tabIndex = tier === value || tier === null && !item.deluxe ? 0 : -1;
+        item.tab.tabIndex = previewTier === value ? 0 : -1;
       }
     },
-    /** The Deluxe side of the switch glows (a free preview has ended) or not. */
-    glow(on) {
-      if (on === glowing) return;
-      glowing = on;
-      deluxeSide.classList.toggle('is-nudging', on);
-    },
+    glow() {},
   };
 }
-
-function group(className, label) {
-  const node = el('div', className);
-  node.setAttribute('role', 'radiogroup');
-  node.setAttribute('aria-label', label);
-  return node;
-}
-
-function el(tag, className = '', text = '') {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
-}
+function group(className, label) { const node = el('div', className); node.setAttribute('role', 'radiogroup'); node.setAttribute('aria-label', label); return node; }

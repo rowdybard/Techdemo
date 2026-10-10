@@ -152,7 +152,7 @@ def main():
     for page in everything:
         out = os.path.join(target, page['slug'] + '.html')
         content = page_html(page, pages, hub)
-        with open(out, 'w', encoding='utf-8') as handle:
+        with open(out, 'w', encoding='utf-8', newline='\n') as handle:
             handle.write(content)
         print(f'wrote {page["slug"]}.html  ({len(content):,} bytes)')
 

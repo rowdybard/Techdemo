@@ -5,6 +5,7 @@ import { LABELS } from './occasions.js';
 import { LIGHT_COLORS } from './lighthouse.js';
 import { PLACES } from './places.js';
 import { el, section } from './studio-kit.js';
+import { groundStyles, isDeluxe } from './catalog.js';
 
 const SHELLS = {
   Classic: ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star'],
@@ -19,7 +20,6 @@ const WEATHER = [
   { name: 'Wind', low: 'Still', high: 'Gusty', get: (c) => c.physics.windSpeed / 10, set: (c, v) => { c.physics.windSpeed = v * 10; } },
   { name: 'Smoke', low: 'None', high: 'Lots', get: (c) => (c.smoke.enabled ? c.smoke.amount / 2 : 0),
     set: (c, v) => { c.smoke.amount = v * 2; c.smoke.enabled = v > 0.01; } },
-  { name: 'Snow', low: 'None', high: 'Blizzard', get: (c) => c.snow.amount, set: (c, v) => { c.snow.amount = v; } },
 ];
 // The lighthouse's light, shown while the pier is on.
 const LIGHTHOUSE = [
@@ -30,7 +30,7 @@ const LIGHT_NAMES = { warm: 'Warm', white: 'White', red: 'Red', green: 'Green' }
 
 /**
  * Builds the folded section. `kit` holds the drawer's controls (studio-kit.js), `deluxeItem(name)`
- * says whether to mark an effect ✦, `startOver` and `advanced` are the footer's two links.
+ * says whether to label an effect Deluxe, `startOver` and `advanced` are the footer's two links.
  */
 export function buildMore(ctx, { kit, refreshers, changed, deluxeItem, startOver, advanced }) {
   const { config } = ctx;
@@ -55,7 +55,6 @@ export function buildMore(ctx, { kit, refreshers, changed, deluxeItem, startOver
         } else {
           mix[type] = kept[type] || 1;
         }
-        if (ctx.builder) ctx.builder.picked(type, mix[type] > 0); // a Deluxe shell switched on makes the send Deluxe
         changed();
       });
       refreshers.push(() => {
@@ -77,9 +76,8 @@ export function buildMore(ctx, { kit, refreshers, changed, deluxeItem, startOver
     });
     refreshers.push(() => {
       chip.setAttribute('aria-pressed', String(style === 'off' ? !config.fountains.enabled : config.fountains.enabled && config.fountains.style === style));
-      // The Halloween mix holds paid effects, so it's marked too ("A bit of everything" is the
-      // free default: a free send uses only its free effects).
-      chip.classList.toggle('is-deluxe', deluxeItem(style) || (style === 'halloween' && Boolean(ctx.builder)));
+      // Named mixes disclose any included Deluxe effect before preview or checkout.
+      chip.classList.toggle('is-deluxe', groundStyles(style).some(isDeluxe));
     });
     ground.append(chip);
   }
@@ -90,7 +88,7 @@ export function buildMore(ctx, { kit, refreshers, changed, deluxeItem, startOver
   const switches = el('div', 'studio-switches');
   const beachOnly = [toggle('Pier & lighthouse', () => config.landmarks.pier, (on) => { config.landmarks.pier = on; }),
     toggle('Dune grass', () => config.landmarks.grass, (on) => { config.landmarks.grass = on; })];
-  switches.append(toggle('Side barges', () => config.fountains.sideBarges, (on) => { config.fountains.sideBarges = on; }), ...beachOnly);
+  switches.append(...beachOnly);
 
   const lighthouse = el('div', 'studio-sliders');
   for (const def of LIGHTHOUSE) lighthouse.append(slider(def));
@@ -106,7 +104,7 @@ export function buildMore(ctx, { kit, refreshers, changed, deluxeItem, startOver
   lighthouse.append(lightColors);
   const lighthouseSection = section('Lighthouse', lighthouse);
   refreshers.push(() => {
-    const beach = config.place.environment === 'beach';
+    const beach = PLACES[config.place.environment]?.capabilities.beach;
     lighthouseSection.hidden = !beach || !config.landmarks.pier;
     for (const row of beachOnly) row.hidden = !beach;
   });
@@ -125,9 +123,12 @@ export function buildMore(ctx, { kit, refreshers, changed, deluxeItem, startOver
   }
 
   const footer = el('div', 'studio-footer');
-  footer.append(button('studio-link', 'Start over', startOver), button('studio-link', 'Advanced settings', advanced));
+  footer.append(button('studio-link', 'Reset show settings', startOver), button('studio-link', 'Advanced settings', advanced));
+
+  const extras = section('Beach details', switches);
+  refreshers.push(() => { extras.hidden = !PLACES[config.place.environment]?.capabilities.beach; });
 
   more.append(section('Fireworks', shellGroups), section('Ground show', ground), section('Sky & weather', weather),
-    section('Extras', switches), lighthouseSection, section('View', cameras), footer);
+    extras, lighthouseSection, section('View', cameras), footer);
   return more;
 }

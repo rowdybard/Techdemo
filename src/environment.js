@@ -25,10 +25,14 @@ const BUILDERS = {
   beach: () => [ocean, beach, landmarks, lighthouse, walk],
   lake: () => [land, pines, village, reeds, mirror, lake],
 };
+// Config survives Shift+R, including the camera views the lake installed in it.
+// Remember each config's beach baseline once rather than snapshotting the lake on rebuild.
+const BEACH_VIEWS = new WeakMap();
 
 export function create(ctx) {
   const { config } = ctx;
-  const startViews = JSON.parse(JSON.stringify(config.camera.presets)); // the config's own views belong to the beach
+  if (!BEACH_VIEWS.has(config)) BEACH_VIEWS.set(config, JSON.parse(JSON.stringify(config.camera.presets)));
+  const startViews = BEACH_VIEWS.get(config);
 
   // The lighthouse beam, as the smoke sees it. It outlives any one place, so the smoke's shader
   // keeps working when the beach comes and goes; only the lighthouse writes to it.

@@ -15,6 +15,7 @@
 // effect, or marked deluxe: true, plays only in a Deluxe greeting; otherwise a shell or
 // ground effect it names is swapped for the occasion's stand-in (`fallback`).
 import { PRESETS, SCENE, applyPreset, applyPresetSections, putScene, takeScene } from './presets.js';
+import { FREE_EFFECTS, DELUXE_EFFECTS } from './catalog.js';
 
 export const PRICE = '$4.99';
 
@@ -263,10 +264,10 @@ export function returnScene(config, before) {
  * occasion's Deluxe shells are taken out of the mix and its ground show plays only
  * free effects. Nothing is remembered in this viewer's saved settings.
  */
-export function applyOccasion(config, name, deluxe) {
+export function applyOccasion(config, name, deluxe, { legacy = false } = {}) {
   const occasion = OCCASIONS[name] || OCCASIONS[DEFAULT_OCCASION];
   applyPreset(config, occasion.preset);
-  const allowed = allowedEffects(occasion, deluxe);
+  const allowed = allowedEffects(occasion, deluxe, legacy);
   for (const item of occasion.free.concat(occasion.deluxe)) {
     if (GROUND.has(item) || item === 'finale') continue;
     if (item in config.look.mix) config.look.mix[item] = allowed.has(item) ? Math.max(config.look.mix[item], 1.2) : 0;
@@ -285,7 +286,8 @@ export function applyOccasion(config, name, deluxe) {
 const GIVEN_AWAY = new Set(Object.values(OCCASIONS).flatMap((occasion) => occasion.free));
 const EVERY_EFFECT = new Set(Object.values(OCCASIONS).flatMap((occasion) => occasion.free.concat(occasion.deluxe)));
 const paid = new WeakMap();
-export function paidItems(occasion) {
+export function paidItems(occasion, { legacy = false } = {}) {
+  if (!legacy) return DELUXE_EFFECTS;
   let set = paid.get(occasion);
   if (!set) {
     set = new Set(occasion.deluxe);
@@ -295,6 +297,7 @@ export function paidItems(occasion) {
   return set;
 }
 
-export function allowedEffects(occasion, deluxe) {
-  return new Set(deluxe ? occasion.free.concat(occasion.deluxe) : occasion.free);
+export function allowedEffects(occasion, deluxe, legacy = false) {
+  if (legacy) return new Set(deluxe ? occasion.free.concat(occasion.deluxe) : occasion.free);
+  return deluxe ? new Set([...FREE_EFFECTS, ...DELUXE_EFFECTS]) : FREE_EFFECTS;
 }

@@ -37,6 +37,10 @@ export function create(ctx) {
   let lastNight = -1;
   let lastMoon = -1;
   let lastAt = -1e9;
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    lastNight = lastMoon = -1;
+    lastAt = -1e9;
+  }, { signal: ctx.signal });
 
   function capture() {
     for (const child of scene.children) {

@@ -3,7 +3,8 @@
 // into hero mode (?hero=1 or #hero) or as a bare embed for a client's site (?embed=1).
 // Everything in a link is untrusted: settings go through loadSettings, which only accepts
 // known keys with matching types, and text is length-capped and shown with textContent.
-import { loadSettings, recall, settingsJSON } from './presets.js';
+import { loadSettings, recall, settingsJSON, applyPreset, LANDING_PRESET } from './presets.js';
+import { lookPlace, MAX_LOOK_BYTES, normalizeLook } from './design.js';
 import { greetingBlocked } from './moderate.js';
 
 // Where client links point when the page itself isn't on a public address (a local file
@@ -27,10 +28,10 @@ export function readLink(config) {
   const embed = params.get('embed') === '1';
   // The endless random show (autoshow.js): its own design every act, never a saved one.
   const autoshow = !embed && (/^\/autoshow\/?$/.test(location.pathname) || params.get('autoshow') === '1');
-  if (!embed && !autoshow) recall(config);
+  if (!embed && !autoshow && !recall(config)) applyPreset(config, LANDING_PRESET);
 
   const packed = params.get('s');
-  if (packed) {
+  if (packed && packed.length <= 32000) {
     const json = unpack(packed);
     if (json) loadSettings(config, json);
   }
@@ -75,6 +76,7 @@ export function readLink(config) {
   // The greeting's occasion, known before the scene is built: a long link carries it, and for a
   // short one the worker puts it in a meta tag (worker/index.js), so the place is right from the start.
   const tag = document.querySelector('meta[name="sg-occasion"]');
+  const placeTag = document.querySelector('meta[name="sg-place"]');
   const occasion = autoshow || embed ? '' : (gift && gift.occasion) || (paid && tag ? tag.content : '');
   const hero = !autoshow && !gift && !paid && (embed || params.get('hero') === '1' || location.hash === '#hero');
   // A client's header spells their business name if nothing else was set.
@@ -84,6 +86,7 @@ export function readLink(config) {
     autoshow,
     make,
     occasion,
+    place: lookPlace(gift?.look) || (paid && ['beach', 'lake'].includes(placeTag?.content) ? placeTag.content : null),
     look: gift ? gift.look : null,
     gift: autoshow ? null : paid || gift,
     hero,
@@ -106,7 +109,11 @@ export function giftLink({ occasion, message, message2, to, from, look }) {
   if (name) params.set('to', name);
   const sender = cleanText(from, MESSAGE_LIMIT);
   if (sender) params.set('from', sender);
-  if (look) params.set('l', pack(JSON.stringify(look)));
+  if (look) {
+    const normalized = normalizeLook(look, { tier: 'free' });
+    if (!normalized) throw new Error('This show could not be saved. Please simplify the design and try again.');
+    params.set('l', pack(JSON.stringify(normalized)));
+  }
   return `${siteBase()}?${params}`;
 }
 
@@ -117,6 +124,7 @@ export function giftLink({ occasion, message, message2, to, from, look }) {
  * an error, which is shown).
  */
 export async function shortLink(greeting) {
+  let refusal = '';
   if (/^https?:$/.test(location.protocol) && !/claude|usercontent/.test(location.hostname)) {
     try {
       const response = await fetch('/api/share', {
@@ -126,10 +134,12 @@ export async function shortLink(greeting) {
       });
       const data = await response.json();
       if (response.ok && /^[A-Za-z0-9]{8}$/.test(data.id)) return paidLink(data.id);
+      if (response.status >= 400 && response.status < 500) refusal = data.error || 'This greeting could not be sent.';
     } catch {
       // Offline or no server: the long link below still works.
     }
   }
+  if (refusal) throw new Error(refusal);
   return giftLink(greeting);
 }
 
@@ -162,7 +172,7 @@ export function embedCode(config) {
 
 // A designed look from a link (look.js checks every value when it's applied).
 function readLook(packed) {
-  if (!packed || packed.length > 2000) return null;
+  if (!packed || packed.length > Math.ceil(MAX_LOOK_BYTES * 4 / 3) + 4) return null;
   try {
     const look = JSON.parse(unpack(packed));
     return look && typeof look === 'object' && !Array.isArray(look) ? look : null;
