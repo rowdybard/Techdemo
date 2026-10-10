@@ -143,38 +143,52 @@ export function fans(pool, config, phone, start, tubes, y, z, palette, lights) {
 export function waterfall(pool, config, phone, start, tubes, y, z, palette, lights) {
   const { look } = config;
   const duration = 8;
-  const edge = z + 8.1; // the main hull is 16 m wide; spill toward the viewer, clear of it
+  // Hung from a line well above the deck, as real falls hang from a cable: a curtain a couple of
+  // metres tall, poured from the deck edge, was too small to see across the water. A fuse races
+  // along the line first and each strand pours once it's lit, which shows where the curtain hangs.
+  const top = y + config.fountains.height * 0.8;
+  const edge = z + 8.1; // the main hull is 16 m wide; hang just in front of it, clear of the hull
   const gravity = 9.81 * config.physics.gravity;
   const drag = 0.9;
+  const fuse = 0.7; // seconds for the fuse to run the length of the line
   const spacing = tubes.length > 1 ? tubes[1] - tubes[0] : 10;
   const left = tubes[0] - spacing / 2;
   const width = tubes[tubes.length - 1] + spacing / 2 - left;
-  // Separate strands keep the short curtain legible without increasing its density.
+  // Separate strands keep the curtain legible without increasing its density.
   const strands = phone ? 28 : 44;
   const perSecond = Math.round(width * (phone ? 1.6 : 2.9)); // by the metre, so a short curtain isn't a solid slab
   const count = Math.round(perSecond * duration);
-  let i = pool.begin(count);
+  const sparks = strands * 2; // the running fuse
+  let i = pool.begin(count + sparks);
+  for (let k = 0; k < sparks; k++) {
+    const share = (k + Math.random()) / sparks;
+    pool.set(i++, left + share * width, top, edge, start + share * fuse,
+      (Math.random() - 0.5) * 3, Math.random() * 2, 0.2 + Math.random() * 0.4, 2.5,
+      1, 0.9, 0.7, 1, 0.6, 0.25, 0.15, 0.3 + Math.random() * 0.15, 0.3 * look.sparkSize, 0.1, KIND.spark);
+  }
   for (let k = 0; k < count; k++) {
-    const t = (k / count) * duration;
-    const born = start + t + Math.random() / perSecond;
-    const vy = 1 + Math.random(); // a small lip of sparks, rather than a tall fountain
-    const fall = waterTime(y, vy, gravity, drag);
-    const x = left + ((k % strands) + 0.5 + (Math.random() - 0.5) * 0.25) * (width / strands);
-    pool.set(i++, x, y, edge + Math.random() * 0.2, born,
-      (Math.random() - 0.5) * 0.3, vy, 4.5 + Math.random() * 2, drag,
+    const strand = k % strands;
+    const lit = start + ((strand + 0.5) / strands) * fuse;
+    const born = lit + ((k / count) * (duration - fuse)) + Math.random() / perSecond;
+    const vy = -0.4 - Math.random() * 1.1; // spilling over the line, not thrown
+    const from = top + (Math.random() - 0.5) * 0.4;
+    const fall = waterTime(from, vy, gravity, drag);
+    const x = left + (strand + 0.5 + (Math.random() - 0.5) * 0.25) * (width / strands);
+    pool.set(i++, x, from, edge + Math.random() * 0.3, born,
+      (Math.random() - 0.5) * 0.3, vy, 0.3 + Math.random() * 0.5, drag,
       0.34, 0.27, 0.17, 0.34, 0.15, 0.04, fall * 0.55, fall, 0.22 * look.sparkSize, 0.45, KIND.glitter);
   }
   pool.end();
   const glow = [0.4, 0.28, 0.1]; // as dim as a fountain's: a whole barge of them lights the shore
-  for (let t = 0; t < tubes.length; t++) light(lights[t], start, duration, tubes[t], y, edge, glow, 14, 0.5, 'hiss');
+  for (let t = 0; t < tubes.length; t++) light(lights[t], start, duration, tubes[t], (top + y) / 2, edge, glow, 14, 0.5, 'hiss');
 }
 
 // Solve the same closed-form vertical motion as the spark shader. A deck-height
 // spark should finish at the water, not keep falling visibly beneath it for six seconds.
 function waterTime(y, vy, gravity, drag) {
   const terminal = -gravity / drag;
-  let low = 0, high = 8;
-  for (let step = 0; step < 16; step++) {
+  let low = 0, high = 40; // a long fall in low gravity still ends at the water
+  for (let step = 0; step < 24; step++) {
     const time = (low + high) / 2;
     const height = y + terminal * time + (vy - terminal) * (1 - Math.exp(-drag * time)) / drag;
     if (height > 0) low = time;

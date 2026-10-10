@@ -170,8 +170,8 @@ export function create(ctx) {
   }
 
   function playSides(pool, start) {
-    // The waterfall is the main barge's alone: squeezed onto a side barge it's a glowing slab.
-    const style = current === 'waterfall' ? 'fountains' : current || firstStyle();
+    // Every style, the waterfall too (its density is by the metre, so a side barge's is a short curtain).
+    const style = current || firstStyle();
     const [, by, bz] = config.show.bargePosition;
     let end = start + 2;
     for (let s = 0; s < 2; s++) {

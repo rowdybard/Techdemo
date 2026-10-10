@@ -239,7 +239,7 @@ test('side-barge disable cancels delayed emissions after their lights already en
   assert.equal(p.mesh.geometry.attributes.aStart.array[delayed * 4 + 3], -1e6);
   module.dispose(); p.dispose();
 });
-test('waterfall starts at the deck, anchors its lights, and dies at water at every height', () => {
+test('waterfall hangs from a line above the deck, lit by a running fuse, and dies at water at every height', () => {
   for (const height of [8, 50]) for (const gravity of [0.2, 1, 2]) {
     const ctx = fixture();
     ctx.config.fountains.height = height;
@@ -251,22 +251,24 @@ test('waterfall starts at the deck, anchors its lights, and dies at water at eve
     const birth = p.mesh.geometry.attributes.aStart.array;
     const motion = p.mesh.geometry.attributes.aMotion.array;
     const shape = p.mesh.geometry.attributes.aShape.array;
-    let count = 0;
+    let count = 0, fuse = 0;
     const point = [0, 0, 0];
+    const top = 2.5 + height * 0.8;
     for (let i = 0; i < p.size; i++) {
       const offset = i * 4;
       if (birth[offset + 3] < -100) continue;
-      count++;
-      assert.equal(birth[offset + 1], 2.5);
-      assert.ok(birth[offset + 2] > -372, 'sparks originate beyond the front hull edge');
+      assert.ok(Math.abs(birth[offset + 1] - top) <= 0.2, 'every spark starts on the line');
+      assert.ok(birth[offset + 2] > -372, 'sparks hang beyond the front hull edge');
       assert.ok(motion[offset + 2] > 0, 'sparks spill outward toward the water');
-      assert.ok(shape[offset] < 4, 'deck-height sparks do not keep a six-second fall');
+      if (shape[offset] < 0.5) { fuse++; continue; } // the fuse running along the line
+      count++;
       positionAt(point, birth[offset], birth[offset + 1], birth[offset + 2],
         motion[offset], motion[offset + 1], motion[offset + 2], motion[offset + 3], shape[offset], 9.81 * gravity, 0, 0);
       assert.ok(Math.abs(point[1]) < 0.002, 'lifetime ends at water level');
     }
     assert.equal(count, Math.round(125 * 2.9) * 8, 'existing per-metre particle density retained');
-    for (const light of lights) { assert.equal(light.y, 2.5); assert.equal(light.z, -371.9); }
+    assert.equal(fuse, 88, 'a fuse runs the line first');
+    for (const light of lights) { assert.equal(light.y, (top + 2.5) / 2); assert.equal(light.z, -371.9); }
     p.dispose();
   }
 });
