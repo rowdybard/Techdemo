@@ -51,6 +51,7 @@ export function create(ctx) {
   let nextLaunch = 0;
 
   let finaleUntil = -1;
+  let secondLine = true; // which of two lines in the sky went up last
 
   // Is a message in the sky (or about to be)? Then random shells go to the sides.
   function wordsUp(time) {
@@ -63,9 +64,18 @@ export function create(ctx) {
 
   // `burstAt`, if given, is the moment the shell must burst: it leaves the barge a fuse earlier
   // (so a shell can be sent off ahead of time and burst exactly on a beat).
-  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false, burstAt = NaN, paletteName = null, owner = 0) {
+  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false, burstAt = NaN, paletteName = null, owner = 0, words = null, line = 0) {
     plan.launch = time;
     planShell(plan, config, phone, aimX, aimY, type);
+    plan.words = words;
+    plan.line = line;
+    // Two lines in the sky take turns, in the show's own shells (a greeting's lines are the director's),
+    // the first in the palette's first colour and the second in its second.
+    if (random && plan.type === 'text' && config.look.text2.trim()) {
+      secondLine = !secondLine;
+      plan.words = secondLine ? config.look.text2 : config.look.text;
+      plan.line = secondLine ? 2 : 1;
+    }
     if (random && plan.type !== 'text' && wordsUp(time)) {
       // Clear of the words: out to one side, at any height.
       const side = Math.random() < 0.5 ? -1 : 1;
@@ -178,8 +188,9 @@ export function create(ctx) {
     },
 
     /** Fires one shell now, whatever the schedule; optionally of one type. */
-    launch(type = null) {
-      launch(uniforms.uTime.value, NaN, NaN, type);
+    /** Fires one shell of `type` now (`words` spells those instead of the words in the sky, as its `line`: 1 or 2). */
+    launch(type = null, words = null, line = 0) {
+      launch(uniforms.uTime.value, NaN, NaN, type, false, NaN, null, 0, words, line);
     },
 
     /** Fires one shell of `type` from the barge to burst at (x, height), at `burstAt` if given, in a named palette if given. */

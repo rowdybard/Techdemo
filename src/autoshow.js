@@ -12,7 +12,7 @@
 // It only writes config (as Customize does) and never saves it, so nobody's own design
 // is touched. No words ever go up.
 
-const CLASSIC = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star',
+const CLASSIC = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'helmet',
   'kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'];
 const SPOOKY = ['pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'];
 const PALETTES = ['classic', 'usa', 'gold', 'neon', 'pastel', 'rainbow', 'royal', 'ocean', 'cosmic', 'rose', 'sakura', 'autumn', 'ice'];
@@ -45,6 +45,7 @@ export function create(ctx) {
   container.classList.add('autoshow-mode');
   const { look, show, fountains, physics, sky, smoke, landmarks } = config;
   look.text = '';
+  look.text2 = '';
   look.mix.text = 0;
 
   // The only controls: sound, and a way to make your own.

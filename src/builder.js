@@ -48,11 +48,12 @@ export function create(ctx) {
   const to = field('Their name (optional)', NAME_LIMIT), from = field('From (optional)', MESSAGE_LIMIT);
   const addLine = button('builder-add-line', '+ Add a second line', () => { message2.label.hidden = false; addLine.hidden = true; message2.input.focus(); });
   message2.label.hidden = true;
+  message2.input.addEventListener('input', () => { if (!greetingBlocked(words())) skyWords(); }, { signal });
   message.input.addEventListener('input', () => {
     state.typed = true; clearTimeout(spellTimer);
     if (isBlocked(words().message)) { status.textContent = BLOCKED_NOTE; return; }
     if (status.textContent === BLOCKED_NOTE) status.textContent = '';
-    config.look.text = words().message;
+    skyWords();
     spellTimer = setTimeout(() => { if (!sheet.hidden) ctx.fireworks?.launch('text'); }, 1200);
   }, { signal });
   const customize = button('send-secondary builder-customize', '🎨 Customize the show', () => ctx.studio?.open());
@@ -108,7 +109,7 @@ export function create(ctx) {
     open.hidden = nav.current !== null;
     if (!nav.current || nav.current === 'studio' && nav.parent === null) {
       state.view = 'closed';
-      if (ownWords) { [config.look.text, config.look.mix.text] = ownWords; ownWords = null; }
+      if (ownWords) { [config.look.text, config.look.mix.text, config.look.text2] = ownWords; ownWords = null; }
     }
   }, { signal });
   sheet.addEventListener('submit', (event) => { event.preventDefault(); sendIt(); }, { signal });
@@ -120,15 +121,21 @@ export function create(ctx) {
     else if (!borrowed && state.borrowed) { returnScene(config, state.borrowed); state.borrowed = null; }
     draft.changed();
     if (!state.typed || !message.input.value.trim()) { message.input.value = OCCASIONS[name].message; state.typed = false; }
-    config.look.text = words().message; refresh();
+    skyWords(); refresh();
   }
   function openBuilder() {
     stopPlayback();
-    if (!ownWords) ownWords = [config.look.text, config.look.mix.text];
-    // Words written in Customize are the greeting's message: the newest carry over, and an edit
-    // made here stands until they change again.
+    if (!ownWords) ownWords = [config.look.text, config.look.mix.text, config.look.text2];
+    // The words in the sky (Customize's, or a look's own) are the greeting's first two lines: the
+    // newest carry over, and an edit made here stands until they change again.
     const sky = cleanText(ownWords[0] || '', MESSAGE_LIMIT).toUpperCase();
-    if (sky && sky !== carried && !isBlocked(sky)) { carried = sky; message.input.value = sky; state.typed = true; }
+    const sky2 = cleanText(ownWords[2] || '', MESSAGE_LIMIT).toUpperCase();
+    if (sky && `${sky}\n${sky2}` !== carried && !greetingBlocked({ message: sky, message2: sky2 })) {
+      carried = `${sky}\n${sky2}`;
+      message.input.value = sky;
+      message2.input.value = sky2;
+      state.typed = true;
+    }
     if (!state.opened) {
       state.opened = true;
       if (!state.typed && !ctx.link.make) {
@@ -138,7 +145,7 @@ export function create(ctx) {
       choose(state.occasion);
     }
     status.textContent = ''; linkBox.hidden = true;
-    config.look.text = words().message; config.look.mix.text = 0.7;
+    skyWords(); config.look.mix.text = 0.7;
     const hasLine = Boolean(message2.input.value.trim()); message2.label.hidden = !hasLine; addLine.hidden = hasLine;
     nav.open('builder'); offer.refresh(); track('builder_open', { content_type: state.occasion });
   }
@@ -157,6 +164,11 @@ export function create(ctx) {
     useVersion.setAttribute('aria-pressed', String(chosen));
     useVersion.textContent = `${chosen ? '✓ ' : 'Use '}${deluxeShown ? 'Deluxe' : 'Free'}${chosen ? ' chosen' : ''}`;
   }
+  // While the greeting is made, its lines are the words in the sky (two take turns).
+  function skyWords() {
+    config.look.text = words().message;
+    config.look.text2 = words().message2;
+  }
   function words() { return { message: cleanText(message.input.value, MESSAGE_LIMIT).toUpperCase() || OCCASIONS[state.occasion].message,
     message2: cleanText(message2.input.value, MESSAGE_LIMIT).toUpperCase(), to: cleanText(to.input.value, NAME_LIMIT).toUpperCase(), from: cleanText(from.input.value, MESSAGE_LIMIT) }; }
   function wordsOk() {
@@ -166,7 +178,7 @@ export function create(ctx) {
   function stopPlayback() {
     if (!playback) return;
     playback = false; ctx.director?.stop(); ctx.crane?.stop?.(); draft.restoreDisplay();
-    config.look.text = words().message;
+    skyWords();
     ctx.setCameraPreset?.(config.camera.preset);
   }
   function startPreview() {

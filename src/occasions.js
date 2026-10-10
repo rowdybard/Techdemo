@@ -24,7 +24,7 @@ export const LABELS = {
   pumpkin: "Jack-o'-lanterns", skull: 'Skulls', bat: 'Bats', ghost: 'Ghosts', web: 'Spider webs',
   brew: "Witch's brew", eyes: 'Eyes in the dark', wisp: "Will-o'-the-wisps",
   cauldron: 'Bubbling cauldrons', wisps: 'Rising wisps', lightning: 'Lightning', lanterns: 'Floating lanterns',
-  heart: 'Hearts', star: 'Stars', ring: 'Rings', peony: 'Peonies', willow: 'Gold willows', palm: 'Palms',
+  heart: 'Hearts', star: 'Stars', helmet: 'Spartan helmets', ring: 'Rings', peony: 'Peonies', willow: 'Gold willows', palm: 'Palms',
   crossette: 'Crossettes', strobe: 'Strobes', crackle: 'Crackle', multibreak: 'Double breaks', chrysanthemum: 'Chrysanthemums',
   fountains: 'Fountains', candles: 'Roman candles', shooters: 'Sweeping shooters', mines: 'Mines', fans: 'V fans',
   kamuro: 'Gold crowns', dahlia: 'Colour-changing dahlias', saturn: 'Saturns', fish: 'Swimming fish', whirl: 'Whirlwinds',

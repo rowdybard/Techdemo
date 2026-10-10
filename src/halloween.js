@@ -27,7 +27,7 @@ const dir = [0, 0, 0];
 
 // --- Drawings ----------------------------------------------------------------------
 
-function arc(cx, cy, rx, ry, from, to, steps) {
+export function arc(cx, cy, rx, ry, from, to, steps) {
   const points = [];
   for (let s = 0; s <= steps; s++) {
     const a = from + ((to - from) * s) / steps;
@@ -42,7 +42,7 @@ function mirror(half) {
 }
 
 // Samples strokes ({ points, color: index }) into POINTS evenly spaced (x, y, colour).
-function sample(strokes) {
+export function sample(strokes) {
   const segments = [];
   let total = 0;
   for (const stroke of strokes) {
@@ -138,7 +138,7 @@ const WEB = sample((() => {
 
 // --- Writers -----------------------------------------------------------------------
 
-function fillLight(out, born, at, color, size) {
+export function fillLight(out, born, at, color, size) {
   out.time = born;
   out.x = at[0];
   out.y = at[1];
@@ -150,7 +150,7 @@ function fillLight(out, born, at, color, size) {
 }
 
 // Writes `count` sparks coming to rest on `drawing`, `scale` metres from middle to edge.
-function drawing(pool, shape, count, born, at, scale, config, colors, life, kind) {
+export function drawing(pool, shape, count, born, at, scale, config, colors, life, kind) {
   const { look, physics } = config;
   const drag = 2.2 * physics.drag;
   let i = pool.begin(count);
@@ -180,7 +180,7 @@ const BAT_COLORS = [VIOLET, BLOOD];
 const GHOST_COLORS = [ECTO, ECTO];
 const WEB_COLORS = [SILVER, VIOLET];
 
-function shapeCount(shell) {
+export function shapeCount(shell) {
   return Math.min(POINTS, Math.round(shell.count * 1.1));
 }
 

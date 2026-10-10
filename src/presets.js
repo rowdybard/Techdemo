@@ -13,7 +13,7 @@ const SAVED = ['place', 'sky', 'ocean', 'beach', 'landmarks', 'show', 'fountains
 const STORAGE_KEY = 'beach-fireworks-settings';
 // [section, key, the old default] for defaults changed since launch (see recall).
 const UPGRADES = [['physics', 'heightMin', 85], ['physics', 'heightMax', 135], ['look', 'text', 'SUNSET COVE']];
-const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'text',
+const TYPES = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'helmet', 'text',
   'pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp', 'kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'];
 
 const DEFAULTS = snapshot(defaults);
@@ -30,6 +30,16 @@ export const PRESETS = {
   'Fourth of July': {
     look: { palette: 'usa', particles: 480, mix: mixOf({ peony: 3, chrysanthemum: 2, crossette: 1.5, strobe: 1.5, ring: 1, multibreak: 1.5, star: 1, dahlia: 1.5, saturn: 0.8, whirl: 1 }) },
     show: { shellsPerMinute: 46, maxShells: 9 },
+  },
+  // Game night in green and white: a quick pace, white strobes like stadium lights, rings and
+  // crossettes, and almost all of it free shells, so its Free version looks the same. No willows
+  // or crackle: they burn traditional gold, off the team colours.
+  'Green & White': {
+    look: { palette: 'greenwhite', particles: 460, text: 'GO GREEN', text2: 'GO WHITE',
+      mix: mixOf({ peony: 3.2, ring: 1.6, crossette: 1.1, strobe: 1.8, multibreak: 1.5, palm: 0.6, star: 0.6, helmet: 1.3, chrysanthemum: 1.2, text: 0.9 }) },
+    show: { shellsPerMinute: 44, maxShells: 8 },
+    fountains: { style: 'shooters,mines,candles' },
+    sky: { timeOfDay: 0.85 },
   },
   'Gold Willows': {
     look: { palette: 'gold', lifetime: 3.2, trailLength: 1.4, mix: mixOf({ willow: 5, palm: 2, crackle: 1.5, kamuro: 2.5, leaves: 1 }) },
@@ -155,14 +165,23 @@ export const PRESETS = {
 export function applyPreset(config, name) {
   const header = { ...config.hero }; // a client's header text survives a change of preset
   const sound = { ...config.sound };
-  const words = config.look.text; // and so do the words in the sky: they're the person's, not the style's
+  // And so do the words in the sky: they're the person's, not the style's. A look with words of its
+  // own (Green & White's chant) brings them only when the person hasn't written any.
+  const words = config.look.text, words2 = config.look.text2;
   merge(config, DEFAULTS);
   merge(config, PRESETS[name] || {});
   Object.assign(config.hero, header);
   Object.assign(config.sound, sound);
-  config.look.text = words;
+  const theirs = words.trim() !== '' && !LOOK_WORDS.has(words);
+  if (theirs || !PRESETS[name]?.look?.text) {
+    config.look.text = theirs ? words : '';
+    config.look.text2 = theirs ? words2 : '';
+  }
   if (words.trim() && !(config.look.mix.text > 0)) config.look.mix.text = 0.5; // a style without words still spells theirs now and then
 }
+
+// Words that came with a look rather than from the person.
+const LOOK_WORDS = new Set(Object.values(PRESETS).map((preset) => preset.look?.text).filter(Boolean));
 
 // A place's setting, as opposed to the show: where it is, its sky, its ice and its snow.
 export const SCENE = ['place', 'sky', 'lake', 'snow'];
@@ -199,6 +218,7 @@ export function settingsJSON(config) {
   data.sound = { enabled: config.sound.enabled, volume: config.sound.volume };
   data.hero = { ...config.hero };
   data.look.text = config.look.text;
+  data.look.text2 = config.look.text2;
   data.look.mix.text = config.look.mix.text;
   data.show.autoLaunch = config.show.autoLaunch;
   return JSON.stringify(data, null, 1);
@@ -222,6 +242,7 @@ export function loadSettings(config, text) {
   if (typeof data.sound?.volume === 'number') config.sound.volume = data.sound.volume;
   if (typeof data.show?.autoLaunch === 'boolean') config.show.autoLaunch = data.show.autoLaunch;
   if (typeof data.look?.text === 'string') config.look.text = data.look.text.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 24);
+  if (typeof data.look?.text2 === 'string') config.look.text2 = data.look.text2.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 24);
   if (typeof data.look?.mix?.text === 'number') config.look.mix.text = data.look.mix.text;
   for (const [key, max] of Object.entries({ business: 48, headline: 90, copy: 160, button: 32 })) if (typeof data.hero?.[key] === 'string') config.hero[key] = data.hero[key].slice(0, max);
   return '';

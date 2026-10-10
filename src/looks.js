@@ -16,6 +16,7 @@ export const LOOKS = [
   { preset: 'Thunder', icon: '⚡', label: 'Thunder', line: 'Crackle, strobes and mines, all power' },
   { preset: 'Ice', icon: '❄️', label: 'Ice and silver', line: 'Cool whites and blues, crisp and clean' },
   { preset: 'Fourth of July', icon: '🇺🇸', label: 'Fourth of July', line: 'Red, white and blue, all night' },
+  { preset: 'Green & White', icon: '🛡️', label: 'Green & White', line: 'Game night in green and white' },
   { preset: 'Neon', icon: '💜', label: 'Neon', line: 'Electric colours, rings and strobes' },
   { preset: 'Calm', icon: '🌙', label: 'Calm', line: 'A gentle, pastel show to relax to' },
   { preset: 'Lake Michigan', icon: '🗼', label: 'Lake Michigan', line: 'A pier, a lighthouse and calm water' },

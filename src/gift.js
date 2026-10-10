@@ -108,6 +108,7 @@ export function create(ctx) {
     if (ctx.setCameraPreset) ctx.setCameraPreset(config.camera.preset);
     words = { message: data.message, message2: data.message2 || '', to: data.to, from: data.from || '' };
     config.look.text = data.message;
+    config.look.text2 = '';
     const kind = deluxe ? 'a Deluxe SkyGreeting' : 'a SkyGreeting';
     title.textContent = `${deluxe ? '✦' : '✨'} ${data.from ? `${data.from} made you ${kind}` : `Someone made you ${kind}`}`;
     card.classList.toggle('gift-deluxe', deluxe);
@@ -164,6 +165,7 @@ export function create(ctx) {
     watching = false;
     busyUntil = -Infinity;
     config.look.text = '';
+    config.look.text2 = '';
     config.look.mix.text = 0;
     card.classList.remove('gift-watching');
     title.textContent = 'This SkyGreeting has been taken down.';
@@ -343,6 +345,7 @@ export function create(ctx) {
     ctx.navigation?.close();
     ctx.link.gift = null;
     config.look.text = '';
+    config.look.text2 = '';
     config.look.mix.text = 0;
     history.replaceState(history.state, '', location.pathname);
     ctx.builder?.startFresh();

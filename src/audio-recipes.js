@@ -1,7 +1,7 @@
 // Procedural recipes, injected with the audio engine's bounded voice helpers.
 import { swarm, whirr } from './sfx.js';
 
-const SHAPES = new Set(['heart', 'star', 'text', 'initials', 'pumpkin', 'skull', 'bat', 'ghost', 'web']);
+const SHAPES = new Set(['heart', 'star', 'helmet', 'text', 'initials', 'pumpkin', 'skull', 'bat', 'ghost', 'web']);
 const HISSERS = new Set(['willow', 'palm', 'wisp', 'chrysanthemum', 'kamuro', 'fish', 'leaves']);
 
 export function createRecipes({ getAudio, getPage, voice, noise, tone, holdGround }) {

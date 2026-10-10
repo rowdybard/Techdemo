@@ -21,6 +21,7 @@ const TYPE_LABELS = {
   multibreak: 'Multi-break',
   heart: 'Heart',
   star: 'Star',
+  helmet: 'Spartan helmet',
   text: 'Your text',
   pumpkin: "Jack-o'-lantern",
   skull: 'Skull',
@@ -113,7 +114,7 @@ export function create(ctx) {
   }
 
   const look = gui.addFolder('Look').close();
-  look.add(config.look, 'palette', { Classic: 'classic', Rainbow: 'rainbow', Gold: 'gold', Royal: 'royal', Ocean: 'ocean', Cosmic: 'cosmic', Rose: 'rose', 'Cherry blossom': 'sakura', Autumn: 'autumn', Ice: 'ice', 'Red, white & blue': 'usa', Neon: 'neon', Pastel: 'pastel', Halloween: 'halloween', Custom: 'custom' }).name('Palette');
+  look.add(config.look, 'palette', { Classic: 'classic', Rainbow: 'rainbow', Gold: 'gold', Royal: 'royal', Ocean: 'ocean', Cosmic: 'cosmic', Rose: 'rose', 'Cherry blossom': 'sakura', Autumn: 'autumn', Ice: 'ice', 'Red, white & blue': 'usa', 'Green & white': 'greenwhite', Neon: 'neon', Pastel: 'pastel', Halloween: 'halloween', Custom: 'custom' }).name('Palette');
   const custom = config.palettes.custom;
   for (let i = 0; i < custom.length; i++) look.addColor(custom, i).name(`Custom colour ${i + 1}`);
   look.add(config.look, 'textWidth', 60, 260, 1).name('Text width (m)');

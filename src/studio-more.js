@@ -8,7 +8,7 @@ import { el, section } from './studio-kit.js';
 import { groundStyles, isDeluxe } from './catalog.js';
 
 const SHELLS = {
-  Classic: ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star'],
+  Classic: ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'helmet'],
   Showpieces: ['kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'],
   Halloween: ['pumpkin', 'ghost', 'bat', 'skull', 'web', 'brew', 'eyes', 'wisp'],
 };

@@ -1,5 +1,5 @@
 // Product entitlements, shared by the browser and Worker. Choreography never sets prices.
-export const FREE_SHELLS = Object.freeze(['peony', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'multibreak', 'heart', 'star', 'pumpkin', 'ghost']);
+export const FREE_SHELLS = Object.freeze(['peony', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'multibreak', 'heart', 'star', 'helmet', 'pumpkin', 'ghost']);
 export const DELUXE_SHELLS = Object.freeze(['chrysanthemum', 'crackle', 'kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves', 'skull', 'bat', 'web', 'brew', 'eyes', 'wisp']);
 export const FREE_GROUND = Object.freeze(['fountains', 'shooters', 'candles', 'mines', 'fans', 'lanterns']);
 export const DELUXE_GROUND = Object.freeze(['waterfall', 'cauldron', 'wisps', 'lightning']);

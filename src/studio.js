@@ -17,7 +17,7 @@ import { isDeluxe, paidShare } from './catalog.js';
 import { takeDesign } from './design.js';
 
 const PALETTES = [['classic', 'Classic'], ['rainbow', 'Rainbow'], ['gold', 'Gold'], ['royal', 'Royal'], ['ocean', 'Ocean'], ['cosmic', 'Cosmic'],
-  ['rose', 'Rose'], ['sakura', 'Cherry blossom'], ['autumn', 'Autumn'], ['ice', 'Ice'], ['usa', 'Red, white & blue'], ['neon', 'Neon'],
+  ['rose', 'Rose'], ['sakura', 'Cherry blossom'], ['autumn', 'Autumn'], ['ice', 'Ice'], ['usa', 'Red, white & blue'], ['greenwhite', 'Green & white'], ['neon', 'Neon'],
   ['pastel', 'Pastel'], ['halloween', 'Halloween']];
 
 // The three sliders most people want (value 0..1 both ways); sky, wind, smoke and snow are under More options.
@@ -132,34 +132,49 @@ export function create(ctx) {
   const feel = el('div', 'studio-sliders');
   for (const def of FEEL) feel.append(slider(def));
 
-  // Words in the sky, first in the drawer: spelled now and then, like any other shell. Empty is
-  // none. While a greeting is being made its message is what goes up, so the box steps aside then.
-  const wordsRow = el('label', 'send-field builder-loud studio-words');
-  const wordsInput = el('input');
-  wordsInput.maxLength = MESSAGE_LIMIT;
-  wordsInput.placeholder = 'Type a name or a message';
-  wordsInput.autocomplete = 'off';
-  wordsInput.enterKeyHint = 'done';
+  // Words in the sky, first in the drawer: spelled now and then, like any other shell, and taking
+  // turns when there are two lines. Empty is none. They become the greeting's first two lines
+  // (builder.js); while a greeting is being made its words are what go up, so the box steps aside.
+  const wordsRow = el('div', 'send-field builder-loud studio-words');
   const wordsNote = el('span', 'studio-words-note');
-  wordsRow.append(el('span', 'studio-words-title', '✨ Words in the sky'), el('span', 'studio-words-hint', 'Spelled out in fireworks, and your greeting’s message when you send it.'), wordsInput, wordsNote);
-  let wordsTimer = 0;
-  wordsInput.addEventListener('input', () => {
-    clearTimeout(wordsTimer);
-    const words = cleanText(wordsInput.value, MESSAGE_LIMIT).toUpperCase();
-    if (words && isBlocked(words)) {
-      wordsNote.textContent = 'Those words can’t go in the sky.';
-      return;
-    }
-    wordsNote.textContent = '';
-    config.look.text = words;
-    if (words && !(config.look.mix.text > 0)) config.look.mix.text = 0.5;
-    // A moment after they stop typing, the sky spells it once, so they see it.
-    wordsTimer = setTimeout(() => { if (words && ctx.fireworks) ctx.fireworks.launch('text'); }, 900);
-  }, { signal });
-  wordsInput.addEventListener('change', () => remember(config), { signal });
-  wordsInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') wordsInput.blur(); }, { signal });
+  const lines = ['text', 'text2'].map((key, n) => {
+    const input = el('input');
+    input.maxLength = MESSAGE_LIMIT;
+    input.placeholder = n ? 'Second line (optional)' : 'Type a name or a message';
+    input.autocomplete = 'off';
+    input.enterKeyHint = 'done';
+    input.setAttribute('aria-label', n ? 'Second line in the sky' : 'Words in the sky');
+    let timer = 0;
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      const words = cleanText(input.value, MESSAGE_LIMIT).toUpperCase();
+      if (words && (isBlocked(words) || isBlocked(n ? `${config.look.text} ${words}` : `${words} ${config.look.text2}`))) {
+        wordsNote.textContent = 'Those words can’t go in the sky.';
+        return;
+      }
+      wordsNote.textContent = '';
+      config.look[key] = words;
+      if (words && !(config.look.mix.text > 0)) config.look.mix.text = 0.5;
+      // A moment after they stop typing, the sky spells it once, so they see it.
+      timer = setTimeout(() => { if (words && ctx.fireworks) ctx.fireworks.launch('text', words, config.look.text2.trim() ? n + 1 : 0); }, 900);
+    }, { signal });
+    input.addEventListener('change', () => remember(config), { signal });
+    input.addEventListener('keydown', (event) => { if (event.key === 'Enter') input.blur(); }, { signal });
+    return { key, input };
+  });
+  let secondWanted = false;
+  const addLine = button('builder-add-line', '+ Add a second line', () => {
+    secondWanted = true;
+    refresh();
+    lines[1].input.focus();
+  });
+  wordsRow.append(el('span', 'studio-words-title', '✨ Words in the sky'), el('span', 'studio-words-hint', 'Spelled out in fireworks, and your greeting’s first lines when you send it.'),
+    lines[0].input, addLine, lines[1].input, wordsNote);
   refreshers.push(() => {
-    if (document.activeElement !== wordsInput) wordsInput.value = config.look.text;
+    for (const { key, input } of lines) if (document.activeElement !== input) input.value = config.look[key];
+    const second = secondWanted || Boolean(config.look.text2.trim());
+    lines[1].input.hidden = !second;
+    addLine.hidden = second;
     wordsRow.hidden = Boolean(ctx.builder && ctx.builder.summary);
   });
 

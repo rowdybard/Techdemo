@@ -129,11 +129,12 @@ export const config = {
   look: {
     palette: 'classic',
     // Weight per burst type: how often each one is picked.
-    mix: { peony: 2, chrysanthemum: 2, willow: 1.5, palm: 1, ring: 1, crossette: 1, strobe: 0.7, crackle: 1, multibreak: 1, heart: 0.35, star: 0.35, text: 0.5,
+    mix: { peony: 2, chrysanthemum: 2, willow: 1.5, palm: 1, ring: 1, crossette: 1, strobe: 0.7, crackle: 1, multibreak: 1, heart: 0.35, star: 0.35, helmet: 0, text: 0.5,
       pumpkin: 0, skull: 0, bat: 0, ghost: 0, web: 0, brew: 0, eyes: 0, wisp: 0,
       // Deluxe's showpieces (premium.js), now and then in the free-running show so people see them.
       kamuro: 0.5, dahlia: 0.5, saturn: 0.35, fish: 0.35, whirl: 0.35, leaves: 0.3 },
     text: '', // what text shells spell, now and then, like any other shell; empty: none (Customize's Words box)
+    text2: '', // a second line: the show's text shells take turns between the two (a greeting's second line)
     textWidth: 230, // metres across
     particles: 420, // sparks per shell (about half on phones)
     burstSize: 79, // metres a spark coasts before drag holds it (Customize's Size at 70%)
@@ -175,6 +176,7 @@ export const config = {
     sakura: [[1, 0.55, 0.75], [1, 0.85, 0.9], [0.95, 0.45, 0.85], [1, 0.95, 0.95]],
     autumn: [[1, 0.5, 0.1], [0.85, 0.22, 0.06], [1, 0.75, 0.25], [0.7, 0.35, 0.1]],
     ice: [[0.75, 0.9, 1], [0.4, 0.75, 1], [0.95, 0.97, 1], [0.55, 1, 1]],
+    greenwhite: [[0.06, 0.8, 0.28], [0.85, 0.9, 0.86], [0.02, 0.45, 0.16], [0.45, 1, 0.55]], // a bright and a deep green, white (dimmed so it doesn't glare), mint
     custom: [[1, 0.3, 0.1], [0.2, 0.6, 1], [1, 0.85, 0.4]], // the panel's colour pickers edit these
     signature: [[1, 0.96, 0.9]], // the sender's name closing a Deluxe show: warm white, so it reads over the gold (not a Customize choice)
   },

@@ -57,7 +57,7 @@ export function readLink(config) {
     gift.message = gift.message2 = gift.to = gift.from = '';
   }
   // Set before the first shells are planned, so any text shell spells the message.
-  if (gift && !gift.blocked) config.look.text = message;
+  if (gift && !gift.blocked) { config.look.text = message; config.look.text2 = ''; }
   // A paid greeting's private link (?g=…): its words come from the server (gift.js).
   // `sent` marks the buyer arriving back from checkout.
   const id = params.get('g');

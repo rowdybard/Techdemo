@@ -124,10 +124,10 @@ function star(pool, shell, config, palette, born, at, velocity, out) {
 }
 
 function text(pool, shell, config, palette, born, at, velocity, out) {
-  const words = config.look.text.trim().slice(0, 24) || 'HELLO';
+  const words = (shell.words || config.look.text).trim().slice(0, 24) || 'HELLO';
   if (words !== sampledText) sampleText(words);
   if (textCount === 0) return;
-  const color = pick(palette);
+  const color = shell.line ? palette[(shell.line - 1) % palette.length] : pick(palette); // two lines: first and second colours
   const count = Math.min(Math.max(textCount, 300), Math.round(shell.count * 2.2));
   shapeBurst(pool, count, textPoint, born, at, (config.look.textWidth / 2) * (shell.textScale || 1), config, color, config.look.lifetime * 1.5, 0.3);
   fillLight(out, born, at, color, shell.size * 1.3);

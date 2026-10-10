@@ -52,7 +52,9 @@ try {
     console.log(`${name}: loaded`);
     await page.locator('.studio-open').click();
     // Words written in Customize become the greeting's message (checked when the builder opens).
-    await page.locator('.studio-words input').fill('CARRY OVER');
+    await page.getByLabel('Words in the sky', { exact: true }).fill('CARRY OVER');
+    await page.getByRole('button', { name: '+ Add a second line', exact: true }).click();
+    await page.getByLabel('Second line in the sky', { exact: true }).fill('AND OVER');
     // Looks read as free to send; the Deluxe price is said once, above them.
     await page.locator('.studio-making').filter({ hasText: '$1.99' }).waitFor();
     assert.equal(await page.locator('.studio-card-tier').first().textContent(), 'Free');
@@ -67,6 +69,7 @@ try {
     console.log(`${name}: lake and Advanced navigation passed`);
     await page.locator('.send-open').click();
     assert.equal(await page.getByLabel('Message', { exact: true }).inputValue(), 'CARRY OVER');
+    assert.equal(await page.getByLabel('Second line (optional)', { exact: true }).inputValue(), 'AND OVER');
     await page.getByLabel('Message', { exact: true }).fill('HAPPY TEST DAY');
     await page.getByRole('radio', { name: /^Free version/ }).click();
     assert.equal(await page.getByRole('button', { name: 'Send free greeting', exact: true }).isEnabled(), true);
