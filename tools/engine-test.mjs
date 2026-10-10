@@ -61,6 +61,22 @@ test('ownership survives more than 2048 runs and already born sparks survive a c
   assert.equal(p.liveCount(11), 1025);
   p.dispose();
 });
+test('only the slots up to the last live spark are drawn, and runs fill from the bottom', () => {
+  const p = pool(100);
+  assert.equal(p.mesh.geometry.instanceCount, 0);
+  emit(p, 30, 0, 0, 1);
+  emit(p, 10, 0, 0, 50);
+  assert.equal(p.mesh.geometry.instanceCount, 40);
+  p.trim(2); // the first 30 have died; the last 10 still hold the top
+  assert.equal(p.mesh.geometry.instanceCount, 40);
+  p.mesh.material.uniforms.uTime.value = 2;
+  assert.equal(emit(p, 20, 0, 2, 1), 0); // into the lowest gap, not after the live run
+  p.trim(10);
+  assert.equal(p.mesh.geometry.instanceCount, 40);
+  p.trim(60);
+  assert.equal(p.mesh.geometry.instanceCount, 0);
+  p.dispose();
+});
 test('a gap crossing the search cursor is found without wrapping a claim', () => {
   const p = pool(10);
   emit(p, 6, 0, 0, 0.5);
@@ -259,7 +275,7 @@ test('lake mask and reflection targets are regenerated after context restoration
   const ice = lake.create(ctx);
   reflections.update(0, 1);
   const firstRenders = ctx.renderer.renders.length;
-  assert.equal(firstRenders, 7); // one mask bake and all six cubemap faces
+  assert.equal(firstRenders, 8); // the mask and crack bakes and all six cubemap faces
   ctx.renderer.domElement.dispatchEvent(new Event('webglcontextrestored'));
   reflections.update(0, 1.1);
   ice.update(0, 1.1);

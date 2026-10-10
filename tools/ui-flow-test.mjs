@@ -79,6 +79,7 @@ try {
     assert.equal(await page.locator('.builder-use').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('.builder-use').textContent(), '✓ Deluxe chosen');
     assert.equal(await page.locator('.builder-bar .send-primary').isEnabled(), true);
+    assert.equal(await page.locator('.builder-film').isVisible(), false, 'A Deluxe preview must not offer a free video');
     await page.getByRole('radio', { name: /^Free preview/ }).click();
     assert.equal(await page.locator('.builder-bar .send-primary').isDisabled(), true);
     await page.getByRole('button', { name: 'Use Free', exact: true }).click();

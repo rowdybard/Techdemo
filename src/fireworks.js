@@ -170,6 +170,7 @@ export function create(ctx) {
         nextLaunch = time;
       }
       syncUniforms(time);
+      pool.trim(time); // draw only up to the last live spark
       stats.poolUsed = pool.liveCount(time);
       const sidesOn = config.fountains.sideBarges;
       sides[0].group.visible = sidesOn;

@@ -1,10 +1,11 @@
 // Particle pool: one instanced quad per particle, all drawn in a single call. Every
 // buffer is allocated once. Spawning claims a contiguous run, writes only that run, and
 // uploads only that run. Dead particles collapse to nothing in the shader until a later
-// run reuses them. A run is placed at a ring cursor, but never over particles that are
-// still alive (or not yet born): it skips past them to free space, and only when the
-// pool has no sufficiently large gap does it overwrite at the cursor. A run
-// that would pass the end starts over at zero, so it never wraps.
+// run reuses them. A run goes in the lowest gap big enough for it, never over particles
+// that are still alive (or not yet born); only when the pool has no such gap does it
+// overwrite at a ring cursor. A run never wraps past the end. Lowest-first keeps the live
+// sparks packed at the start of the pool, so only up to the last live one is drawn: every
+// slot costs vertex work even when empty, which was half a quiet frame on a phone.
 import * as THREE from 'three';
 import { fireworksFragment, fireworksVertex } from './fireworks.glsl.js';
 
@@ -57,21 +58,18 @@ export function createPool(size, uniforms) {
   const bornAt = new Float64Array(size).fill(-Infinity);
   const diesAt = new Float64Array(size).fill(-Infinity);
   const owners = new Uint8Array(size);
+  let high = 0; // one past the highest slot alive or waiting to be born: how many are drawn
+  quad.instanceCount = 0;
   let squeezed = 0; // runs that had to overwrite live particles because the pool was full
   let lastDeath = -Infinity;
 
   // Where `count` particles can go without covering any that are alive or still waiting to
-  // be born at `now`: from the cursor on, skipping past each live run in the way, and
-  // starting over at zero once. Falls back to the cursor (the oldest) if it's all full.
+  // be born at `now`: the lowest such gap. Falls back to the ring cursor if it's all full.
   function claim(count, now) {
-    const first = cursor + count > size ? 0 : cursor;
-    let at = freeRun(first, size, count, now);
-    // Include a gap beginning before the cursor and ending after it. A claim still
-    // never wraps past the physical buffer's end.
-    if (at < 0 && first > 0) at = freeRun(0, Math.min(size, first + count - 1), count, now);
+    const at = freeRun(0, size, count, now);
     if (at >= 0) return at;
     squeezed++;
-    return first;
+    return cursor + count > size ? 0 : cursor;
   }
 
   function freeRun(from, to, count, now) {
@@ -159,12 +157,20 @@ export function createPool(size, uniforms) {
       shape[o + 3] = kind;
       bornAt[i] = born;
       diesAt[i] = born + life;
+      if (i >= high) high = i + 1;
       owners[i] = owner;
       if (born + life > lastDeath) lastDeath = born + life;
     },
 
+    /** Draws only up to the last slot still alive or waiting at `time`. Call once a frame. */
+    trim(time) {
+      while (high > 0 && diesAt[high - 1] <= time) high--;
+      quad.instanceCount = high;
+    },
+
     /** Uploads the run claimed by the last begin(). */
     end() {
+      quad.instanceCount = high;
       if (!runCount) return;
       for (let a = 0; a < attributeList.length; a++) {
         attributeList[a].addUpdateRange(runStart * 4, runCount * 4);

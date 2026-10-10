@@ -1,9 +1,9 @@
 // The frozen lake's surface: one quad at the waterline, drawn by the shader in ice.glsl.js. The
 // land around it (land.js) hides its edges, so it only has to be bigger than the lake. Its fixed
-// patterns (open water, frost, wind streaks, which cracks show) are drawn into a texture once,
-// on the GPU, as it's built.
+// patterns (open water, frost, wind streaks, which cracks show, and the big cracks themselves) are
+// drawn into two textures once, on the GPU, as it's built.
 import * as THREE from 'three';
-import { ICE_RECT, iceVertex, iceFragment, maskFragment, maskVertex } from './ice.glsl.js';
+import { ICE_RECT, crackFragment, iceVertex, iceFragment, maskFragment, maskVertex } from './ice.glsl.js';
 
 export function create(ctx) {
   const { scene, config } = ctx;
@@ -17,19 +17,31 @@ export function create(ctx) {
     magFilter: THREE.LinearFilter,
     depthBuffer: false,
   });
+  // The big cracks' distance field: one channel, about a metre a texel (two on a phone).
+  const cracks = new THREE.WebGLRenderTarget(phone ? 1024 : 2048, phone ? 320 : 640, {
+    format: THREE.RedFormat,
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipmapLinearFilter,
+    magFilter: THREE.LinearFilter,
+    depthBuffer: false,
+  });
   function bake() {
     const bakeScene = new THREE.Scene();
-    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: maskVertex, fragmentShader: maskFragment }));
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
     quad.frustumCulled = false;
     bakeScene.add(quad);
+    const materials = [maskFragment, crackFragment].map((fragmentShader) => new THREE.ShaderMaterial({ vertexShader: maskVertex, fragmentShader }));
     const previous = renderer.getRenderTarget();
     try {
-      renderer.setRenderTarget(masks);
-      renderer.render(bakeScene, new THREE.Camera());
+      for (const [k, target] of [masks, cracks].entries()) {
+        quad.material = materials[k];
+        renderer.setRenderTarget(target);
+        renderer.render(bakeScene, new THREE.Camera());
+      }
     } finally {
       renderer.setRenderTarget(previous);
       quad.geometry.dispose();
-      quad.material.dispose();
+      for (const material of materials) material.dispose();
     }
   }
   bake();
@@ -44,6 +56,7 @@ export function create(ctx) {
     uTime: { value: 0 },
     uOpen: { value: settings.open },
     uMasks: { value: masks.texture },
+    uCracks: { value: cracks.texture },
   };
   const geometry = new THREE.PlaneGeometry(ICE_RECT.width, ICE_RECT.depth).rotateX(-Math.PI / 2).translate(ICE_RECT.x + ICE_RECT.width / 2, 0, ICE_RECT.z + ICE_RECT.depth / 2);
   geometry.deleteAttribute('normal');
@@ -70,6 +83,7 @@ export function create(ctx) {
       geometry.dispose();
       mesh.material.dispose();
       masks.dispose();
+      cracks.dispose();
     },
   };
 }

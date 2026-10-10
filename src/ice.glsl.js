@@ -49,6 +49,18 @@ export const maskFragment = /* glsl */ `
   }
 `;
 
+// The big pressure cracks, drawn once as well: how far each point lies from the nearest crack, in
+// cells (a quarter of a cell is 1.0). Working out the cell pattern for every pixel was the costliest
+// part of the surface; a distance field filters smoothly, so the thin lines hold up between texels.
+export const crackFragment = /* glsl */ `
+  varying vec2 vUv;
+  ${noiseGLSL}
+  void main() {
+    vec2 p = vec2(${ICE_RECT.x.toFixed(1)}, ${ICE_RECT.z.toFixed(1)}) + vUv * vec2(${ICE_RECT.width.toFixed(1)}, ${ICE_RECT.depth.toFixed(1)});
+    gl_FragColor = vec4(clamp(cells(p * 0.055).y * 4.0, 0.0, 1.0), 0.0, 0.0, 1.0);
+  }
+`;
+
 export const iceVertex = /* glsl */ `
   varying vec3 vWorld;
   void main() {
@@ -66,6 +78,7 @@ export const iceFragment = /* glsl */ `
   uniform float uEnvRadius;
   uniform vec4 uClockBox;       // where the countdown clock hangs: x, y, z, half the quad's size
   uniform sampler2D uMasks;     // the surface's fixed patterns (see maskFragment)
+  uniform sampler2D uCracks;    // distance to the big cracks (see crackFragment)
   varying vec3 vWorld;
 
   ${noiseGLSL}
@@ -117,7 +130,8 @@ export const iceFragment = /* glsl */ `
     vec3 view = toEye / distance;
     float near = 1.0 - smoothstep(15.0, 160.0, distance);
 
-    vec4 masks = texture2D(uMasks, (p - vec2(${ICE_RECT.x.toFixed(1)}, ${ICE_RECT.z.toFixed(1)})) / vec2(${ICE_RECT.width.toFixed(1)}, ${ICE_RECT.depth.toFixed(1)}));
+    vec2 uv = (p - vec2(${ICE_RECT.x.toFixed(1)}, ${ICE_RECT.z.toFixed(1)})) / vec2(${ICE_RECT.width.toFixed(1)}, ${ICE_RECT.depth.toFixed(1)});
+    vec4 masks = texture2D(uMasks, uv);
     float rim;
     float water = openness(masks.r, rim);
 
@@ -125,8 +139,8 @@ export const iceFragment = /* glsl */ `
     vec2 bumps = (vec2(valueNoise(p * 0.35), valueNoise(p * 0.35 + 19.0)) - 0.5) * 0.02 * (0.3 + 0.7 * near);
     float crack = 0.0;
     if (distance < 450.0) { // farther off a crack is thinner than a pixel
-      vec3 crackCell = cells(p * 0.055);
-      crack = (1.0 - smoothstep(0.0, 0.035 + 0.02 * (1.0 - near), crackCell.y)) * smoothstep(0.1, 0.9, masks.a) * (1.0 - smoothstep(300.0, 450.0, distance));
+      float edge = texture2D(uCracks, uv).r * 0.25;
+      crack = (1.0 - smoothstep(0.0, 0.035 + 0.02 * (1.0 - near), edge)) * smoothstep(0.1, 0.9, masks.a) * (1.0 - smoothstep(300.0, 450.0, distance));
     }
     if (near > 0.02) { // up close, a finer net of cracks too
       // Wandering cracks: the cell walls warped by noise, broken into stretches, thin.

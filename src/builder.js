@@ -81,8 +81,10 @@ export function create(ctx) {
     if (!draft.pending && draft.tier === draft.previewTier) return;
     const tier = draft.previewTier; stopPlayback(); draft.commit(tier); refresh();
   });
+  // Only the Free preview can be saved (with its mark): a recording of the Deluxe preview would be
+  // the paid show for nothing. Deluxe buyers save a clean video from their greeting (gift.js).
   const film = button('send-secondary builder-film', '🎬 Save video', () => {
-    if (!wordsOk() || !ctx.video || !ctx.director) return;
+    if (draft.previewTier === 'deluxe' || !wordsOk() || !ctx.video || !ctx.director) return;
     stopPlayback();
     ctx.video.capture({ watermark: true, name: `skygreeting-${state.occasion}`, returnTo: resumePreview,
       play: () => { playback = true; previewComplete = false; return ctx.director.play(OCCASIONS[state.occasion], words(), draft.previewTier === 'deluxe'); } });
@@ -146,6 +148,7 @@ export function create(ctx) {
     for (const node of [send, barSend]) { node.textContent = label; node.disabled = state.paying || !draft.canSend || draft.tier === 'deluxe' && !offer.ready; }
     const deluxeShown = draft.previewTier === 'deluxe', chosen = !draft.pending && draft.tier === draft.previewTier;
     useVersion.classList.toggle('is-deluxe', deluxeShown);
+    film.hidden = !ctx.video?.supported || deluxeShown;
     useVersion.setAttribute('aria-pressed', String(chosen));
     useVersion.textContent = `${chosen ? '✓ ' : 'Use '}${deluxeShown ? 'Deluxe' : 'Free'}${chosen ? ' chosen' : ''}`;
   }

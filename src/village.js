@@ -4,7 +4,10 @@
 // (landHeight in lake.glsl.js) and stands on it with a deep
 // foundation, so it sits on the slope however the ground falls. Windows are drawn in the
 // fragment shader as a grid on each wall, warm and bright enough that the bloom pass gives each
-// a halo, and they blur into a glow of average brightness when they're smaller than a pixel
+// a halo. Their edges are softened by as much as one pixel covers, so a window a pixel or two
+// across keeps the same total light wherever it lands on the pixel grid (sharp edges made each
+// one jump between pixels as the camera moved, and the bloom turned every jump into a flash),
+// and they blur into a glow of average brightness when they're smaller than about three pixels
 // (a phone, or a house far off), so nothing shimmers.
 import * as THREE from 'three';
 import { valueNoiseGLSL, skyGLSL } from './glsl.js';
@@ -94,12 +97,15 @@ const fragmentShader = /* glsl */ `
       vec2 id = floor(g);
       vec2 f = fract(g);
       float fits = step(1.0, vUV.x) * step(vUV.x, vSize.x - 1.0) * step(1.2, vUV.y) * step(vUV.y, vSize.y - 0.9);
-      vec2 inside = smoothstep(vec2(0.27, 0.22), vec2(0.31, 0.26), f) * (1.0 - smoothstep(vec2(0.69, 0.76), vec2(0.73, 0.8), f));
+      // How much of a cell one pixel covers, across and up: each edge is blurred that wide.
+      vec2 pixel = clamp(fwidth(g), vec2(0.04), vec2(0.3));
+      vec2 inside = smoothstep(vec2(0.29, 0.24) - pixel * 0.5, vec2(0.29, 0.24) + pixel * 0.5, f)
+        * (1.0 - smoothstep(vec2(0.71, 0.78) - pixel * 0.5, vec2(0.71, 0.78) + pixel * 0.5, f));
       float shape = inside.x * inside.y;
-      // Too small to resolve: the average light of the whole grid.
-      float footprint = max(fwidth(vUV.x), fwidth(vUV.y));
-      float resolved = 1.0 - smoothstep(0.2 * cell.x, 0.5 * cell.x, footprint);
-      shape = mix(0.17, shape, resolved);
+      // Too small to resolve (a window under about two pixels): the grid's average light, a little
+      // brighter than the true average because a blur of windows doesn't catch the bloom.
+      float resolved = 1.0 - smoothstep(0.15, 0.35, max(fwidth(g.x), fwidth(g.y)));
+      shape = mix(0.3, shape, resolved);
       float roll = hash12(id + vSeed * 91.0 + floor(vSize.x));
       float lit = step(roll, vLook.w + uCheer * (1.0 - vLook.w));
       vec3 warm = mix(vec3(1.0, 0.55, 0.22), vec3(1.0, 0.78, 0.45), hash12(id + 7.0 + vSeed * 13.0));
