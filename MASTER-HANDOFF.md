@@ -36,13 +36,8 @@ The owner is not a developer. They test on an Android phone, on the live site.
 
 ### State at handoff (October 10, 2026)
 
-- **Live** (`ccr-09268299-owgtnw` at `8edaad8`): everything up to "Less glow": the Deluxe upgrades, the Showpieces and waterfall, free strobes/double breaks/mines/fans, sound round one (new crackle; whistles still present), the glow fixes.
-- **On the work branch, not yet live** (the owner hadn't said "merge" yet when the session ended):
-  1. `6fd45c3` **Sound: no more whistles.** The owner found the whistle awful in both versions; launches now just thump, whirlwinds whirr.
-  2. `cc931e3` + `0f9308f` **Interface rework**: Looks-first Customize (18 looks, ten new, eight new palettes), More options folded away, sound and lock icons on screen, the builder's "+ Add a second line", Save video's 5-second minimum and "Record again", and a sturdier `settled()` in the check.
-  3. This handoff document and `AGENTS.md`.
-
-  If the owner asks to merge, merge all of it (it's one fast-forward). See §10 for what was and wasn't verified.
+- **Live** (`ccr-09268299-owgtnw` at `2a781a7`, merged by the owner on October 10): everything, including the Deluxe upgrades, the Showpieces and waterfall, free strobes/double breaks/mines/fans, the new crackle, the glow fixes, **no more whistles** (launches thump, whirlwinds whirr), the **interface rework** (Looks-first Customize with 18 looks and eight new palettes, More options folded away, sound and lock icons on screen, the builder's "+ Add a second line"), **Save video's 5-second minimum** with "Record again", and this document plus `AGENTS.md`.
+- **Nothing is waiting on the work branch.** See §10 for what was and wasn't verified.
 
 ---
 
@@ -177,7 +172,7 @@ Booms (thump + rumble + crack, delayed by distance at 343 m/s, panned, duller wi
 
 ## 9. Open items and ideas (rough priority)
 
-1. **Merge the pending work** when the owner says so (§2), then get their verdict on the new Customize, the sound button, the Looks and the whirr, on their phone.
+1. **Get the owner's verdict** on the new Customize, the sound button, the Looks and the whirr, on their phone (all live since October 10).
 2. **Real-phone checks nobody here could do:** frame rate on the frozen lake and with the Showpieces and waterfall; the gift-wrap flow and sound on iOS and Android; Save as video on iOS.
 3. **Split the two files over 400 lines:** `builder.js` (move the share/checkout half out) and `audio.js` (move the ground and clock recipes into `sfx.js`).
 4. **Looks and free sends:** some looks lean on paid showpieces (Under the sea's fish, Galaxy's Saturns), so a free send of them is plainer. Consider a small "✦ uses Deluxe effects" note on those cards, or lean them more on free shells.
