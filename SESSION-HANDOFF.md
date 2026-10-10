@@ -2,7 +2,7 @@
 
 **Start with `MASTER-HANDOFF.md`** (October 10, 2026): the complete guide, including what's live and what's waiting to be merged. This file is the dated log behind it. Where things stood as of **October 9, 2026**, for whoever picks this up next (a person or another AI session). `HANDOFF.md` is the long spec and per-feature reference (read its Status section for how each part works); this file is the short version: what's live, how to work on it, what's still open, and what went wrong before.
 
-## October 10, after the engine-takeover merge (on the work branch until the owner says merge)
+## October 10, after the engine-takeover merge (merged and live the same day)
 
 - **Preview bar:** Edit and Save video keep their size; "Use Deluxe" / "Use Free" sits on one line beside them, gold-bordered on the Deluxe preview and lit ("✓ Deluxe chosen", gold glow) once picked; checkout below says "Choose a version to send" until then. Tapping the preview tab of the version already chosen no longer starts a comparison (that greyed checkout out and asked again).
 - **Save video** only on the Free preview (with its mark). Owner: "couldn't they just steal it". A phone's own screen recorder can't be stopped; the clean video is a paid perk on the greeting page.
