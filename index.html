@@ -169,7 +169,13 @@
   .builder-add-line[hidden], .send-field[hidden] { display: none; }
   .builder-bar { flex-wrap: wrap; }
   .builder-edit { flex: none; padding-inline: 18px; }
-  .builder-bar .send-primary { white-space: nowrap; }
+  .builder-bar .send-primary { flex-basis: 100%; white-space: nowrap; }
+  /* Edit and Save video keep their size; the version button takes the rest of the row, on one line. */
+  .builder-bar :is(.builder-edit, .builder-film) { flex: none; }
+  .builder-bar .builder-use { flex: 1 1 auto; white-space: nowrap; border: 1.5px solid transparent; transition: background-color 0.25s, border-color 0.25s, box-shadow 0.25s, color 0.25s; }
+  .builder-bar .builder-use.is-deluxe { border-color: rgb(255 180 92 / 0.8); color: #ffd98a; }
+  .builder-bar .builder-use[aria-pressed="true"] { border-color: rgb(233 237 245 / 0.6); background: rgb(233 237 245 / 0.22); }
+  .builder-bar .builder-use.is-deluxe[aria-pressed="true"] { border-color: #ffd98a; background: rgb(255 180 92 / 0.3); color: #fff4dd; box-shadow: 0 0 0 1px rgb(255 217 138 / 0.6), 0 0 20px rgb(255 180 92 / 0.7); }
   .builder-versions { flex-basis: 100%; display: flex; gap: 4px; padding: 4px; border: 1px solid var(--rule); border-radius: 999px; background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .builder-version { flex: 1; padding: 8px 10px; border: 0; border-radius: 999px; background: none; color: var(--muted); font: 600 13px var(--sans); cursor: pointer; }
   .builder-version[aria-checked="true"] { background: rgb(233 237 245 / 0.16); color: var(--ink); }

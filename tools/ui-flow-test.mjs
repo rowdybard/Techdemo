@@ -74,9 +74,15 @@ try {
     await page.getByRole('button', { name: 'Done', exact: true }).click();
     assert.equal(await page.getByLabel('Message', { exact: true }).inputValue(), 'HAPPY TEST DAY');
     await page.getByRole('button', { name: 'Preview the show', exact: true }).click();
+    // Previewing the chosen version again keeps the choice: lit, and checkout ready.
+    await page.getByRole('radio', { name: /^Deluxe preview/ }).click();
+    assert.equal(await page.locator('.builder-use').getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('.builder-use').textContent(), '✓ Deluxe chosen');
+    assert.equal(await page.locator('.builder-bar .send-primary').isEnabled(), true);
     await page.getByRole('radio', { name: /^Free preview/ }).click();
     assert.equal(await page.locator('.builder-bar .send-primary').isDisabled(), true);
-    await page.getByRole('button', { name: 'Use Free version', exact: true }).click();
+    await page.getByRole('button', { name: 'Use Free', exact: true }).click();
+    assert.equal(await page.locator('.builder-use').textContent(), '✓ Free chosen');
     await page.getByRole('button', { name: 'Edit', exact: true }).click();
     console.log(`${name}: explicit candidate/preview versions passed`);
     await page.getByRole('radio', { name: /^Full Deluxe show/ }).click();

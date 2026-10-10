@@ -57,7 +57,8 @@ export function create(ctx) {
   const customize = button('send-secondary builder-customize', '🎨 Customize the show', () => ctx.studio?.open());
   const plans = createPlans((deluxe, comparison) => {
     stopPlayback();
-    if (comparison) { draft.compare(deluxe ? 'deluxe' : 'free'); startPreview(); }
+    // Previewing the version already chosen isn't a comparison: it keeps the choice, so checkout stays ready.
+    if (comparison) { const value = deluxe ? 'deluxe' : 'free'; if (value === draft.tier) draft.cancel(); else draft.compare(value); startPreview(); }
     else { draft.commit(deluxe ? 'deluxe' : 'free'); refresh(); }
   }, signal);
   const choice = el('p', 'builder-choice'); choice.setAttribute('role', 'status');
@@ -75,7 +76,11 @@ export function create(ctx) {
   const bar = el('div', 'builder-bar');
   const edit = button('send-secondary builder-edit', 'Edit', () => nav.back());
   const barSend = button('send-primary', '', sendIt);
-  const useVersion = button('send-secondary', 'Use this version', () => { const tier = draft.previewTier; stopPlayback(); draft.commit(tier); refresh(); });
+  // Picks the version on screen; stays lit (gold for Deluxe) once it's the chosen one, above checkout.
+  const useVersion = button('send-secondary builder-use', 'Use this version', () => {
+    if (!draft.pending && draft.tier === draft.previewTier) return;
+    const tier = draft.previewTier; stopPlayback(); draft.commit(tier); refresh();
+  });
   const film = button('send-secondary builder-film', '🎬 Save video', () => {
     if (!wordsOk() || !ctx.video || !ctx.director) return;
     stopPlayback();
@@ -137,10 +142,12 @@ export function create(ctx) {
     plans.show(OCCASIONS[state.occasion], draft.pending ? null : draft.tier, offer.label, draft.previewTier);
     choice.textContent = draft.pending ? 'This is a comparison preview. Choose a version below before sending.' : draft.tier === null ? 'Free to preview. Choose the version you want to send.' : `You chose ${draft.tier === 'free' ? 'the Free version' : 'Deluxe'}.`;
     priceNote.textContent = offer.note;
-    const label = draft.tier === 'deluxe' ? `Continue to checkout · ${offer.price}` : draft.tier === 'free' ? 'Send free greeting' : 'Choose a version to send';
+    const label = !draft.canSend ? 'Choose a version to send' : draft.tier === 'deluxe' ? `Continue to checkout · ${offer.price}` : 'Send free greeting';
     for (const node of [send, barSend]) { node.textContent = label; node.disabled = state.paying || !draft.canSend || draft.tier === 'deluxe' && !offer.ready; }
-    useVersion.hidden = !draft.pending && draft.tier !== null;
-    useVersion.textContent = `Use ${draft.previewTier === 'deluxe' ? `Deluxe · ${offer.label}` : 'Free version'}`;
+    const deluxeShown = draft.previewTier === 'deluxe', chosen = !draft.pending && draft.tier === draft.previewTier;
+    useVersion.classList.toggle('is-deluxe', deluxeShown);
+    useVersion.setAttribute('aria-pressed', String(chosen));
+    useVersion.textContent = `${chosen ? '✓ ' : 'Use '}${deluxeShown ? 'Deluxe' : 'Free'}${chosen ? ' chosen' : ''}`;
   }
   function words() { return { message: cleanText(message.input.value, MESSAGE_LIMIT).toUpperCase() || OCCASIONS[state.occasion].message,
     message2: cleanText(message2.input.value, MESSAGE_LIMIT).toUpperCase(), to: cleanText(to.input.value, NAME_LIMIT).toUpperCase(), from: cleanText(from.input.value, MESSAGE_LIMIT) }; }
