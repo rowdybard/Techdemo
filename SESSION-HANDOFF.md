@@ -1,6 +1,6 @@
 # SkyGreeting: session handoff
 
-Where things stand as of **October 9, 2026**, for whoever picks this up next (a person or another AI session). `HANDOFF.md` is the long spec and per-feature reference (read its Status section for how each part works); this file is the short version: what's live, how to work on it, what's still open, and what went wrong before.
+**Start with `MASTER-HANDOFF.md`** (October 10, 2026): the complete guide, including what's live and what's waiting to be merged. This file is the dated log behind it. Where things stood as of **October 9, 2026**, for whoever picks this up next (a person or another AI session). `HANDOFF.md` is the long spec and per-feature reference (read its Status section for how each part works); this file is the short version: what's live, how to work on it, what's still open, and what went wrong before.
 
 ## What it is
 

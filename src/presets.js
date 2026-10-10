@@ -76,7 +76,7 @@ export const PRESETS = {
     sky: { timeOfDay: 0.12 },
   },
   Royal: {
-    look: { palette: 'royal', lifetime: 3, mix: mixOf({ kamuro: 2, chrysanthemum: 1.5, saturn: 0.8, willow: 1, crossette: 1, peony: 1 }) },
+    look: { palette: 'royal', lifetime: 3, mix: mixOf({ kamuro: 1.2, chrysanthemum: 1.5, saturn: 0.8, willow: 0.8, crossette: 1.2, peony: 1.2 }) },
     show: { shellsPerMinute: 26 },
     fountains: { style: 'waterfall,fountains', color: 'gold' },
     sky: { timeOfDay: 0.85 },

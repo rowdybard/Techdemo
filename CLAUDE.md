@@ -1,6 +1,6 @@
 # Beach Fireworks
 
-Real-time Three.js beach scene with a fully customizable firework show, built as a sales demo. The full spec, architecture and build order are in `HANDOFF.md`. Read it before changing anything. `SESSION-HANDOFF.md` is the short current-state summary (what's live, open items, gotchas): read that first.
+Real-time Three.js fireworks greetings (SkyGreeting). **Read `MASTER-HANDOFF.md` first**: the complete current guide (deploying, architecture, recipes, gotchas, the owner, open work). `SESSION-HANDOFF.md` is the dated log of decisions and gotchas, and `HANDOFF.md` the original spec and no-leak rules.
 
 ## Working rules
 
