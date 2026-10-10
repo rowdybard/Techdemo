@@ -3,7 +3,7 @@ import { config as defaults } from '../src/config.js';
 import { takeDesign, putDesign, normalizeLook, MAX_LOOK_BYTES } from '../src/design.js';
 import { lookOf, applyLook, keepFree } from '../src/look.js';
 import { PRESETS, applyPreset, settingsJSON, loadSettings } from '../src/presets.js';
-import { deluxeFeatures } from '../src/catalog.js';
+import { deluxeFeatures, freeDesign, FREE_SHELLS } from '../src/catalog.js';
 import { OCCASIONS } from '../src/occasions.js';
 import { readLink, giftLink, shortLink } from '../src/link.js';
 import { rememberCheckout, trackPurchase } from '../src/track.js';
@@ -22,10 +22,15 @@ await test('every shipped Look preserves its complete authored settings in a v2 
   assert.deepEqual(takeDesign(received),takeDesign(c),name);
  }
 });
+await test('a Free version swaps each paid shell for its nearest free one',()=>{
+ const free=freeDesign({look:{mix:{peony:1,saturn:2,skull:1,kamuro:0.5}},fountains:{enabled:true,style:'mixed',sideBarges:true}});
+ assert.deepEqual(deluxeFeatures(free),[]);assert.equal(free.look.mix.ring,2);assert.equal(free.look.mix.ghost,1);assert.equal(free.look.mix.willow,0.5);assert.equal(free.look.mix.peony,1);
+ assert.equal(freeDesign({look:{mix:{peony:4,chrysanthemum:3}}}).look.mix.peony,5); // weights stay within 0..5
+});
 await test('Free new sends exclude side barges and paid mixes, including forged legacy inputs',()=>{
  for(const look of [{e:1,m:{peony:0,crackle:1},g:'mixed'}, {ver:2,design:{fountains:{sideBarges:true,enabled:true,style:'halloween'},look:{mix:{skull:2}}}}]){
   const result=normalizeLook(look,{tier:'free'});assert.equal(result.ver,2);assert.equal(result.design.fountains.sideBarges,false);
-  assert.deepEqual(deluxeFeatures(result.design),[]);assert.ok(result.design.look.mix.peony>0);
+  assert.deepEqual(deluxeFeatures(result.design),[]);assert.ok(FREE_SHELLS.some((name)=>result.design.look.mix[name]>0));
  }
 });
 await test('published legacy greetings retain side barges while newly authored Free does not',()=>{

@@ -188,7 +188,8 @@ test('shortening a ground hold cancels future smoke but keeps existing smoke', (
   record.hold = 1;
   module.update(0.1, 1);
   let existing = 0;
-  for (let i = 390; i < 520; i++) {
+  const size = births.length / 4;
+  for (let i = Math.round(size * 0.75); i < size; i++) { // the ground share of the ring
     assert.ok(births[i * 4 + 3] <= 1);
     if (births[i * 4 + 3] >= 0) existing++;
   }

@@ -102,7 +102,9 @@ export function fireShell(pool, shell, config, palette, out) {
   positionAt(at, shell.x, shell.y, shell.z, shell.vx, shell.vy, shell.vz, ROCKET_DRAG, fuse, g, wx, wz);
   velocityAt(velocity, shell.vx, shell.vy, shell.vz, ROCKET_DRAG, fuse, g, wx, wz);
   out.crackle = 0; // a burst that crackles late says so (a chrysanthemum's tips)
-  burst(pool, shell, config, palette, launch + fuse, at, velocity, out);
+  pool.noteSpans(out); // where its stars go, so the smoke can follow them (smoke.js)
+  try { burst(pool, shell, config, palette, launch + fuse, at, velocity, out); }
+  finally { pool.noteSpans(null); }
   out.type = shell.type;
   out.end = pool.lastDeath;
   return out;

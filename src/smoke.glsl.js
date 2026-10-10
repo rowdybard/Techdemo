@@ -75,7 +75,9 @@ export const smokeVertex = /* glsl */ `
       // Lined up with the star's path as it looks from here, so trails read as streaks.
       vec2 along = (viewMatrix * vec4(aTrail.xyz, 0.0)).xy;
       if (dot(along, along) > 1e-4) angle = atan(along.y, along.x);
-      stretch = vec2(aTrail.w * (1.0 + age * 0.02), aLook.y);
+      // A fresh trail is a thin streak along the star's path; it swells as it spreads, so the
+      // burst's lines blur into a cloud of its shape instead of sitting there as round puffs.
+      stretch = vec2(aTrail.w * (1.0 + age * 0.03), aLook.y * mix(0.35, 1.0, smoothstep(0.0, 9.0, age)));
     }
     vec2 corner = mat2(cos(angle), sin(angle), -sin(angle), cos(angle)) * (position.xy * stretch);
     view.xy += corner * radius;
@@ -129,8 +131,8 @@ export const smokeFragment = /* glsl */ `
     float n = billow(p + warp * 1.8 + vec2(t, -0.6 * t));
     // Cut against a soft edge: thick in the middle, ragged lobes toward the outside,
     // and as it ages the cut rises until only wisps are left.
-    float edge = smoothstep(0.2, 1.0, r);
-    float d = n - edge * 0.62 - 0.1 - vTear * 0.18;
+    float edge = smoothstep(0.0, 1.0, r);
+    float d = n - edge * 0.7 - 0.12 - vTear * 0.18;
     // A wide ramp keeps the outlines soft, like smoke, not cut out like paper.
     float density = smoothstep(-0.04, 0.42, d) * (1.0 - smoothstep(0.75, 1.0, r));
     float alpha = density * vAlpha;

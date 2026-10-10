@@ -78,7 +78,8 @@ The owner is not a developer. They test on an Android phone, on the live site.
 
 - **Merged on October 10 at 2026-10-10T03:57:00Z:** Astra/Codex's `codex/engine-takeover` (see the update at the top), plus two fixes on top: `_headers` no longer caches `src/` for five minutes (a phone paired the new page's round icons with the old "Lock view" text and no sound button), and the frozen lake's near right island moved from 64, -158 to 84, -104 because its pines hid the right side barge. The $1.99 launch offer started at the merge.
 - **Before that** (`2a781a7`): everything, including the Deluxe upgrades, the Showpieces and waterfall, free strobes/double breaks/mines/fans, the new crackle, the glow fixes, **no more whistles** (launches thump, whirlwinds whirr), the **interface rework** (Looks-first Customize with 18 looks and eight new palettes, More options folded away, sound and lock icons on screen, the builder's "+ Add a second line"), **Save video's 5-second minimum** with "Record again", and this document plus `AGENTS.md`.
-- **Nothing is waiting on the work branch.** See §10 for what was and wasn't verified.
+- **On the work branch, not yet live** (October 10, after the merge; the owner says "merge" to ship): the preview bar's buttons on one line, with a gold "Use Deluxe" that lights up ("✓ Deluxe chosen") and stays lit above checkout, and previewing the already-chosen version no longer greys checkout out; **Save video only on the Free preview** (a Deluxe preview recording was the paid show for free); the lake's **village windows filtered** so they stop flashing under bloom as the view turns, and its **reeds removed** (they read as dune grass); a **performance pass** (the spark pool packs live sparks low and draws only up to the last one, which halved a quiet phone frame; the ice's big cracks are baked once into a distance-field texture); **smoke from every burst along its own stars** (see §7); **Looks shown as free to send**, with "✦ best with Deluxe" only on looks that lean on paid shells and the price said once above the grid, and a Free version that swaps each paid shell for its nearest free one (`FREE_STAND_IN` in `catalog.js`); and the check's startup baseline now waits for counts to settle.
+- See §10 for what was and wasn't verified.
 - **Not done at release:** the optional legacy-tally sweep in `worker/MAINTENANCE.md` (it needs a `MAINTENANCE_TOKEN` secret the owner would set in the dashboard; old report tallies are imported anyway whenever a greeting is opened).
 
 ---
@@ -191,7 +192,10 @@ Booms (thump + rumble + crack, delayed by distance at 343 m/s, panned, duller wi
 - **High things reflect at the camera's feet** on the lake: the open water is a bay in front of the viewer for that reason.
 - **GLSL:** no `fwidth` in vertex shaders; `patch` is reserved. `glsl.js` splits vertex-safe noise from fragment-only foam.
 - **Stripe:** a publishable key in the secret slot gives "publishable API key" errors; the owner's BetBlocker VPN once blocked checkout.stripe.com. **Don't suggest turning BetBlocker off.**
-- **Headless counts include the lake's cube capture** the frame it happens; the check waits for counts (and real frames) to settle.
+- **Headless counts include the lake's cube capture** the frame it happens; the check waits for counts (and real frames) to settle. Auto quality also steps down in the first seconds and the texture count dips mid-switch, so the rebuild baseline is read only once the counts (textures included) hold still.
+- **The spark pool draws only `instanceCount = high`** (one past the highest slot alive or waiting to be born): claims take the lowest free run, `set()` raises `high`, and `pool.trim(time)` (called by fireworks.js each frame) lowers it. Every slot costs vertex work even when empty, so don't go back to drawing the whole pool.
+- **Smoke reads a burst's stars back from the pool:** `fireShell` calls `pool.noteSpans(record)` around `burst()`, so each burst record's `spans`/`spanCount` say where its runs went, and `smoke.js` follows a sample of those stars (`starSmoke`). A burst record without spans (tests, odd callers) falls back to the old synthetic rays. When the smoke ring is full, the most faded puff gives way, so every burst smokes.
+- **Shell weights run 0..5** everywhere (the server rejects more); `freeDesign`'s stand-ins add weights and cap at 5.
 
 ---
 

@@ -13,7 +13,7 @@ import { isBlocked } from './moderate.js';
 import { controls, el, gradient, section, strip } from './studio-kit.js';
 import { buildMore } from './studio-more.js';
 import { createPlaceSettings } from './place-settings.js';
-import { isDeluxe } from './catalog.js';
+import { isDeluxe, paidShare } from './catalog.js';
 import { takeDesign } from './design.js';
 
 const PALETTES = [['classic', 'Classic'], ['rainbow', 'Rainbow'], ['gold', 'Gold'], ['royal', 'Royal'], ['ocean', 'Ocean'], ['cosmic', 'Cosmic'],
@@ -52,7 +52,7 @@ export function create(ctx) {
   refreshers.push(() => {
     const summary = ctx.builder ? ctx.builder.summary : '';
     making.hidden = !ctx.builder;
-    making.textContent = summary || `Free to preview. Full Deluxe shows cost ${ctx.builder?.priceLabel || 'the displayed checkout price'} to send. You can also choose a Free version.`;
+    making.textContent = summary || `Every look is free to send. ✦ Deluxe adds showpiece shells, side barges and a grand finale · ${ctx.builder?.priceLabel || 'one payment'}.`;
   });
 
   // The Looks: a whole show in one tap, with its colours along the bottom of the card.
@@ -69,9 +69,11 @@ export function create(ctx) {
     const palette = config.palettes[(PRESETS[look.preset].look || {}).palette || 'classic'];
     const colours = el('span', 'studio-card-strip');
     colours.style.background = strip(palette);
-    const price = el('span', 'studio-card-price');
-    card.append(el('span', 'studio-card-icon', look.icon), el('span', 'studio-card-name', look.label), el('span', 'studio-card-line', look.line), el('span', 'studio-card-preview', 'Free to preview'), price, colours);
-    refreshers.push(() => { card.setAttribute('aria-pressed', String(currentPreset === look.preset)); price.textContent = `Deluxe to send · ${ctx.builder?.priceLabel || 'Price unavailable'}`; });
+    // Free to send, every one; a look that leans on paid shells says it's best with Deluxe.
+    const tier = el('span', 'studio-card-tier', 'Free');
+    if (paidShare((PRESETS[look.preset].look || {}).mix) >= 0.4) tier.append(el('span', 'studio-card-plus', ' · ✦ best with Deluxe'));
+    card.append(el('span', 'studio-card-icon', look.icon), el('span', 'studio-card-name', look.label), el('span', 'studio-card-line', look.line), tier, colours);
+    refreshers.push(() => { card.setAttribute('aria-pressed', String(currentPreset === look.preset)); });
     looks.append(card);
   }
   function pickLook(name) {

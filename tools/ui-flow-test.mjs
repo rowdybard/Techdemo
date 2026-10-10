@@ -51,7 +51,9 @@ try {
     await page.goto(url, { timeout: 90000 });
     console.log(`${name}: loaded`);
     await page.locator('.studio-open').click();
-    await page.locator('.studio-card-price').first().filter({ hasText: '$1.99' }).waitFor();
+    // Looks read as free to send; the Deluxe price is said once, above them.
+    await page.locator('.studio-making').filter({ hasText: '$1.99' }).waitFor();
+    assert.equal(await page.locator('.studio-card-tier').first().textContent(), 'Free');
     await page.getByRole('button', { name: '🏔️ Frozen lake', exact: true }).click();
     await page.getByLabel('Ice & water').waitFor();
     await page.getByText('More options', { exact: true }).click();

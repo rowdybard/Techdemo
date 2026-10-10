@@ -152,6 +152,10 @@ async function open(name, contextOptions, saved = null) {
   }
   await page.waitForTimeout(waitMs);
   await rendered(page);
+  // The baseline the rebuilds are measured against: read once the counts hold still. Auto
+  // quality steps down in the first seconds, and a reading taken mid-switch (targets freed,
+  // not yet remade) looked like two textures leaking.
+  await settled(page);
   const overlay = await readOverlay(page);
   await page.screenshot({ path: join(OUT, `${name}.png`) });
   const { width, height } = contextOptions.viewport;
@@ -242,7 +246,7 @@ async function settled(page) {
     await page.waitForTimeout(2000);
     await drawnFrames(page, 8);
     const o = await readOverlay(page);
-    const now = [o.calls, o.geometries, o.programs].join('/');
+    const now = [o.calls, o.geometries, o.textures, o.programs].join('/');
     same = now === last ? same + 1 : 0;
     last = now;
   }

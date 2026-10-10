@@ -1,7 +1,8 @@
-// Smoke. Every burst leaves smoke where its stars burned: each star's position late in
-// its burn is worked out with the same motion the sparks use (drag, gravity, wind), so
-// the smoke traces the shape and sag of the burst, hangs in curtains under willows and
-// palms, and lies in a band under text, plus a small dense puff where the shell broke.
+// Smoke. Every burst leaves smoke where its stars burned: a sample of the burst's own stars,
+// read back from the spark pool (each burst notes where its stars went), is followed with the
+// same motion the sparks use (drag, gravity, wind), so the smoke takes the burst's real shape: a
+// ring leaves a ring, a heart a heart, a Saturn its planet and ring, willows and palms hang in
+// curtains, and text lies in a band. A small dense puff marks where the shell broke.
 // The ground show leaves low smoke over the barges. Puffs ride the wind (faster higher
 // up, as real wind is), drift apart, spread and thin as they spread, so a show clears
 // downwind instead of piling up in one place. The burst lights
@@ -11,21 +12,23 @@
 //
 // Like the sparks, a puff's whole life is written once, when it's made: one instanced
 // quad per puff in a fixed ring, all drawn in a single call. A puff is only replaced
-// once it has mostly faded, so a finale fills the ring and the haze stops thickening
-// there instead of puffs vanishing mid-air. That also caps how much smoke is ever drawn
-// over the screen, which is what costs time on phones.
+// once it has mostly faded; when the ring is full, the most faded puff gives way, so every
+// burst still leaves smoke in a busy show (the ring running out left later bursts with
+// none). The ring also caps how much smoke is ever drawn over the screen, which is what
+// costs time on phones.
 import * as THREE from 'three';
 import { smokeFragment, smokeVertex } from './smoke.glsl.js';
 import { positionAt, velocityAt } from './particles.js';
 
 // Many small puffs rather than a few big ones: each lies along a star's trail, so the
 // total area drawn (what costs time on a GPU) stays about what the old big puffs used.
-const PUFFS = { desktop: 520, phone: 170 };
+const PUFFS = { desktop: 760, phone: 220 };
 // Ground smoke gets its own part of the ring, so the barges (the side ones play almost
 // all the time) can't crowd out the smoke from bursts or pile up without limit.
 const GROUND_SHARE = 0.25;
 const GROUND_EVERY = { desktop: 2, phone: 3.2 }; // seconds between puffs from each burning tube
-const RAYS = { desktop: 8, phone: 5 }; // star trails per burst that leave smoke
+const RAYS = { desktop: 8, phone: 5 }; // star trails per burst that leave smoke, when its stars aren't known
+const SAMPLED = { desktop: 16, phone: 7 }; // the burst's own stars followed for smoke
 const ALONG = { desktop: 3, phone: 2 }; // puffs along each trail
 const SHELL_RECORDS = 96; // fireworks.js keeps this many burst records (its SHELLS)
 const FOUNTAIN_RECORDS = 22; // the main barge's tubes and the two side barges' (fountains.js)
@@ -125,16 +128,24 @@ export function create(ctx) {
     const from = ground ? skyCount : 0;
     const to = ground ? size : skyCount;
     let slot = cursors[which];
+    let faded = -1;
+    let most = 0;
     for (let checked = 0; checked < to - from; checked++) {
       const o = slot * 4;
       const next = slot + 1 >= to ? from : slot + 1;
-      if (now - origin.array[o + 3] >= shape.array[o + 2] * 0.75) {
+      const spent = (now - origin.array[o + 3]) / shape.array[o + 2];
+      if (spent >= 0.75) {
         cursors[which] = next;
         return slot;
       }
+      if (spent > most) {
+        most = spent;
+        faded = slot;
+      }
       slot = next;
     }
-    return -1;
+    // Full: the most faded puff gives way, so a new burst never goes without smoke.
+    return faded;
   }
 
   // One puff: where and when it appears, its starting radius, how fast it spreads (metres
@@ -211,6 +222,9 @@ export function create(ctx) {
     puff(record.x, record.y, record.z, record.time + 0.1, reach * (0.07 + Math.random() * 0.03), 1.4 + Math.random(),
       life * (0.5 + Math.random() * 0.3), 1, 0.9, Math.random() * 6.28, 0, 1, 0.7);
 
+    const pool = ctx.fireworks && ctx.fireworks.pool;
+    if (pool && record.spanCount > 0 && starSmoke(record, pool, reach, life, lowTier)) return;
+
     const star = STARS[record.type] || STARS.peony;
     const { physics } = config;
     const drag = star[0] * physics.drag;
@@ -249,6 +263,61 @@ export function create(ctx) {
           vel[0] / fly, vel[1] / fly, vel[2] / fly, Math.min(3.5, Math.max(1.2, step / (2 * radius))));
       }
     }
+  }
+
+  // Smoke along a sample of the burst's own stars, spread evenly through them so it takes the
+  // burst's whole shape: each puff born as its star passes, stretched along the way it was
+  // flying, thickening toward where the star burns out. Glints and crackle pops are too brief to
+  // leave smoke of their own. Returns how many stars it followed (0: none could be read back).
+  function starSmoke(record, pool, reach, life, lowTier) {
+    const attributes = pool.mesh.geometry.attributes;
+    const start = attributes.aStart.array;
+    const motion = attributes.aMotion.array;
+    const form = attributes.aShape.array;
+    const spans = record.spans;
+    let total = 0;
+    for (let s = 0; s < record.spanCount; s++) total += spans[s * 2 + 1];
+    if (!total) return 0;
+    const want = Math.max(4, Math.round((phone ? SAMPLED.phone : SAMPLED.desktop) * (lowTier ? 0.6 : 1)));
+    const along = phone ? ALONG.phone : ALONG.desktop;
+    const hanging = HANGING[record.type];
+    const { physics } = config;
+    const g = 9.81 * physics.gravity;
+    const offset = Math.random();
+    let followed = 0;
+    for (let k = 0; k < want * 2 && followed < want; k++) {
+      // Evenly through the stars (a second pass, half a step on, stands in for any skipped).
+      let n = Math.floor((((k % want) + (k < want ? offset : (offset + 0.5) % 1)) / want) * total);
+      let s = 0;
+      while (s < record.spanCount - 1 && n >= spans[s * 2 + 1]) {
+        n -= spans[s * 2 + 1];
+        s++;
+      }
+      const o = (spans[s * 2] + Math.min(n, spans[s * 2 + 1] - 1)) * 4;
+      const starLife = form[o];
+      const born = start[o + 3];
+      if (!(starLife > 0.45) || born < record.time - 0.05) continue; // a glint or pop, or the slot was reused
+      const px = start[o], py = start[o + 1], pz = start[o + 2];
+      const vx = motion[o], vy = motion[o + 1], vz = motion[o + 2], drag = motion[o + 3];
+      let lx = px, ly = py, lz = pz;
+      for (let j = 0; j < along; j++) {
+        const share = (j + 0.75 + (Math.random() - 0.5) * 0.4) / along;
+        const t = starLife * (hanging ? 0.2 + 0.75 * share : 0.15 + 0.8 * share);
+        positionAt(spot, px, py, pz, vx, vy, vz, drag, t, g, physics.windX, physics.windZ);
+        velocityAt(vel, vx, vy, vz, drag, t, g, physics.windX, physics.windZ);
+        const step = Math.hypot(spot[0] - lx, spot[1] - ly, spot[2] - lz);
+        lx = spot[0];
+        ly = spot[1];
+        lz = spot[2];
+        const fly = Math.hypot(vel[0], vel[1], vel[2]) || 1;
+        const radius = reach * (0.032 + Math.random() * 0.018) * (0.75 + (0.5 * (j + 1)) / along);
+        puff(spot[0], spot[1], spot[2], born + t, radius, 0.7 + Math.random() * 0.6,
+          life * (0.5 + Math.random() * 0.45), 1, hanging ? 0.5 : 0.65 + Math.random() * 0.25, 0, 0, 1, hanging ? 1 : 1.15, false,
+          vel[0] / fly, vel[1] / fly, vel[2] / fly, Math.min(5, Math.max(1.5, step / (2 * radius))));
+      }
+      followed++;
+    }
+    return followed;
   }
 
   // Ground-show smoke: while a tube burns it pours out smoke that rises as a glowing plume

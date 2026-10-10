@@ -99,9 +99,8 @@
 #app :is(.studio, .builder, .builder-bar, .panel)[hidden] { display: none !important; }
 #app[data-panel="advanced"] .panel.lil-gui { display: block; z-index: 4; }
 #app[data-panel="advanced"] :is(.send-open, .studio-open, .walk-hint, .debug) { display: none; }
-.studio-card-price, .studio-card-preview { grid-column: 1 / -1; font-size: 11px; line-height: 1.35; }
-.studio-card-price { color: #ffd27a; font-weight: 600; }
-.studio-card-preview { color: var(--muted); margin-top: 5px; }
+.studio-card-tier { grid-column: 1 / -1; margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.studio-card-plus { color: #ffd27a; }
 .studio-help { margin: 3px 0 9px; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .studio-candidate { display: grid; gap: 8px; }
 .studio-candidate[hidden] { display: none; }

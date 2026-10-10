@@ -2,6 +2,15 @@
 
 **Start with `MASTER-HANDOFF.md`** (October 10, 2026): the complete guide, including what's live and what's waiting to be merged. This file is the dated log behind it. Where things stood as of **October 9, 2026**, for whoever picks this up next (a person or another AI session). `HANDOFF.md` is the long spec and per-feature reference (read its Status section for how each part works); this file is the short version: what's live, how to work on it, what's still open, and what went wrong before.
 
+## October 10, after the engine-takeover merge (on the work branch until the owner says merge)
+
+- **Preview bar:** Edit and Save video keep their size; "Use Deluxe" / "Use Free" sits on one line beside them, gold-bordered on the Deluxe preview and lit ("✓ Deluxe chosen", gold glow) once picked; checkout below says "Choose a version to send" until then. Tapping the preview tab of the version already chosen no longer starts a comparison (that greyed checkout out and asked again).
+- **Save video** only on the Free preview (with its mark). Owner: "couldn't they just steal it". A phone's own screen recorder can't be stopped; the clean video is a paid perk on the greeting page.
+- **Frozen lake:** village window edges are blurred by a pixel's width and merge into a glow under about two pixels (frame-to-frame light while turning, phone settings: 2.5% → 0.9%); the reeds are gone; the near right island moved earlier the same day.
+- **Performance:** spark pool lowest-first + draw-to-high (software-GL phone frame 621 → 315 ms, the pool drawing about 480 slots instead of 20,000 in a quiet moment); ice big cracks baked to a distance field (ice about 35% cheaper). Measured with `perfphone.mjs`-style scripts: noise is about ±20 ms a frame.
+- **Smoke:** every burst smokes (the ring used to run out at about a burst a second), laid along a sample of the burst's real stars (16 desktop, 7 phone, 3/2 puffs each), fresh trails thin streaks that swell (`smoke.glsl.js`). Owner: "looks really fake and doesn't come from all fireworks in their shape". Not yet seen by the owner.
+- **Looks:** cards say "Free" (and "✦ best with Deluxe" when 40% or more of the mix is paid shells); one line above: "Every look is free to send. ✦ Deluxe adds showpiece shells, side barges and a grand finale · $1.99 launch price". Free versions swap paid shells for free stand-ins.
+
 ## What it is
 
 **SkyGreeting** (https://skygreeting.com) is a real-time three.js beach-at-dusk fireworks show that became a paid product. People design a show, write words that fireworks spell in the sky, and send it as a link. It plays live in the recipient's browser. The repository started as a sales demo ("Beach Fireworks") and was first built in Codex, then continued in Claude Code from `HANDOFF.md`.

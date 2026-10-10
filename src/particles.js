@@ -59,6 +59,7 @@ export function createPool(size, uniforms) {
   const diesAt = new Float64Array(size).fill(-Infinity);
   const owners = new Uint8Array(size);
   let high = 0; // one past the highest slot alive or waiting to be born: how many are drawn
+  let spanOut = null; // a burst record noting where its runs went, so smoke can read its stars back
   quad.instanceCount = 0;
   let squeezed = 0; // runs that had to overwrite live particles because the pool was full
   let lastDeath = -Infinity;
@@ -124,11 +125,22 @@ export function createPool(size, uniforms) {
       return end;
     },
 
+    /** While `record` is set, each run claimed is noted in its spans (start, count pairs). */
+    noteSpans(record) {
+      spanOut = record && record.spans ? record : null;
+      if (spanOut) spanOut.spanCount = 0;
+    },
+
     /** Claims `count` particles and returns the index of the first. */
     begin(count) {
       if (!Number.isInteger(count) || count < 0 || count > size) throw new RangeError('Particle claim exceeds the pool');
       runStart = count ? claim(count, uniforms.uTime.value) : cursor;
       runCount = count;
+      if (spanOut && count && spanOut.spanCount < spanOut.spans.length / 2) {
+        spanOut.spans[spanOut.spanCount * 2] = runStart;
+        spanOut.spans[spanOut.spanCount * 2 + 1] = count;
+        spanOut.spanCount++;
+      }
       cursor = runStart + count;
       return runStart;
     },
