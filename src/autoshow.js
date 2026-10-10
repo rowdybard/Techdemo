@@ -7,15 +7,26 @@
 // palette or freshly mixed hues), size, sparkle, trails, pace, the ground show and its
 // style, side barges, smoke, the pier and lighthouse, the sky, the wind and sometimes the
 // view. Within an act the pace swells toward the end, some acts close on a grand finale,
-// and a short breather follows before the next. Sky, clouds, wind and smoke ease to their
-// new values instead of jumping; shell changes only touch shells launched after them.
+// and a short breather follows before the next. About two acts in five are one of Customize's
+// Looks (looks.js) rather than a random design, and now and then, between acts, the show moves
+// between the beach and the frozen lake (its midnight sky and falling snow come with it). Sky,
+// clouds, wind, smoke and snow ease to their new values instead of jumping; shell changes only
+// touch shells launched after them. ?look=green-white (a Look's name) plays that Look act after
+// act, and ?place=lake (or beach) keeps the show in one place: an endless Green & White show for
+// a party's TV is skygreeting.com/autoshow?look=green-white.
 // It only writes config (as Customize does) and never saves it, so nobody's own design
 // is touched. No words ever go up.
+import { LOOKS } from './looks.js';
+import { PRESETS } from './presets.js';
 
-const CLASSIC = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'helmet',
+const CLASSIC = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star',
   'kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'];
 const SPOOKY = ['pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'];
-const PALETTES = ['classic', 'usa', 'gold', 'neon', 'pastel', 'rainbow', 'royal', 'ocean', 'cosmic', 'rose', 'sakura', 'autumn', 'ice'];
+const PALETTES = ['classic', 'usa', 'gold', 'neon', 'pastel', 'rainbow', 'royal', 'ocean', 'cosmic', 'rose', 'sakura', 'autumn', 'ice', 'greenwhite'];
+const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// The Looks with shells of their own (Classic is the app's defaults, which a random act covers).
+const ACT_LOOKS = LOOKS.filter(({ preset }) => PRESETS[preset]?.look?.mix);
+const LOOK_STYLE = ['lifetime', 'trailLength', 'glitter', 'sparkSize', 'brightness', 'burstSize']; // a Look's own touches, when it has them
 const GROUND = ['fountains', 'shooters', 'candles', 'mines', 'fans', 'waterfall', 'mixed'];
 const SPOOKY_GROUND = ['cauldron', 'wisps', 'lightning', 'lanterns', 'halloween'];
 const LIGHT_COLORS = ['warm', 'white', 'red', 'green'];
@@ -43,7 +54,11 @@ export function create(ctx) {
   const { config, container, signal } = ctx;
   if (!ctx.link.autoshow) return { update() {}, dispose() {} };
   container.classList.add('autoshow-mode');
-  const { look, show, fountains, physics, sky, smoke, landmarks } = config;
+  const { look, show, fountains, physics, sky, smoke, landmarks, snow } = config;
+  const params = new URLSearchParams(location.search);
+  const onlyLook = ACT_LOOKS.find(({ preset, label }) => [slug(preset), slug(label)].includes(slug(params.get('look') || '')))?.preset || null;
+  const onlyPlace = ['beach', 'lake'].includes(params.get('place')) ? params.get('place') : null;
+  if (onlyPlace) config.place.environment = onlyPlace;
   look.text = '';
   look.text2 = '';
   look.mix.text = 0;
@@ -85,8 +100,10 @@ export function create(ctx) {
     [physics, 'windSpeed', physics.windSpeed, 8],
     [physics, 'windDirection', physics.windDirection, 360],
     [smoke, 'amount', smoke.amount, 0.5],
+    [snow, 'amount', snow.amount, 1],
   ];
-  const target = (key, value) => { for (const e of eased) if (e[1] === key) e[2] = value; };
+  // Smoke and snow both call theirs `amount`, so the object can be named too.
+  const target = (key, value, object = null) => { for (const e of eased) if (e[1] === key && (!object || e[0] === object)) e[2] = value; };
 
   let actEnd = 0; // when this act ends (show time, seconds)
   let swellAt = 0; // when the pace picks up for the act's close
@@ -225,9 +242,30 @@ export function create(ctx) {
   // Most in the air at once, for a pace; phones have a smaller particle pool.
   const shellCap = (pace) => Math.min(ctx.phone ? 9 : 16, Math.round(3 + pace / 7));
 
+  // A Look's shells, colours, ground show and pace for this act (its words never go up).
+  function lookAct(name) {
+    const preset = PRESETS[name] || {};
+    for (const type in look.mix) look.mix[type] = 0;
+    Object.assign(look.mix, preset.look?.mix || {});
+    look.mix.text = 0;
+    if (preset.look?.palette) look.palette = preset.look.palette;
+    for (const key of LOOK_STYLE) if (typeof preset.look?.[key] === 'number') look[key] = preset.look[key];
+    if (preset.fountains?.style) fountains.style = preset.fountains.style;
+    if (preset.show?.shellsPerMinute) basePace = preset.show.shellsPerMinute;
+    pool = Object.keys(look.mix).filter((type) => look.mix[type] > 0);
+  }
+  // Between acts, now and then, the beach gives way to the frozen lake or back: the scenery
+  // rebuilds during the breather.
+  function placeFor() {
+    const place = onlyPlace || (chance(0.22) ? (config.place.environment === 'lake' ? 'beach' : 'lake') : config.place.environment);
+    config.place.environment = place;
+    return place;
+  }
+
   function newAct(time) {
+    const lake = placeFor() === 'lake';
     // Halloween turns up now and then all year, most of the time in October.
-    const spooky = chance(new Date().getMonth() === 9 ? 0.6 : 0.15);
+    const spooky = !onlyLook && chance(new Date().getMonth() === 9 ? 0.6 : 0.15);
     pool = spooky ? SPOOKY.concat(chance(0.5) ? ['willow', 'crackle', 'strobe'] : []) : CLASSIC;
     for (const type in look.mix) look.mix[type] = 0;
     const kinds = 2 + ((Math.random() * 5) | 0);
@@ -269,11 +307,23 @@ export function create(ctx) {
     landmarks.lightColor = pickOne(LIGHT_COLORS);
     landmarks.light = rand(0.6, 1.6);
 
-    target('timeOfDay', spooky ? rand(0.7, 1) : rand(0.15, 1));
+    // A Look now and then (every act, if the link names one): Halloween's for a spooky act.
+    const named = onlyLook || (chance(0.4) ? (spooky ? 'Halloween' : pickOne(ACT_LOOKS.filter(({ preset }) => preset !== 'Halloween')).preset) : null);
+    if (named) {
+      lookAct(named);
+      show.shellsPerMinute = basePace;
+      show.maxShells = shellCap(basePace);
+    }
+
+    // The lake is midnight and snowing; the beach anywhere from dusk to night, and never snow.
+    target('timeOfDay', lake ? rand(0.82, 1) : spooky ? rand(0.7, 1) : rand(0.15, 1));
     target('cloudCoverage', rand(0, 0.6));
     target('windSpeed', rand(0.5, 6));
     target('windDirection', rand(0, 360));
-    target('amount', rand(0.06, 0.4));
+    target('amount', lake ? rand(0.05, 0.12) : rand(0.05, 0.18), smoke); // since the smoke was made visible, 0.18 is a thick haze
+    target('amount', lake ? rand(0.15, 0.7) : 0, snow);
+    if (lake) config.lake.open = rand(0.3, 0.8);
+    else snow.amount = 0;
 
     const length = rand(25, 60);
     rushUntil = 0;
