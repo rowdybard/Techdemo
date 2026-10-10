@@ -1,9 +1,11 @@
-# Cloudflare static-asset headers. Code and pictures may be cached for five minutes, so
-# repeat visits skip a round trip per file; pages (index, terms, privacy) are revalidated
-# every time so a deploy shows up at once. vendor/ holds exact library versions whose
-# paths change with the version, so they are cached for a year.
-/src/*
-  Cache-Control: public, max-age=300
+# Cloudflare static-asset headers. Pages and code (src/) have no rule here, so they get
+# Cloudflare's default, "public, max-age=0, must-revalidate" with an ETag: an unchanged file
+# costs a quick 304, and after a deploy no phone can pair the new page with old scripts it
+# kept. (A five-minute rule for src/ did exactly that: the new page's round icons with the old
+# "Lock view" label and no sound button.) Don't add a src/* rule back: it would also be joined
+# onto the og/ rule below, since Cloudflare joins every matching rule's values with a comma.
+# vendor/ holds exact library versions whose paths change with the version, so they are cached
+# for a year.
 /src/og/*
   Cache-Control: public, max-age=86400
 /vendor/*
