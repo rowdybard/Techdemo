@@ -17,18 +17,24 @@ export function create(ctx) {
     magFilter: THREE.LinearFilter,
     depthBuffer: false,
   });
-  {
+  function bake() {
     const bakeScene = new THREE.Scene();
     const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: maskVertex, fragmentShader: maskFragment }));
     quad.frustumCulled = false;
     bakeScene.add(quad);
     const previous = renderer.getRenderTarget();
-    renderer.setRenderTarget(masks);
-    renderer.render(bakeScene, new THREE.Camera());
-    renderer.setRenderTarget(previous);
-    quad.geometry.dispose();
-    quad.material.dispose();
+    try {
+      renderer.setRenderTarget(masks);
+      renderer.render(bakeScene, new THREE.Camera());
+    } finally {
+      renderer.setRenderTarget(previous);
+      quad.geometry.dispose();
+      quad.material.dispose();
+    }
   }
+  bake();
+  let needsBake = false;
+  renderer.domElement.addEventListener('webglcontextrestored', () => { needsBake = true; }, { signal: ctx.signal });
 
   const uniforms = {
     ...ctx.sky.uniforms,
@@ -51,6 +57,10 @@ export function create(ctx) {
 
   return {
     update(dt, time) {
+      if (needsBake) {
+        bake();
+        needsBake = false;
+      }
       uniforms.uTime.value = time;
       uniforms.uOpen.value = settings.open;
     },

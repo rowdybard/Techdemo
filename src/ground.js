@@ -3,8 +3,7 @@
 //   candles   roman candles: coloured balls pumped up one after another
 //   mines     sprays of comets bursting up from the deck in sequence across the barge
 //   fans      paired tubes firing outward at alternate angles, drawing Vs
-//   waterfall a curtain of silver-gold sparks pouring down the whole length of the barge from a
-//             line high above it into the water (Deluxe)
+//   waterfall a curtain of silver-gold sparks spilling from the barge's deck into the water (Deluxe)
 // Each writes all of its particles at once, with later birth times, placed with the same
 // closed-form motion the shader uses (see particles.js), and lights its tubes while it runs.
 import { KIND } from './fireworks.glsl.js';
@@ -139,16 +138,18 @@ export function fans(pool, config, phone, start, tubes, y, z, palette, lights) {
   pool.end();
 }
 
-// Sparks pour from a line high over the barge, end to end, and fall into the water: a sheet of
-// light along the whole barge. They start silver-white and redden as they fall.
+// A low curtain spilling over the front deck edge, end to end. It must originate
+// on the barge even when other ground effects have their height turned up.
 export function waterfall(pool, config, phone, start, tubes, y, z, palette, lights) {
   const { look } = config;
   const duration = 8;
-  const top = y + config.fountains.height;
+  const edge = z + 8.1; // the main hull is 16 m wide; spill toward the viewer, clear of it
+  const gravity = 9.81 * config.physics.gravity;
+  const drag = 0.9;
   const spacing = tubes.length > 1 ? tubes[1] - tubes[0] : 10;
   const left = tubes[0] - spacing / 2;
   const width = tubes[tubes.length - 1] + spacing / 2 - left;
-  // Strands, like real falls hung from a line, so it reads as falling streams and not a sheet.
+  // Separate strands keep the short curtain legible without increasing its density.
   const strands = phone ? 28 : 44;
   const perSecond = Math.round(width * (phone ? 1.6 : 2.9)); // by the metre, so a short curtain isn't a solid slab
   const count = Math.round(perSecond * duration);
@@ -156,13 +157,28 @@ export function waterfall(pool, config, phone, start, tubes, y, z, palette, ligh
   for (let k = 0; k < count; k++) {
     const t = (k / count) * duration;
     const born = start + t + Math.random() / perSecond;
-    const fall = 5.5 + Math.random() * 0.5; // long enough to reach the water
+    const vy = 1 + Math.random(); // a small lip of sparks, rather than a tall fountain
+    const fall = waterTime(y, vy, gravity, drag);
     const x = left + ((k % strands) + 0.5 + (Math.random() - 0.5) * 0.25) * (width / strands);
-    pool.set(i++, x, top + (Math.random() - 0.5) * 0.6, z + (Math.random() - 0.5) * 1.5, born,
-      (Math.random() - 0.5) * 0.3, -1 - Math.random() * 1.5, (Math.random() - 0.5) * 0.4, 0.9,
+    pool.set(i++, x, y, edge + Math.random() * 0.2, born,
+      (Math.random() - 0.5) * 0.3, vy, 4.5 + Math.random() * 2, drag,
       0.34, 0.27, 0.17, 0.34, 0.15, 0.04, fall * 0.55, fall, 0.22 * look.sparkSize, 0.45, KIND.glitter);
   }
   pool.end();
   const glow = [0.4, 0.28, 0.1]; // as dim as a fountain's: a whole barge of them lights the shore
-  for (let t = 0; t < tubes.length; t++) light(lights[t], start, duration, tubes[t], (top + y) / 2, z, glow, 14, 0.5, 'hiss');
+  for (let t = 0; t < tubes.length; t++) light(lights[t], start, duration, tubes[t], y, edge, glow, 14, 0.5, 'hiss');
+}
+
+// Solve the same closed-form vertical motion as the spark shader. A deck-height
+// spark should finish at the water, not keep falling visibly beneath it for six seconds.
+function waterTime(y, vy, gravity, drag) {
+  const terminal = -gravity / drag;
+  let low = 0, high = 8;
+  for (let step = 0; step < 16; step++) {
+    const time = (low + high) / 2;
+    const height = y + terminal * time + (vy - terminal) * (1 - Math.exp(-drag * time)) / drag;
+    if (height > 0) low = time;
+    else high = time;
+  }
+  return (low + high) / 2;
 }

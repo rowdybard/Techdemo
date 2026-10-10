@@ -77,10 +77,10 @@
 :is(.gift-mode, .building, .hero-mode) .studio-open { display: none; }
 .embed-mode :is(.studio-open, .studio) { display: none !important; }
 
-/* Making a greeting: its summary, and ✦ on effects that make it a Deluxe send. */
+/* Greeting summary and clear text labels for Deluxe effects. */
 .studio-making { margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; background: rgb(255 180 92 / 0.12); color: var(--ink); font-size: 12px; line-height: 1.4; }
 .studio-making[hidden] { display: none; }
-.studio-chip.is-deluxe::after { content: ' ✦'; color: var(--spark); }
+.studio-chip.is-deluxe::after { content: ' · Deluxe'; color: var(--spark); font-size: 11px; }
 .builder-customize { flex: none; }
 
 /* Playing with the show first? One clear next step, always in reach: send this show. */
@@ -93,3 +93,28 @@
 .studio-words { margin-top: 12px; }
 .studio-words[hidden] { display: none; }
 .studio-words-note { min-height: 1em; color: var(--muted); font-size: 12px; text-transform: none; }
+
+/* Panel visibility is explicit; hidden controls are absent from keyboard and layout. */
+#app :is(.studio, .builder, .builder-bar, .panel) [hidden],
+#app :is(.studio, .builder, .builder-bar, .panel)[hidden] { display: none !important; }
+#app[data-panel="advanced"] .panel.lil-gui { display: block; z-index: 4; }
+#app[data-panel="advanced"] :is(.send-open, .studio-open, .walk-hint, .debug) { display: none; }
+.studio-card-price, .studio-card-preview { grid-column: 1 / -1; font-size: 11px; line-height: 1.35; }
+.studio-card-price { color: #ffd27a; font-weight: 600; }
+.studio-card-preview { color: var(--muted); margin-top: 5px; }
+.studio-help { margin: 3px 0 9px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.studio-candidate { display: grid; gap: 8px; }
+.studio-candidate[hidden] { display: none; }
+.studio-candidate .studio-send { font-size: 14px; }
+.builder-choice { margin: 2px 0; color: #ffd27a; font-size: 13px; line-height: 1.45; }
+.send-primary:disabled { cursor: default; opacity: 0.5; box-shadow: none; }
+.studio :is(button, summary), .builder :is(button, input), .builder-bar button { min-height: 44px; }
+.studio-switch { min-height: 44px; }
+.studio-swatch { width: 44px; height: 44px; }
+.studio-slider { grid-template-columns: 76px 1fr; }
+.studio-slider input { min-height: 44px; }
+.builder-bar { flex-wrap: wrap; }
+#app .builder-plan.is-deluxe .builder-plan-lines li::before { content: '✓ '; }
+.video-flow[hidden] { display: none !important; }
+.video-pill { min-height: 44px; }
+.video-cancel { top: calc(66px + env(safe-area-inset-top, 0px)); background: rgb(20 25 40 / 0.9); }

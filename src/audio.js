@@ -19,12 +19,10 @@
 // during the show; a voice cap bounds it, and every voice disconnects itself when done.
 
 import { makeNoiseSoon, noiseNow } from './noise.js';
-import { swarm, whirr } from './sfx.js';
+import { createRecipes } from './audio-recipes.js';
 
 const SPEED_OF_SOUND = 343;
 const MAX_VOICES = 32;
-const SHAPES = new Set(['heart', 'star', 'text', 'initials', 'pumpkin', 'skull', 'bat', 'ghost', 'web']);
-const HISSERS = new Set(['willow', 'palm', 'wisp', 'chrysanthemum', 'kamuro', 'fish', 'leaves']);
 
 let shared = null; // { audio, brown, white, crackle, room } for the page's lifetime
 let lastInput = 0; // when the person last touched the page (ms), for the idle sleep
@@ -88,7 +86,22 @@ export function create(ctx) {
   let heardBurst = -1e9;
   let heardLaunch = -1e9;
   let heardGround = -1e9;
-  let groundVoices = 0;
+  const activeVoices = new Array(MAX_VOICES).fill(null);
+  const groundUntil = new Float64Array(3);
+  const groundOwners = new Uint8Array(3);
+  let voiceOwner = 0;
+  const { burstSound, launchSound, groundSound, tick, midnight } = createRecipes({
+    getAudio: () => audio, getPage: () => page, voice, noise, tone,
+    holdGround(when, hold) {
+      for (let i = 0; i < groundUntil.length; i++) {
+        if (groundUntil[i] > audio.currentTime) continue;
+        groundUntil[i] = when + hold + 0.5;
+        groundOwners[i] = voiceOwner;
+        return true;
+      }
+      return false;
+    },
+  });
 
   let starting = false;
   // Browsers want the context made and resumed in the tap itself. Everything else (the
@@ -138,6 +151,10 @@ export function create(ctx) {
   if (settings.enabled) ctx.container.addEventListener('scene-ready', makeNoiseSoon, { once: true, signal });
   lastInput = performance.now();
   ctx.audioState = () => (audio ? audio.state : 'none');
+  ctx.audio = { cutGround: (owner) => stopVoices(owner), cutDirected: () => stopVoices(3, true) };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopVoices(); }, { signal });
+  document.addEventListener('freeze', () => stopVoices(), { signal });
+  addEventListener('pagehide', () => stopVoices(), { signal });
 
   // The sea: low surf washing in sets (two slow swells beating), and a fizz of foam. On the
   // frozen lake it's a faint wind instead: the same sound at a tenth of the level.
@@ -181,7 +198,8 @@ export function create(ctx) {
   // A voice: `build(add)` makes its nodes (registering each with add) and returns
   // { source, output }. It's panned, sent to the bus, and disconnects itself when done.
   function voice(when, length, pan, build) {
-    if (voices >= MAX_VOICES) return false;
+    if (voices >= MAX_VOICES || audio.state !== 'running') return false;
+    const slot = activeVoices.indexOf(null);
     voices++;
     const nodes = [];
     const add = (node) => { nodes.push(node); return node; };
@@ -193,12 +211,35 @@ export function create(ctx) {
       last = last.connect(panner);
     }
     last.connect(bus);
-    source.onended = () => {
-      for (const node of nodes) node.disconnect();
-      voices--;
-    };
+    const entry = { source, nodes, owner: voiceOwner, when };
+    activeVoices[slot] = entry;
+    source.onended = () => finishVoice(slot, entry);
     source.stop(when + length + 0.05);
     return true;
+  }
+
+  function finishVoice(slot, entry) {
+    if (activeVoices[slot] !== entry) return;
+    activeVoices[slot] = null;
+    entry.source.onended = null;
+    for (const node of entry.nodes) node.disconnect();
+    voices--;
+  }
+
+  // Future Web Audio starts otherwise survive a pause or a cancelled fountain.
+  // Disconnect and stop every source, including recipe modulation oscillators.
+  function stopVoices(owner = null, futureOnly = false) {
+    for (let i = 0; i < activeVoices.length; i++) {
+      const entry = activeVoices[i];
+      if (!entry || (owner !== null && entry.owner !== owner) || (futureOnly && entry.when <= audio.currentTime)) continue;
+      for (const node of entry.nodes) {
+        if (node.stop) { try { node.stop(); } catch { /* already ended */ } }
+      }
+      finishVoice(i, entry);
+    }
+    for (let i = 0; i < groundUntil.length; i++) {
+      if (owner === null || groundOwners[i] === owner) groundUntil[i] = 0;
+    }
   }
 
   function envelope(add, when, peak, attack, decay) {
@@ -242,63 +283,6 @@ export function create(ctx) {
     });
   }
 
-  // --- Recipes -------------------------------------------------------------------
-
-  function boom(when, loud, air, pan, size = 1) {
-    tone(when, { from: 72 * (1.1 - 0.2 * size), to: 36, peak: 0.85 * loud, decay: 0.9, pan });
-    noise(page.brown, when, { peak: 0.75 * loud, attack: 0.008, decay: 2.2, from: 200 + 1400 * air, to: 80, pan });
-    noise(page.white, when, { peak: 0.32 * loud * air, decay: 0.09, type: 'highpass', from: 1800, pan });
-  }
-
-  function burstSound(b, when, loud, air, pan) {
-    const type = b.type;
-    if (type === 'eyes') return;
-    boom(when, loud * (SHAPES.has(type) ? 0.6 : 1), air, pan, Math.min(1.4, b.size / 60));
-    if (b.crackle > 0) crackles(when + b.crackle, 0.45, loud * 0.8, air, pan); // a chrysanthemum's crackling tips
-    if (type === 'crackle' || type === 'brew') {
-      crackles(when + 0.5, 1.5, loud, air, pan); // its pops come 0.5 to 1.9 s after the break (bursts.js)
-    } else if (type === 'strobe') {
-      noise(page.crackle, when + 0.2, { peak: 0.25 * loud, attack: 0.05, decay: 2.2, type: 'bandpass', from: 1800, q: 1.2, pan, rate: 0.45 });
-    } else if (HISSERS.has(type)) {
-      noise(page.white, when + 0.15, { peak: 0.06 * loud, attack: 0.4, decay: 2.6, type: 'bandpass', from: 5200 * air + 800, q: 0.6, pan });
-    } else if (type === 'whirl') {
-      // Whirlwinds whirr as they spin: two soft fizzes, panned apart.
-      for (const side of [-0.2, 0.2]) {
-        const at = when + 0.1 + Math.random() * 0.1;
-        const length = 1.8 + Math.random() * 0.5;
-        voice(at, length, pan + side, (add) => whirr(audio, add, page, at, { peak: 0.08 * loud, length, air }));
-      }
-    } else if (type === 'multibreak') {
-      boom(when + 0.9, loud * 0.7, air, pan, 0.8);
-    } else if (type === 'crossette') {
-      for (let k = 0; k < 4; k++) noise(page.white, when + 0.75 + k * 0.05, { peak: 0.22 * loud, decay: 0.07, type: 'bandpass', from: 1400, q: 1, pan: pan + (k - 1.5) * 0.08 });
-    }
-  }
-
-  // A swarm of crackling pops, in two voices panned apart so it's wide, as a crackle shell is.
-  function crackles(when, length, loud, air, pan) {
-    for (const side of [-0.28, 0.28]) {
-      voice(when + Math.random() * 0.06, length, Math.max(-0.9, Math.min(0.9, pan + side)), (add) => swarm(audio, add, page, when, { peak: 0.5 * loud, length, air }));
-    }
-  }
-
-  // The countdown clock: a wooden tick each second, higher as zero nears (with a low thump on
-  // the last three), then at zero a boom, and a bell struck under it.
-  function tick(when, second) {
-    const near = 1 - second / 10;
-    tone(when, { from: 900 + 900 * near, to: 500 + 400 * near, peak: 0.2 + 0.2 * near, attack: 0.002, decay: 0.09, type: 'triangle' });
-    noise(page.white, when, { peak: 0.08, decay: 0.03, type: 'highpass', from: 3500 });
-    if (second <= 3) tone(when, { from: 150, to: 60, peak: 0.45, decay: 0.3 });
-  }
-
-  function midnight(when) {
-    boom(when, 1, 1, 0, 1.5);
-    for (const [ratio, peak, decay] of [[1, 0.3, 3.4], [2, 0.2, 2.6], [2.76, 0.16, 2], [5.4, 0.09, 1.2], [8.9, 0.05, 0.7]]) {
-      tone(when, { from: 196 * ratio, to: 195 * ratio, peak, attack: 0.003, decay });
-    }
-    noise(page.white, when + 0.02, { peak: 0.3, attack: 0.1, decay: 1.6, type: 'bandpass', from: 1500, to: 6000, q: 0.5 });
-  }
-
   let tickedSecond = Infinity; // the number the clock last sounded
   function clockSounds(time, when, muted) {
     const clock = ctx.countdown;
@@ -312,48 +296,6 @@ export function create(ctx) {
     if (muted) return;
     if (shown >= 1 && shown <= 10) tick(when, shown);
     else if (shown <= 0) midnight(when);
-  }
-
-  function launchSound(b, loud, air, pan, when) {
-    tone(when, { from: 120, to: 55, peak: 0.35 * loud, decay: 0.35, pan });
-    noise(page.white, when, { peak: 0.18 * loud * air, decay: 0.22, from: 900, to: 300, pan });
-  }
-
-  function groundSound(g, when, loud, air, pan) {
-    const hold = Math.max(0.3, g.hold);
-    switch (g.sound) {
-      case 'hiss':
-        if (groundVoices >= 3) return;
-        noise(page.white, when, { peak: 0.09 * loud, attack: 0.5, decay: hold, type: 'bandpass', from: 3400 * air + 700, q: 0.5, pan });
-        noise(page.brown, when, { peak: 0.12 * loud, attack: 0.5, decay: hold, from: 300, pan });
-        groundVoices++;
-        setTimeout(() => { groundVoices--; }, (hold + (when - audio.currentTime)) * 1000);
-        break;
-      case 'whoosh':
-        for (let t = 0; t < hold; t += 0.45) {
-          noise(page.white, when + t, { peak: 0.06 * loud, attack: 0.08, decay: 0.32, type: 'bandpass', from: 700, to: 2600 * air + 400, q: 1.1, pan });
-        }
-        break;
-      case 'pops':
-        for (let t = 0; t < hold; t += 0.55) {
-          tone(when + t, { from: 140, to: 70, peak: 0.22 * loud, decay: 0.18, pan });
-          noise(page.white, when + t, { peak: 0.1 * loud * air, decay: 0.05, type: 'highpass', from: 1500, pan });
-        }
-        break;
-      case 'boom':
-        boom(when, loud * 0.55, air, pan, 0.7);
-        break;
-      case 'bubble':
-        noise(page.brown, when, { peak: 0.14 * loud, attack: 0.6, decay: hold, from: 420, q: 4, pan });
-        noise(page.crackle, when + 0.3, { peak: 0.2 * loud, attack: 0.3, decay: hold, type: 'lowpass', from: 900, pan, rate: 0.35 });
-        break;
-      case 'thunder':
-        noise(page.white, when, { peak: 0.6 * loud, decay: 0.14, type: 'highpass', from: 1100, pan });
-        noise(page.brown, when + 0.05, { peak: 1.1 * loud, attack: 0.12, decay: 3.6, from: 380, to: 90, pan });
-        break;
-      default:
-        break;
-    }
   }
 
   // Where a sound comes from, as seen from the camera: delay, loudness, brightness, pan.
@@ -376,12 +318,17 @@ export function create(ctx) {
       if (!audio) return;
       // Nobody has touched the page for a while (open, on screen, but left alone): stop the
       // sound until they do. The show keeps playing silently.
-      if (audio.state === 'running' && performance.now() - lastInput > settings.idleSeconds * 1000) audio.suspend().catch(() => {});
+      const idle = performance.now() - lastInput > settings.idleSeconds * 1000;
+      if (audio.state === 'running' && idle) {
+        stopVoices();
+        audio.suspend().catch(() => {});
+      }
       master.gain.value = settings.enabled ? settings.volume : 0;
       const bursts = ctx.fireworks ? ctx.fireworks.bursts : null;
       const ground = ctx.fountains ? ctx.fountains.lights : null;
       // Muted: skip the sounds, but keep up, so turning it up doesn't play a backlog.
-      if (!settings.enabled || settings.volume <= 0) {
+      if (idle || document.hidden || audio.state !== 'running' || !settings.enabled || settings.volume <= 0) {
+        stopVoices();
         clockSounds(time, 0, true);
         if (bursts) {
           heardBurst = latest(bursts, 'time', time);
@@ -400,6 +347,7 @@ export function create(ctx) {
       if (bursts) {
         for (let i = 0; i < bursts.length; i++) {
           const b = bursts[i];
+          voiceOwner = b.owner || 0;
           if (b.launch > heardLaunch && b.launch <= time) {
             const h = listen(b.x, by, bz, 1);
             launchSound(b, h.loud, h.air, h.pan, now + (b.launch - time) + h.delay);
@@ -409,6 +357,7 @@ export function create(ctx) {
             burstSound(b, now + (b.time - time) + h.delay, h.loud, h.air, h.pan);
           }
         }
+        voiceOwner = 0;
         heardBurst = latest(bursts, 'time', time);
         heardLaunch = latest(bursts, 'launch', time);
       }
@@ -417,7 +366,9 @@ export function create(ctx) {
           const g = ground[i];
           if (g.time > heardGround && g.time <= time && g.sound && g.sound !== 'none') {
             const h = listen(g.x, by + 4, g.z, 1);
+            voiceOwner = g.owner || (i < 14 ? 1 : 2);
             groundSound(g, now + (g.time - time) + h.delay, h.loud, h.air, h.pan);
+            voiceOwner = 0;
           }
         }
         heardGround = latest(ground, 'time', time);
@@ -425,7 +376,7 @@ export function create(ctx) {
     },
 
     dispose() {
-      // Sounds still playing end on their own and disconnect themselves.
+      stopVoices();
       for (const node of sea) {
         if (node.stop) node.stop();
         node.disconnect();
@@ -440,6 +391,7 @@ export function create(ctx) {
       bus = null;
       echo = null;
       echoLevel = null;
+      ctx.audio = null;
     },
   };
 }

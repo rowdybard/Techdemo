@@ -68,6 +68,7 @@ export function create(ctx) {
   let allowed = null;
   let occasion = null;
   let deluxe = false;
+  let originalText = null;
 
   const director = {
     active: false,
@@ -75,10 +76,12 @@ export function create(ctx) {
     craneFrom: -Infinity,
     craneUntil: -Infinity,
     /** Plays `occasion`'s ending with these words; returns how long it lasts. */
-    play(nextOccasion, nextWords, withDeluxe) {
+    play(nextOccasion, nextWords, withDeluxe, { legacy = false } = {}) {
+      director.stop();
+      originalText = { text: config.look.text, width: config.look.textWidth };
       occasion = nextOccasion;
       deluxe = withDeluxe;
-      allowed = allowedEffects(occasion, deluxe);
+      allowed = allowedEffects(occasion, deluxe, legacy);
       words = { ...nextWords, year: String(newYear()), from: signature(nextWords.from),
         initials: [initial(nextWords.from), initial(nextWords.to)].filter(Boolean).join(' + ') };
       cues = withWords(timed(occasion.ending.filter((cue) => deluxe || !cue.deluxe)), words);
@@ -90,12 +93,19 @@ export function create(ctx) {
       director.active = true;
       return end - start;
     },
-    stop() {
+    stop({ settle = false } = {}) {
       director.active = false;
       next = cues.length;
       director.craneUntil = -Infinity;
       if (ctx.countdown) ctx.countdown.stop();
+      if (!settle) { ctx.crane?.reset(); ctx.fireworks?.cancelDirected?.(now); }
+      if (originalText) {
+        config.look.text = originalText.text;
+        config.look.textWidth = originalText.width;
+        originalText = null;
+      }
     },
+    get remaining() { return director.active ? Math.max(0, end - now) : 0; },
   };
   ctx.director = director;
 
@@ -110,7 +120,7 @@ export function create(ctx) {
 
   // A Deluxe effect in a free greeting becomes the occasion's stand-in.
   function resolve(item) {
-    if (occasion.deluxe.includes(item) && !allowed.has(item)) return occasion.fallback[item] || (GROUND.has(item) ? 'fountains' : 'peony');
+    if (!allowed.has(item)) return occasion.fallback[item] || (GROUND.has(item) ? 'fountains' : 'peony');
     return item;
   }
 
@@ -125,7 +135,7 @@ export function create(ctx) {
       // Their initials in a heart (or one initial, if only one name was given; none, no heart).
       if (!words.initials) return;
       config.look.text = words.initials;
-      fireworks.launchAt('initials', middle, cue.h || 150, burstAt);
+      extend(fireworks.launchAt('initials', middle, cue.h || 150, burstAt, null, true));
     } else if (cue.crane) {
       director.craneFrom = start + cue.at;
       director.craneUntil = director.craneFrom + cue.crane;
@@ -135,14 +145,17 @@ export function create(ctx) {
       config.look.text = text;
       config.look.textWidth = cue.width || Math.min(250, Math.max(100, 60 + text.length * 10));
       // The name goes well below the message, which is still sinking when it bursts.
-      fireworks.launchAt('text', middle, HEIGHT[cue.text] || 132, burstAt, cue.palette);
+      extend(fireworks.launchAt('text', middle, HEIGHT[cue.text] || 132, burstAt, cue.palette, true));
     } else if (cue.ground) {
-      if (ctx.fountains) ctx.fountains.play(resolve(cue.ground), Boolean(cue.layer));
+      if (ctx.fountains) extend(ctx.fountains.play(resolve(cue.ground), Boolean(cue.layer)));
     } else if (cue.shell) {
       // Pulled in on an upright phone, so shells at the sides stay on screen.
       const squeeze = ctx.camera.aspect < 1 ? 0.72 : 1;
-      fireworks.launchAt(resolve(cue.shell), middle + cue.x * squeeze, cue.h, burstAt, cue.palette);
+      extend(fireworks.launchAt(resolve(cue.shell), middle + cue.x * squeeze, cue.h, burstAt, cue.palette, true));
     }
+  }
+  function extend(lastDeath) {
+    if (Number.isFinite(lastDeath)) end = Math.max(end, lastDeath + 0.5);
   }
 
   return {
@@ -150,10 +163,11 @@ export function create(ctx) {
       now = time;
       if (!director.active) return;
       while (next < cues.length && time >= start + cues[next].at) fire(cues[next++]);
-      if (time >= end) director.active = false;
+      if (time >= end) director.stop({ settle: true });
     },
 
     dispose() {
+      director.stop();
       ctx.director = null;
     },
   };

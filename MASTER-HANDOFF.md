@@ -1,5 +1,44 @@
 # SkyGreeting: master handoff
 
+## Current takeover update — October 9, 2026
+
+This update takes precedence over the older baseline below. The audited source and production
+Worker matched `8f791222119297b226b32df3d8b4b09e048f4c64` on the live/default branch
+`ccr-09268299-owgtnw` (there is no `main`). Implementation is on `codex/engine-takeover`.
+Do not assume these changes are deployed. Only update the live branch when the owner says **merge**.
+The implementation ledger and release procedure are in [TAKEOVER-IMPLEMENTATION.md](TAKEOVER-IMPLEMENTATION.md).
+
+- First-time visitors start on **Galaxy, night beach**. Existing valid saved settings and explicit
+  greeting designs take precedence. Classic retains its original appearance.
+- Full Looks are free to preview. Sending requires an explicit Free or Deluxe choice; comparison
+  previews never choose a payment tier. Every current Look discloses its Deluxe contents before selection.
+- Side-barge fountains are prominent and **Deluxe for newly authored greetings on both places**.
+  Existing published legacy greetings retain their historical appearance. Free uses the center barge.
+- Frozen Lake shows Snowfall and Ice & water; beach-only controls are absent. Each place remembers
+  its own scene edits. The waterfall now originates at the barge deck instead of an invisible elevated line.
+- `catalog.js` owns shared entitlements; `design.js` owns the bounded v2 design envelope. New share,
+  checkout, restore, and replay use the same snapshot, including custom colours and lake settings.
+  Legacy compact links remain readable. `navigation.js` owns the panel stack, Back/Escape, focus, and scroll.
+- `worker/pricing.js` owns the regular **$4.99** and launch **$1.99** offer. The launch clock is exactly
+  30 days from a single configured `DELUXE_LAUNCH_START_UTC`; it is deliberately inactive until approved
+  release configuration. Checkout must match `expectedPriceCents`; a changed quote requires another click.
+- SQLite Durable Objects (`GUARDS`) own atomic rate/report decisions and moderation tombstones.
+  KV still stores greeting content. Deploying this branch introduces the `greeting-guards-v1` migration.
+  Tombstones must be written before content deletion so Stripe recovery cannot resurrect it.
+- Purchase analytics requires a confirmed paid record, actual amount, and the opaque transaction matching
+  the current tab's checkout. Free returns and repeat visits cannot fabricate purchases.
+- Video completion follows the actual scene/cue/particle tail, including New Year's longer show.
+  Cancel works immediately and discards the recording; Done returns to the originating panel.
+- `npm run check` now includes design, UI-state, engine, audio, video, Worker, desktop/phone flow,
+  and resource-rebuild checks. Use Node 24; on Windows set `PYTHON` to a working Python executable
+  if the `python3` Store alias is unavailable. Run the full command alone before committing.
+- The integrated check passed October 9, including desktop/phone/recipient flows, 27 focused
+  engine/audio/video regressions, 18 Worker tests, 20 beach rebuilds, six lake rebuilds and three
+  place round trips. Local Wrangler dry-run passed. Real payments, email delivery and physical-device
+  audio/video/GPU behavior still need release verification; see the implementation ledger.
+
+The owner explicitly excluded livestream/YouTube/TikTok work from this takeover.
+
 The one document to read before changing anything, for any coding agent (Codex, Sol, Astra, Claude or a person). Written October 10, 2026 at the end of a long Claude Code session. It covers what the product is, how the code is built, how to change it safely, how to ship, what's live and what isn't, recipes for the usual changes, the owner's verdicts so far, and what's still open.
 
 The older documents are still useful for detail: **`SESSION-HANDOFF.md`** (a dated log of every feature and gotcha, newest decisions included) and **`HANDOFF.md`** (the original spec, the no-leak rules and a long per-feature Status section, parts of it stale). Where they disagree with this file, this file wins.

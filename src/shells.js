@@ -83,6 +83,7 @@ export function fireShell(pool, shell, config, palette, out) {
   const wx = physics.windX;
   const wz = physics.windZ;
   const { launch, fuse } = shell;
+  pool.beginLifetime();
 
   // The rising comet and the sparks it sheds on the way up.
   let i = pool.begin(1 + SHED);
@@ -103,6 +104,7 @@ export function fireShell(pool, shell, config, palette, out) {
   out.crackle = 0; // a burst that crackles late says so (a chrysanthemum's tips)
   burst(pool, shell, config, palette, launch + fuse, at, velocity, out);
   out.type = shell.type;
+  out.end = pool.lastDeath;
   return out;
 }
 

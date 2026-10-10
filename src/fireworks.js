@@ -13,6 +13,7 @@ const FINALE_MAX_SHELLS = 24;
 const SAMPLE_SHELLS = 3; // shells a Style card sends up the moment it's picked
 const TAP_PIXELS = 8; // a press that moves further than this is a drag, not a tap
 const TAP_MS = 350;
+const DIRECTED = 3; // separate from ambient shells and the two ground-show owners
 
 export function create(ctx) {
   const { scene, config, renderer, camera, phone, stats, signal } = ctx;
@@ -44,7 +45,7 @@ export function create(ctx) {
   const plan = { launch: 0 };
   const bursts = [];
   // crackle: seconds after the break when its stars' tips crackle (audio.js), 0 for none.
-  for (let i = 0; i < SHELLS; i++) bursts.push({ time: -1e9, launch: -1e9, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, end: -1e9, type: '', crackle: 0 });
+  for (let i = 0; i < SHELLS; i++) bursts.push({ owner: 0, time: -1e9, launch: -1e9, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, end: -1e9, type: '', crackle: 0 });
   ctx.fireworks = { bursts };
   let next = 0;
   let nextLaunch = 0;
@@ -55,14 +56,14 @@ export function create(ctx) {
   function wordsUp(time) {
     for (let i = 0; i < SHELLS; i++) {
       const b = bursts[i];
-      if (b.type === 'text' && b.time - 4 < time && b.time + config.look.lifetime * 1.6 > time) return true;
+      if (b.type === 'text' && b.launch < time && b.end > time) return true;
     }
     return false;
   }
 
   // `burstAt`, if given, is the moment the shell must burst: it leaves the barge a fuse earlier
   // (so a shell can be sent off ahead of time and burst exactly on a beat).
-  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false, burstAt = NaN, paletteName = null) {
+  function launch(time, aimX = NaN, aimY = NaN, type = null, random = false, burstAt = NaN, paletteName = null, owner = 0) {
     plan.launch = time;
     planShell(plan, config, phone, aimX, aimY, type);
     if (random && plan.type !== 'text' && wordsUp(time)) {
@@ -75,14 +76,17 @@ export function create(ctx) {
     if (!Number.isNaN(burstAt)) plan.launch = burstAt - plan.fuse;
     const record = bursts[next];
     next = (next + 1) % SHELLS;
-    fireShell(pool, plan, config, config.palettes[paletteName] || config.palettes[config.look.palette], record);
-    record.end = record.time + config.look.lifetime * 1.2;
+    pool.shellShow(owner);
+    try { fireShell(pool, plan, config, config.palettes[paletteName] || config.palettes[config.look.palette], record); }
+    finally { pool.shellShow(); }
+    record.owner = owner;
     record.launch = plan.launch;
+    return record.end;
   }
 
   function inTheAir(time) {
     let count = 0;
-    for (let i = 0; i < SHELLS; i++) if (bursts[i].end > time && bursts[i].time - 6 < time) count++;
+    for (let i = 0; i < SHELLS; i++) if (bursts[i].end > time && bursts[i].launch <= time) count++;
     return count;
   }
 
@@ -106,7 +110,6 @@ export function create(ctx) {
     const record = bursts[next];
     next = (next + 1) % SHELLS;
     fireShell(pool, plan, config, config.palettes[config.look.palette], record);
-    record.end = record.time + config.look.lifetime * 1.2;
     record.launch = plan.launch;
   }
   nextLaunch = 1.2;
@@ -146,19 +149,22 @@ export function create(ctx) {
   const api = {
     update(dt, time) {
       const { show } = config;
-      if (time < finaleUntil) {
+      if (ctx.recordingTail) {
+        nextLaunch = time;
+      } else if (time < finaleUntil) {
         // Finale: shells as fast as the pool can take them.
         if (nextLaunch < time - 1) nextLaunch = time;
-        while (time >= nextLaunch) {
+        for (let queued = 0; time >= nextLaunch && queued < FINALE_MAX_SHELLS; queued++) {
           if (inTheAir(time) < FINALE_MAX_SHELLS) launch(nextLaunch, NaN, NaN, null, true);
           nextLaunch += 0.12 + Math.random() * 0.18;
         }
       } else if (show.autoLaunch && !(ctx.director && ctx.director.active)) {
         // A long pause skips the shells it missed instead of firing them all at once.
         if (nextLaunch < time - 1) nextLaunch = time;
-        while (time >= nextLaunch) {
+        const rate = Number.isFinite(show.shellsPerMinute) && show.shellsPerMinute > 0 ? Math.min(240, show.shellsPerMinute) : 1;
+        for (let queued = 0; time >= nextLaunch && queued < FINALE_MAX_SHELLS; queued++) {
           if (inTheAir(time) < show.maxShells) launch(nextLaunch, NaN, NaN, null, true);
-          nextLaunch += (60 / show.shellsPerMinute) * (0.4 + Math.random() * 1.2);
+          nextLaunch += (60 / rate) * (0.4 + Math.random() * 1.2);
         }
       } else {
         nextLaunch = time;
@@ -176,8 +182,25 @@ export function create(ctx) {
     },
 
     /** Fires one shell of `type` from the barge to burst at (x, height), at `burstAt` if given, in a named palette if given. */
-    launchAt(type, x, height, burstAt = NaN, palette = null) {
-      launch(uniforms.uTime.value, x, height, type, false, burstAt, palette);
+    launchAt(type, x, height, burstAt = NaN, palette = null, directed = false) {
+      return launch(uniforms.uTime.value, x, height, type, false, burstAt, palette, directed ? DIRECTED : 0);
+    },
+
+    /** Explicit Stop/Back drops unborn directed sparks and queued smoke/sound, preserving visible tails. */
+    cancelDirected(time = uniforms.uTime.value) {
+      pool.cut(DIRECTED, time);
+      ctx.smoke?.cutDirected(time);
+      ctx.audio?.cutDirected();
+      for (let i = 0; i < bursts.length; i++) {
+        const record = bursts[i];
+        if (record.owner !== DIRECTED) continue;
+        if (record.launch > time) record.launch = -1e9;
+        if (record.time > time) {
+          record.time = -1e9;
+          record.end = time;
+          record.crackle = 0;
+        }
+      }
     },
 
     /** A few shells from the mix as it is now, already climbing and bursting within about a second: a new style shows at once. */
@@ -205,6 +228,7 @@ export function create(ctx) {
   ctx.fireworks.pool = pool; // the ground-show fountains write into the same pool
   ctx.fireworks.launch = api.launch;
   ctx.fireworks.launchAt = api.launchAt;
+  ctx.fireworks.cancelDirected = api.cancelDirected;
   ctx.fireworks.finale = api.finale;
   ctx.fireworks.sample = api.sample;
   return api;

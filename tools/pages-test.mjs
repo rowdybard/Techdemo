@@ -26,8 +26,8 @@ const { isBlocked } = await import(pathToFileURL(join(ROOT, 'src/moderate.js')))
 
 // Are the generated pages what the fragments say they should be?
 const fresh = mkdtempSync(join(tmpdir(), 'ideas-'));
-const made = spawnSync('python3', [join(ROOT, 'tools/make-ideas.py'), fresh], { encoding: 'utf8' });
-if (made.status !== 0) fail('make-ideas.py', made.stderr || made.stdout);
+const made = spawnSync(process.env.PYTHON || 'python3', [join(ROOT, 'tools/make-ideas.py'), fresh], { encoding: 'utf8' });
+if (made.status !== 0) fail('make-ideas.py', made.stderr || made.stdout || `${made.error?.message}. Set PYTHON to your Python executable.`);
 
 const pages = readdirSync(ROOT).filter((f) => f.endsWith('.html') && read(f).includes('Made by tools/make-ideas.py'));
 if (pages.length < 10) fail('pages', `expected at least 10 generated pages, found ${pages.length}`);
@@ -47,7 +47,7 @@ for (const file of pages) {
   const tag = (re) => (re.exec(source) || [])[1];
   const decode = (text) => text.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
-  if (existsSync(join(fresh, file)) && readFileSync(join(fresh, file), 'utf8') !== source) fail(file, 'is out of date; run python3 tools/make-ideas.py and commit the result');
+  if (existsSync(join(fresh, file)) && readFileSync(join(fresh, file), 'utf8').replace(/\r\n/g, '\n') !== source.replace(/\r\n/g, '\n')) fail(file, 'is out of date; run python3 tools/make-ideas.py and commit the result');
 
   // Head.
   const title = decode(tag(/<title>([^<]*)<\/title>/) || '');

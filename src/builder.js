@@ -1,456 +1,248 @@
-// The greeting builder ("Send a fireworks show"). Two ways in, one send screen: start
-// here (pick an occasion, write the words, design the show in Customize), or play and
-// customize the show first and then tap Send: the builder opens with that show, exactly as
-// it is, and only adds the words and the ending. (If the show hasn't been touched, the
-// occasion's own look is applied, as before.) Preview the ending, then send exactly that. Deluxe effects are marked ✦; using any, or ticking Deluxe,
-// makes it a paid send, and the send button always says which. Nothing asks for money
-// while you're making it.
-//
-// A Deluxe send goes to Stripe Checkout through the site's server (worker/index.js),
-// which keeps the greeting until payment and returns the buyer to a private ?g= link.
-// The price shown comes from the server. Words only ever reach the page as textContent.
-import { track, rememberPrice } from './track.js';
+// Greeting words, an authored design and an explicit send choice survive every panel.
+import { track, rememberCheckout } from './track.js';
 import { MESSAGE_LIMIT, NAME_LIMIT, cleanText, shortLink } from './link.js';
-import { DEFAULT_OCCASION, OCCASIONS, PRICE, applyOccasion, borrowScene, paidItems, returnScene } from './occasions.js';
-import { addDeluxe, deluxeInUse, keepFree, lookOf } from './look.js';
+import { DEFAULT_OCCASION, OCCASIONS, applyOccasion, borrowScene, returnScene, paidItems } from './occasions.js';
+import { lookOf } from './look.js';
+import { putDesign } from './design.js';
 import { createPlans } from './plans.js';
-import { applyPreset } from './presets.js';
+import { createDraft } from './builder-draft.js';
+import { createOffer } from './offer-ui.js';
 import { BLOCKED_NOTE, greetingBlocked, isBlocked } from './moderate.js';
+import { el } from './studio-kit.js';
 
-const TEXT_WEIGHT = 0.7; // how often the live show spells the message while building
-
+const SESSION_KEY = 'skygreeting-checkout-draft-v2';
 export function create(ctx) {
-  const { config, container, signal } = ctx;
-  const state = { occasion: DEFAULT_OCCASION, deluxe: false, typed: false, paying: false, guessed: false, baseline: '', borrowed: null };
-  // The show as the app itself leaves it (the defaults, or the last occasion look applied):
-  // anything different was set by the person, by playing with Customize or the panel, or
-  // saved from their last visit, and is theirs to send. Worked out before anything changes.
-  const lookJson = () => JSON.stringify(lookOf(config));
-  const fresh = structuredClone(config);
-  applyPreset(fresh, 'Default');
-  state.baseline = JSON.stringify(lookOf(fresh));
-  const designIsMine = () => lookJson() !== state.baseline;
-  // The app's own untouched show already holds a few Deluxe effects (chrysanthemums,
-  // strobes, crackle, double breaks). Those only make a send Deluxe if the person switched
-  // them on in Customize (`picked`), never just by being there.
-  const baseUse = new Set(deluxeInUse(fresh, OCCASIONS[DEFAULT_OCCASION]));
-  const picked = new Set();
-  let price = PRICE;
-  let priceCents = Math.round(Number(String(PRICE).replace(/[^0-9.]/g, '')) * 100) || 499;
-  // The real price, from the server (a test price while trying out checkout).
-  if (/^https?:$/.test(location.protocol)) {
-    fetch('/api/config', { signal }).then((response) => (response.ok ? response.json() : null)).then((data) => {
-      if (data && data.priceCents >= 50) {
-        price = `$${(data.priceCents / 100).toFixed(2)}`;
-        priceCents = data.priceCents;
-        refresh();
-      }
-    }, () => {});
-  }
-
-  // "Send a fireworks show" where it fits; "Send a show" on a narrow phone, beside Customize.
-  const open = el('button', 'send-open');
-  open.append('🎆 Send a ', el('span', 'send-open-wide', 'fireworks '), 'show');
-  open.type = 'button';
-
-  // The sheet.
-  const sheet = el('form', 'send-box builder');
-  sheet.hidden = true;
-  sheet.noValidate = true;
-  const close = el('button', 'send-close', 'Close');
-  close.type = 'button';
-  const head = el('div', 'builder-head');
-  head.append(el('p', 'send-title', 'Send a fireworks show'), close);
-  const chips = el('div', 'builder-chips');
-  chips.setAttribute('role', 'radiogroup');
-  chips.setAttribute('aria-label', 'Occasion');
+  const { config, container, signal, navigation: nav } = ctx;
+  const draft = createDraft(config);
+  const state = { occasion: DEFAULT_OCCASION, typed: false, paying: false, opened: false, view: 'closed', borrowed: null };
+  let spellTimer = 0, playback = false, previewComplete = false, ready = false, ownWords = null;
+  const offer = createOffer(signal, () => { if (ready) { refresh(); ctx.studio?.refresh(); } });
+  const button = (className, text, action) => {
+    const node = el('button', className, text); node.type = 'button';
+    if (action) node.addEventListener('click', action, { signal });
+    return node;
+  };
+  const open = button('send-open', '🎆 Send a show', openBuilder);
+  const sheet = el('form', 'send-box builder'); sheet.noValidate = true;
+  const close = button('send-close', 'Back', () => nav.back());
+  const head = el('div', 'builder-head'), heading = el('h2', 'send-title', 'Send a fireworks show'); heading.tabIndex = -1; head.append(heading, close);
+  const chips = el('div', 'builder-chips'); chips.setAttribute('role', 'radiogroup'); chips.setAttribute('aria-label', 'Occasion');
   const chipFor = {};
   for (const name in OCCASIONS) {
-    const chip = el('button', 'builder-chip', OCCASIONS[name].label);
-    chip.type = 'button';
-    chip.setAttribute('role', 'radio');
-    chip.addEventListener('click', () => choose(name), { signal });
-    chipFor[name] = chip;
-    chips.append(chip);
+    const chip = button('builder-chip', OCCASIONS[name].label, () => choose(name));
+    chip.setAttribute('role', 'radio'); chipFor[name] = chip; chips.append(chip);
+    chip.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault(); const names = Object.keys(OCCASIONS), delta = event.key === 'ArrowRight' ? 1 : -1;
+      const next = names[(names.indexOf(name) + delta + names.length) % names.length]; chipFor[next].focus(); choose(next);
+    }, { signal });
   }
-  // Shown when the show being sent is the one the person set up themselves.
   const own = el('p', 'builder-own');
-  const ownText = el('span', '', '✓ Your show is included: the colours, fireworks and sky you set up.');
-  const ownReset = el('button', 'builder-own-reset');
-  ownReset.type = 'button';
-  own.append(ownText, ownReset);
-  ownReset.addEventListener('click', () => choose(state.occasion, true), { signal });
-  const message = field('Message', MESSAGE_LIMIT, 'builder-loud');
-  const message2 = field('Second line (optional)', MESSAGE_LIMIT, 'builder-loud');
+  const ownReset = button('builder-own-reset', '', () => {
+    draft.previewChange(() => applyOccasion(config, state.occasion, true));
+    ctx.studio?.setStyle(OCCASIONS[state.occasion].preset); refresh();
+  });
+  own.append(el('span', '', 'Your chosen show is included. '), ownReset);
+  const message = field('Message', MESSAGE_LIMIT), message2 = field('Second line (optional)', MESSAGE_LIMIT);
+  const to = field('Their name (optional)', NAME_LIMIT), from = field('From (optional)', MESSAGE_LIMIT);
+  const addLine = button('builder-add-line', '+ Add a second line', () => { message2.label.hidden = false; addLine.hidden = true; message2.input.focus(); });
   message2.label.hidden = true;
-  const addLine = el('button', 'builder-add-line', '+ Add a second line');
-  addLine.type = 'button';
-  addLine.addEventListener('click', () => {
-    message2.label.hidden = false;
-    addLine.hidden = true;
-    message2.input.focus();
-  }, { signal });
-  const to = field('Their name (optional)', NAME_LIMIT, 'builder-loud');
-  const from = field('From (optional)', MESSAGE_LIMIT, '');
-  // The words go up in the live show: the sky text follows the message, and a moment
-  // after typing stops it's spelled once so you see it right away.
-  let spellTimer = 0;
   message.input.addEventListener('input', () => {
-    state.typed = true;
-    clearTimeout(spellTimer);
-    // Words that can't go in the sky never reach it, even in the live preview.
-    if (isBlocked(words().message)) {
-      status.textContent = BLOCKED_NOTE;
-      return;
-    }
+    state.typed = true; clearTimeout(spellTimer);
+    if (isBlocked(words().message)) { status.textContent = BLOCKED_NOTE; return; }
     if (status.textContent === BLOCKED_NOTE) status.textContent = '';
     config.look.text = words().message;
-    spellTimer = setTimeout(() => { if (ctx.fireworks && !sheet.hidden) ctx.fireworks.launch('text'); }, 1200);
+    spellTimer = setTimeout(() => { if (!sheet.hidden) ctx.fireworks?.launch('text'); }, 1200);
   }, { signal });
-
-  // Free or Deluxe (plans.js): cards in the sheet, and a switch on the bar that plays the one picked.
-  let wantDeluxe = false;
-  const plans = createPlans((on, fromPreview) => {
-    if (on !== state.deluxe) setDeluxe(on);
-    if (!fromPreview) return;
-    if (on) track('deluxe_preview', { content_type: state.occasion });
-    startPreview();
+  const customize = button('send-secondary builder-customize', '🎨 Customize the show', () => ctx.studio?.open());
+  const plans = createPlans((deluxe, comparison) => {
+    stopPlayback();
+    if (comparison) { draft.compare(deluxe ? 'deluxe' : 'free'); startPreview(); }
+    else { draft.commit(deluxe ? 'deluxe' : 'free'); refresh(); }
   }, signal);
-  const customize = el('button', 'send-secondary builder-customize', '🎨 Customize the show');
-  customize.type = 'button';
-  customize.addEventListener('click', () => {
-    show('studio');
-    if (ctx.studio) ctx.studio.open(() => { show('sheet'); refresh(); });
-  }, { signal });
-
-  const row = el('div', 'send-row');
-  const preview = el('button', 'send-secondary', 'Preview the show');
-  preview.type = 'button';
-  const send = el('button', 'send-primary');
-  send.type = 'submit';
-  row.append(preview, send);
-  const status = el('p', 'send-status');
-  status.setAttribute('role', 'status');
-  const linkBox = el('input', 'send-link');
-  linkBox.readOnly = true;
-  linkBox.hidden = true;
-  linkBox.setAttribute('aria-label', 'Link to send');
-  const terms = el('p', 'builder-terms');
-  const termsLink = el('a', '', 'Terms');
-  termsLink.href = '/terms';
-  termsLink.target = '_blank';
-  termsLink.rel = 'noopener';
-  const privacyLink = el('a', '', 'Privacy');
-  privacyLink.href = '/privacy';
-  privacyLink.target = '_blank';
-  privacyLink.rel = 'noopener';
-  terms.append('By sending, you agree to SkyGreeting’s ', termsLink, '. ', privacyLink, '.');
-  sheet.append(head, chips, own, message.label, addLine, message2.label, to.label, from.label, customize, plans.cards, row, linkBox, status, terms);
-
-  // While a preview plays: a slim bar instead of the sheet.
+  const choice = el('p', 'builder-choice'); choice.setAttribute('role', 'status');
+  const priceNote = el('p', 'builder-terms');
+  const preview = button('send-secondary', 'Preview the show', startPreview);
+  const send = el('button', 'send-primary'); send.type = 'submit';
+  const row = el('div', 'send-row'); row.append(preview, send);
+  const status = el('p', 'send-status'); status.setAttribute('role', 'status');
+  const linkBox = el('input', 'send-link'); linkBox.readOnly = true; linkBox.hidden = true; linkBox.setAttribute('aria-label', 'Link to send');
+  const terms = el('p', 'builder-terms', 'By sending, you agree to SkyGreeting’s ');
+  for (const [path, label] of [['terms', 'Terms'], ['privacy', 'Privacy']]) {
+    const link = el('a', '', label); link.href = `/${path}`; link.target = '_blank'; link.rel = 'noopener'; terms.append(link, '. ');
+  }
+  sheet.append(head, chips, own, message.label, addLine, message2.label, to.label, from.label, customize, choice, plans.cards, priceNote, row, linkBox, status, terms);
   const bar = el('div', 'builder-bar');
-  bar.hidden = true;
-  const edit = el('button', 'send-secondary builder-edit', 'Edit');
-  edit.type = 'button';
-  const barSend = el('button', 'send-primary');
-  barSend.type = 'button';
-  // Record the preview as a video to post (watermarked: it isn't a paid greeting yet).
-  const film = el('button', 'send-secondary builder-film', '🎬 Save video');
-  film.type = 'button';
-  film.title = 'Save as video';
-  film.setAttribute('aria-label', 'Save as video');
-  film.hidden = !(ctx.video && ctx.video.supported);
-  film.addEventListener('click', () => {
+  const edit = button('send-secondary builder-edit', 'Edit', () => nav.back());
+  const barSend = button('send-primary', '', sendIt);
+  const useVersion = button('send-secondary', 'Use this version', () => { const tier = draft.previewTier; stopPlayback(); draft.commit(tier); refresh(); });
+  const film = button('send-secondary builder-film', '🎬 Save video', () => {
     if (!wordsOk() || !ctx.video || !ctx.director) return;
-    show('closed');
-    track('save_video', { content_type: state.occasion, method: 'builder' });
-    ctx.video.capture({
-      watermark: true,
-      name: `skygreeting-${state.occasion}`,
-      play: () => ctx.director.play(OCCASIONS[state.occasion], words(), state.deluxe),
-    });
-  }, { signal });
-  bar.append(plans.bar, edit, film, barSend);
-
-  // When checkout can't start: say why, and offer the free version.
+    stopPlayback();
+    ctx.video.capture({ watermark: true, name: `skygreeting-${state.occasion}`, returnTo: resumePreview,
+      play: () => { playback = true; previewComplete = false; return ctx.director.play(OCCASIONS[state.occasion], words(), draft.previewTier === 'deluxe'); } });
+  });
+  film.hidden = !ctx.video?.supported;
+  bar.append(plans.bar, edit, film, useVersion, barSend);
   const soon = el('div', 'send-box');
-  soon.hidden = true;
-  const soonFree = el('button', 'send-primary', 'Send the free version');
-  soonFree.type = 'button';
-  const soonBack = el('button', 'send-secondary', 'Back');
-  soonBack.type = 'button';
-  const soonRow = el('div', 'send-row');
-  soonRow.append(soonBack, soonFree);
   const soonText = el('p', 'send-status');
+  const soonRow = el('div', 'send-row');
+  soonRow.append(button('send-secondary', 'Back', () => nav.back()), button('send-primary', 'Send the free version', () => { draft.commit('free'); nav.replace('builder'); sendIt(); }));
   soon.append(el('p', 'send-title', 'Checkout couldn’t start'), soonText, soonRow);
-
   container.append(open, sheet, bar, soon);
 
-  // `fresh`: use the occasion's own look even over a show the person set up.
-  function choose(name, fresh = false) {
+  const unregister = [
+    nav.register('builder', { element: sheet, initialFocus: () => heading, show() { state.view = 'sheet'; stopPlayback(); refresh(); }, beforeBack() { stopPlayback(); draft.cancel(); } }),
+    nav.register('builder-preview', { element: bar, show() { state.view = 'bar'; refresh(); }, beforeBack() { stopPlayback(); draft.cancel(); } }),
+    nav.register('builder-checkout-error', { element: soon, show() { state.view = 'soon'; } }),
+  ];
+  container.addEventListener('panel-change', () => {
+    open.hidden = nav.current !== null;
+    if (!nav.current || nav.current === 'studio' && nav.parent === null) {
+      state.view = 'closed';
+      if (ownWords) { [config.look.text, config.look.mix.text] = ownWords; ownWords = null; }
+    }
+  }, { signal });
+  sheet.addEventListener('submit', (event) => { event.preventDefault(); sendIt(); }, { signal });
+
+  function choose(name) {
     state.occasion = name;
-    if (!state.typed || !message.input.value.trim()) {
-      message.input.value = OCCASIONS[name].message;
-      state.typed = false;
-    }
-    // A show the person set up is kept as it is; the occasion then gives only the words
-    // and the ending. Otherwise the occasion's look (scene, fireworks, ground show) is applied.
-    if (fresh || !designIsMine()) {
-      applyOccasion(config, name, wantDeluxe);
-      state.baseline = lookJson();
-      state.borrowed = null;
-      if (ctx.studio) ctx.studio.setStyle(OCCASIONS[name].preset); // Customize's Style cards show it
-    } else {
-      // Their own fireworks stay, but an occasion with a setting of its own (New Year's frozen
-      // lake) brings that along, and gives it back when they pick another.
-      const wants = borrowScene(config, name);
-      if (wants && !state.borrowed) state.borrowed = { scene: wants, style: ctx.studio ? ctx.studio.style : null };
-      else if (!wants && state.borrowed) {
-        returnScene(config, state.borrowed.scene);
-        if (ctx.studio && state.borrowed.style) ctx.studio.setStyle(state.borrowed.style);
-        state.borrowed = null;
+    const borrowed = borrowScene(config, name);
+    if (borrowed && !state.borrowed) state.borrowed = borrowed;
+    else if (!borrowed && state.borrowed) { returnScene(config, state.borrowed); state.borrowed = null; }
+    draft.changed();
+    if (!state.typed || !message.input.value.trim()) { message.input.value = OCCASIONS[name].message; state.typed = false; }
+    config.look.text = words().message; refresh();
+  }
+  function openBuilder() {
+    stopPlayback();
+    if (!ownWords) ownWords = [config.look.text, config.look.mix.text];
+    if (!state.opened) {
+      state.opened = true;
+      if (!state.typed && !ctx.link.make) {
+        const spooky = ['pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'].some((type) => config.look.mix[type] > 0);
+        state.occasion = spooky ? 'halloween' : ({ usa: 'congrats', pastel: 'love', gold: 'thanks' }[config.look.palette] || 'birthday');
       }
-      if (wants && ctx.studio) ctx.studio.setStyle(OCCASIONS[name].preset);
+      choose(state.occasion);
     }
-    config.look.text = words().message;
-    config.look.mix.text = TEXT_WEIGHT;
-    refresh();
+    status.textContent = ''; linkBox.hidden = true;
+    config.look.text = words().message; config.look.mix.text = 0.7;
+    const hasLine = Boolean(message2.input.value.trim()); message2.label.hidden = !hasLine; addLine.hidden = hasLine;
+    nav.open('builder'); offer.refresh(); track('builder_open', { content_type: state.occasion });
   }
-
-  function setDeluxe(on) {
-    const occasion = OCCASIONS[state.occasion];
-    const mine = designIsMine();
-    wantDeluxe = on;
-    if (on) addDeluxe(config, occasion);
-    else keepFree(config, occasion);
-    // Picking a version isn't designing a show: the occasion's own look stays the occasion's.
-    if (!mine) state.baseline = lookJson();
-    refresh();
-  }
-
   function refresh() {
-    const occasion = OCCASIONS[state.occasion];
-    // Paid if Deluxe is ticked or the design uses any Deluxe effect.
-    const used = deluxeInUse(config, occasion).filter((item) => !baseUse.has(item) || picked.has(item));
-    if (used.length && !wantDeluxe) wantDeluxe = true;
-    state.deluxe = wantDeluxe;
-    for (const name in chipFor) chipFor[name].setAttribute('aria-checked', String(name === state.occasion));
-    own.hidden = !designIsMine();
-    ownReset.textContent = `Use the ${occasion.label} look instead`;
-    plans.show(occasion, state.deluxe, price);
-    const label = state.deluxe ? `Send · ${price} ✦` : 'Send · Free';
-    send.textContent = label;
-    barSend.textContent = label;
+    if (!ready) return;
+    for (const name in chipFor) { const selected = name === state.occasion; chipFor[name].setAttribute('aria-checked', String(selected)); chipFor[name].tabIndex = selected ? 0 : -1; }
+    ownReset.textContent = `Use the ${OCCASIONS[state.occasion].label} look`;
+    plans.show(OCCASIONS[state.occasion], draft.pending ? null : draft.tier, offer.label, draft.previewTier);
+    choice.textContent = draft.pending ? 'This is a comparison preview. Choose a version below before sending.' : draft.tier === null ? 'Free to preview. Choose the version you want to send.' : `You chose ${draft.tier === 'free' ? 'the Free version' : 'Deluxe'}.`;
+    priceNote.textContent = offer.note;
+    const label = draft.tier === 'deluxe' ? `Continue to checkout · ${offer.price}` : draft.tier === 'free' ? 'Send free greeting' : 'Choose a version to send';
+    for (const node of [send, barSend]) { node.textContent = label; node.disabled = state.paying || !draft.canSend || draft.tier === 'deluxe' && !offer.ready; }
+    useVersion.hidden = !draft.pending && draft.tier !== null;
+    useVersion.textContent = `Use ${draft.previewTier === 'deluxe' ? `Deluxe · ${offer.label}` : 'Free version'}`;
   }
-
-  function show(which) {
-    if (which === 'closed' && state.view && state.view !== 'closed' && state.ownWords) {
-      [config.look.text, config.look.mix.text] = state.ownWords;
-      state.ownWords = null;
-    }
-    sheet.hidden = which !== 'sheet';
-    bar.hidden = which !== 'bar';
-    soon.hidden = which !== 'soon';
-    open.hidden = which !== 'closed';
-    state.view = which;
-    container.classList.toggle('building', which !== 'closed');
-    if (which !== 'bar' && ctx.director) ctx.director.stop();
-  }
-
-  function words() {
-    return {
-      message: cleanText(message.input.value, MESSAGE_LIMIT).toUpperCase() || OCCASIONS[state.occasion].message,
-      message2: cleanText(message2.input.value, MESSAGE_LIMIT).toUpperCase(),
-      to: cleanText(to.input.value, NAME_LIMIT).toUpperCase(),
-      from: cleanText(from.input.value, MESSAGE_LIMIT),
-    };
-  }
-
-  // The message, their name and the sender's name, checked before anything is shown or sent.
+  function words() { return { message: cleanText(message.input.value, MESSAGE_LIMIT).toUpperCase() || OCCASIONS[state.occasion].message,
+    message2: cleanText(message2.input.value, MESSAGE_LIMIT).toUpperCase(), to: cleanText(to.input.value, NAME_LIMIT).toUpperCase(), from: cleanText(from.input.value, MESSAGE_LIMIT) }; }
   function wordsOk() {
     if (!greetingBlocked(words())) return true;
-    show('sheet');
-    status.textContent = BLOCKED_NOTE;
-    return false;
+    nav.replace('builder'); status.textContent = BLOCKED_NOTE; return false;
   }
-
+  function stopPlayback() {
+    if (!playback) return;
+    playback = false; ctx.director?.stop(); ctx.crane?.stop?.(); draft.restoreDisplay();
+    config.look.text = words().message;
+    ctx.setCameraPreset?.(config.camera.preset);
+  }
   function startPreview() {
     if (!wordsOk()) return;
-    show('bar');
-    if (ctx.director) ctx.director.play(OCCASIONS[state.occasion], words(), state.deluxe);
+    stopPlayback(); nav.open('builder-preview', { parent: 'builder' });
+    playback = true; previewComplete = false;
+    refresh();
+    track('preview_start', { content_type: state.occasion, version: draft.previewTier });
+    ctx.director?.play(OCCASIONS[state.occasion], words(), draft.previewTier === 'deluxe');
   }
-
+  function resumePreview() { stopPlayback(); if (nav.current !== 'builder-preview') nav.open('builder-preview', { parent: 'builder' }); refresh(); }
   async function sendIt() {
-    if (!wordsOk()) return;
-    if (state.deluxe) {
-      payForDeluxe();
-      return;
-    }
-    if (state.paying) return;
-    state.paying = true;
-    show('sheet');
-    status.textContent = 'Making your link…';
-    // A short link that keeps the words out of the address, kept by the server; if the
-    // server can't be reached (offline, the preview), the words ride in a long link instead.
-    const url = await shortLink({ occasion: state.occasion, ...words(), look: lookOf(config) });
-    state.paying = false;
-    status.textContent = '';
-    track('share', { method: 'free_link', content_type: state.occasion });
-    linkBox.value = url;
-    linkBox.hidden = false;
-    linkBox.select();
-    const sender = cleanText(from.input.value, MESSAGE_LIMIT);
-    const note = sender ? `${sender} made you a SkyGreeting` : 'Someone made you a SkyGreeting';
-    if (navigator.share) {
-      navigator.share({ title: 'A SkyGreeting for you', text: note, url }).then(() => { status.textContent = 'Sent.'; }, () => copy(url));
-    } else {
-      copy(url);
-    }
-  }
-
-  // Saves the greeting on the server and goes to Stripe's checkout page.
-  async function payForDeluxe() {
-    if (state.paying) return;
-    state.paying = true;
-    show('sheet');
-    status.textContent = 'Opening secure checkout…';
-    track('begin_checkout', { currency: 'USD', value: priceCents / 100, items: [{ item_name: 'SkyGreeting Deluxe', item_category: state.occasion }] });
-    rememberPrice(priceCents);
-    let error = 'Checkout isn’t available right now.';
+    if (state.paying || !draft.canSend || !wordsOk()) return;
+    stopPlayback(); putDesign(config, draft.sendDesign());
+    if (draft.tier === 'deluxe') { await payForDeluxe(); return; }
+    state.paying = true; nav.replace('builder'); status.textContent = 'Making your link…'; refresh();
     try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ occasion: state.occasion, ...words(), look: lookOf(config) }),
-      });
+      const url = await shortLink({ occasion: state.occasion, ...words(), look: lookOf(config) });
+      linkBox.value = url; linkBox.hidden = false; linkBox.select();
+      const note = words().from ? `${words().from} made you a SkyGreeting` : 'Someone made you a SkyGreeting';
+      if (navigator.share) {
+        try { await navigator.share({ title: 'A SkyGreeting for you', text: note, url }); status.textContent = 'Shared.'; track('share_success', { method: 'free_link', content_type: state.occasion }); }
+        catch (error) { if (error.name !== 'AbortError') await copy(url); else status.textContent = 'Your link is ready whenever you want to share it.'; }
+      } else await copy(url);
+    } catch { status.textContent = 'Your link couldn’t be made. Please try again.'; }
+    finally { state.paying = false; refresh(); }
+  }
+  async function payForDeluxe() {
+    if (!offer.ready) return;
+    const quoted = offer.quote.priceCents;
+    state.paying = true; nav.replace('builder'); status.textContent = 'Opening secure checkout…'; refresh();
+    saveDraft();
+    try {
+      const response = await fetch('/api/checkout', { method: 'POST', signal, headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ occasion: state.occasion, ...words(), look: lookOf(config), expectedPriceCents: quoted }) });
       const data = await response.json();
-      if (response.ok && data.url) {
-        location.assign(data.url);
-        return;
+      if (response.status === 409 && data.error === 'price_changed') {
+        await offer.refresh(); status.textContent = `The price changed. Review ${offer.price} and click Continue to checkout again.`;
+        track('checkout_price_changed', { content_type: state.occasion }); return;
       }
-      if (data.error) error = data.error;
-    } catch {
-      // Offline, or not on the real site (the preview has no server).
-    } finally {
-      state.paying = false;
-    }
-    soonText.textContent = `${error} You can send the free version now.`;
-    status.textContent = '';
-    show('soon');
+      if (!response.ok || !data.url) throw new Error(data.error || 'Checkout isn’t available right now.');
+      rememberCheckout(data.transactionId); track('begin_checkout', { currency: offer.quote?.currency || 'USD', value: quoted / 100 });
+      location.assign(data.url);
+    } catch (error) {
+      soonText.textContent = `${error.message || 'Checkout isn’t available right now.'} Your greeting is saved here.`;
+      nav.open('builder-checkout-error', { parent: 'builder' }); track('checkout_error', { content_type: state.occasion });
+    } finally { state.paying = false; refresh(); }
   }
-
-  function copy(url) {
-    status.textContent = 'The link is in the box. Copy it and send it.';
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => { status.textContent = 'Link copied. Paste it in a text or DM.'; }, () => {});
-    }
+  async function copy(url) {
+    status.textContent = 'Your link is ready. Copy it and send it.';
+    if (!navigator.clipboard) return;
+    try { await navigator.clipboard.writeText(url); status.textContent = 'Link copied. Paste it in a text or message.'; track('share_success', { method: 'copy', content_type: state.occasion }); } catch { /* The visible box remains selectable. */ }
   }
-
-  // The occasion a show set up by the person most likely is for: Halloween's fireworks or
-  // palette mean Halloween; otherwise the palette hints (red, white and blue: congrats;
-  // pastels: love; gold: thank you), and anything else is a birthday.
-  function guessOccasion() {
-    if (state.guessed) return;
-    state.guessed = true;
-    if (state.typed || !designIsMine()) return;
-    const mix = config.look.mix;
-    const spooky = ['pumpkin', 'skull', 'bat', 'ghost', 'web', 'brew', 'eyes', 'wisp'].some((type) => mix[type] > 0);
-    const byPalette = { halloween: 'halloween', usa: 'congrats', pastel: 'love', gold: 'thanks' };
-    state.occasion = spooky ? 'halloween' : byPalette[config.look.palette] || 'birthday';
+  function snapshotDraft() { return { version: 2, occasion: state.occasion, words: words(), secondLine: !message2.label.hidden, design: draft.snapshot() }; }
+  function restoreDraft(saved) {
+    if (saved?.version !== 2 || !OCCASIONS[saved.occasion] || !saved.design?.full) return false;
+    state.occasion = saved.occasion; state.typed = true; state.opened = true;
+    for (const [key, target] of Object.entries({ message, message2, to, from })) target.input.value = cleanText(saved.words?.[key] || '', key === 'to' ? NAME_LIMIT : MESSAGE_LIMIT);
+    draft.restore(saved.design); message2.label.hidden = !saved.secondLine; addLine.hidden = Boolean(saved.secondLine); refresh(); return true;
   }
-
-  open.addEventListener('click', () => {
-    // The builder spells the message while it's open; closing gives back the person's own words.
-    if (!state.view || state.view === 'closed') state.ownWords = [config.look.text, config.look.mix.text];
-    guessOccasion();
-    choose(state.occasion);
-    status.textContent = '';
-    linkBox.hidden = true;
-    const hasLine = Boolean(message2.input.value.trim());
-    message2.label.hidden = !hasLine;
-    addLine.hidden = hasLine;
-    show('sheet');
-  }, { signal });
-  close.addEventListener('click', () => show('closed'), { signal });
-  sheet.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') show('closed');
-  }, { signal });
-  preview.addEventListener('click', startPreview, { signal });
-  edit.addEventListener('click', () => show('sheet'), { signal });
-  sheet.addEventListener('submit', (event) => {
-    event.preventDefault();
-    sendIt();
-  }, { signal });
-  barSend.addEventListener('click', sendIt, { signal });
-  soonBack.addEventListener('click', () => show('sheet'), { signal });
-  soonFree.addEventListener('click', () => {
-    setDeluxe(false);
-    sendIt();
-  }, { signal });
-
-  // A button on a page of ideas (?make=love&text=…, read in link.js) opens the builder on
-  // that occasion once the show is up, with the words in the box if the link carried them.
-  const make = ctx.link.make;
-  if (make && OCCASIONS[make.occasion]) {
-    state.occasion = make.occasion;
-    state.guessed = true; // the link said which; don't guess from the design
-    if (make.text) {
-      message.input.value = make.text;
-      state.typed = true;
-    }
-    container.addEventListener('scene-ready', () => open.click(), { once: true, signal });
-  }
-
+  function saveDraft() { try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(snapshotDraft())); } catch { /* Storage can be disabled; the current tab still holds the draft. */ } }
   ctx.builder = {
-    open: () => open.click(),
-    refresh: () => refresh(),
-    /** Customize says a Deluxe shell was switched on (or off) by the person. */
-    picked(item, on) {
-      if (on) picked.add(item);
-      else picked.delete(item);
-    },
-    /** Forget the show as it is now: the next open applies an occasion's own look. */
-    startFresh() {
-      picked.clear();
-      state.baseline = lookJson();
-      state.guessed = false;
-    },
-    /** The Deluxe effects, for Customize's ✦ marks: always, so playing with the show first shows what's paid too. */
-    get deluxe() { return [...paidItems(OCCASIONS[state.occasion])]; },
-    get price() { return price; },
-    get summary() { return state.view && state.view !== 'closed' ? `${OCCASIONS[state.occasion].label} greeting · ${send.textContent}` : ''; },
+    open: openBuilder, close: () => { stopPlayback(); draft.cancel(); nav.close(); }, refresh, resumePreview, snapshotDraft, restoreDraft,
+    startFresh() { this.reset(); },
+    reset() { state.typed = false; state.opened = false; state.borrowed = null; state.occasion = DEFAULT_OCCASION; for (const item of [message, message2, to, from]) item.input.value = ''; draft.reset(); refresh(); },
+    designChanged() { draft.changed(); refresh(); },
+    previewChange(change) { stopPlayback(); draft.previewChange(change); refresh(); },
+    resetDesign(change) { stopPlayback(); draft.resetDesign(change); refresh(); },
+    chooseVersion(tier) { stopPlayback(); draft.commit(tier); refresh(); ctx.studio?.refresh(); },
+    cancelCandidate() { draft.cancel(); refresh(); },
+    picked() {},
+    get pending() { return draft.pending; }, get tier() { return draft.tier; },
+    get deluxe() { return [...paidItems(OCCASIONS[state.occasion]), 'sideBarges']; },
+    get price() { return offer.price; }, get priceLabel() { return offer.label; },
+    get summary() { return state.view !== 'closed' ? `${OCCASIONS[state.occasion].label} greeting · ${draft.tier === 'free' ? 'Free version' : `Deluxe preview · ${offer.label}`}` : ''; },
   };
-  refresh();
-
-  return {
-    update() {
-      plans.glow(state.view === 'bar' && !state.deluxe && !(ctx.director && ctx.director.active));
-    },
-    dispose() {
-      clearTimeout(spellTimer);
-      open.remove();
-      sheet.remove();
-      bar.remove();
-      soon.remove();
-      container.classList.remove('building');
-      ctx.builder = null;
-    },
-  };
-
-  function field(name, limit, className) {
-    const label = el('label', `send-field ${className}`.trim());
-    const input = el('input');
-    input.maxLength = limit;
-    input.autocomplete = 'off';
-    input.spellcheck = false;
-    label.append(el('span', '', name), input);
-    return { label, input };
+  ready = true; refresh();
+  const make = ctx.link.make;
+  if (make && OCCASIONS[make.occasion]) { state.occasion = make.occasion; if (make.text) { message.input.value = make.text; state.typed = true; } }
+  const canceled = new URL(location.href).searchParams.has('canceled');
+  if (canceled) {
+    try { restoreDraft(JSON.parse(sessionStorage.getItem(SESSION_KEY))); } catch { /* An unavailable or old draft cannot be restored. */ }
+    const url = new URL(location.href); url.searchParams.delete('canceled'); history.replaceState(history.state, '', url);
   }
-}
-
-function el(tag, className = '', text = '') {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
+  container.addEventListener('scene-ready', () => {
+    offer.refresh();
+    if (make || canceled) { openBuilder(); if (canceled) status.textContent = 'Checkout canceled. Your greeting is ready to edit.'; }
+  }, { once: true, signal });
+  return {
+    update() { if (playback && !previewComplete && ctx.director && !ctx.director.active) { previewComplete = true; track('preview_complete', { content_type: state.occasion, version: draft.previewTier }); } },
+    dispose() { clearTimeout(spellTimer); for (const off of unregister) off(); for (const node of [open, sheet, bar, soon]) node.remove(); ctx.builder = null; },
+  };
+  function field(name, limit) { const label = el('label', 'send-field builder-loud'), input = el('input'); input.maxLength = limit; input.autocomplete = 'off'; input.spellcheck = false; label.append(el('span', '', name), input); return { label, input }; }
 }
