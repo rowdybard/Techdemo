@@ -5,7 +5,8 @@
 This update takes precedence over the older baseline below. The audited source and production
 Worker matched `8f791222119297b226b32df3d8b4b09e048f4c64` on the live/default branch
 `ccr-09268299-owgtnw` (there is no `main`). Implementation is on `codex/engine-takeover`.
-Do not assume these changes are deployed. Only update the live branch when the owner says **merge**.
+**Merged and live since 2026-10-10T03:57:00Z** (with a cache fix and a frozen-lake island move on top, see
+"State at handoff" below). Only update the live branch when the owner says **merge**.
 The implementation ledger and release procedure are in [TAKEOVER-IMPLEMENTATION.md](TAKEOVER-IMPLEMENTATION.md).
 
 - First-time visitors start on **Galaxy, night beach**. Existing valid saved settings and explicit
@@ -69,14 +70,16 @@ The owner is not a developer. They test on an Android phone, on the live site.
   git merge-base --is-ancestor origin/ccr-09268299-owgtnw HEAD && git push origin HEAD:ccr-09268299-owgtnw
   ```
   Then confirm it's live by fetching a changed file from the site, e.g. `curl -s "https://skygreeting.com/src/studio.js?v=$RANDOM" | grep <something new>`. Pages and `src/` files are revalidated on every visit (Cloudflare's default; `_headers` has no `src/*` rule on purpose), so a reload shows the new version. Files cached under the old five-minute rule can linger up to 5 minutes once.
-- **What deploys:** `wrangler.jsonc`'s build command copies every top-level `*.html`, `robots.txt`, `sitemap.xml`, the favicons, `site.webmanifest`, `icons/`, `_headers`, `src/` and `vendor/` into `.deploy/`, which becomes the static assets. **A new top-level file that isn't a page, or a new top-level folder, must be added to that command** or it won't go live. `worker/index.js` runs first for `/api/*`, `/`, `/autoshow`.
-- **Secrets** live only in the Cloudflare dashboard (Workers → techdemo → Settings → Variables and Secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY` (not set yet: `/api/config` reports `"email": false`). **Never** put `sk_` or `whsec_` keys in chat, files or commits, and never ask the owner to paste a secret. The price is `DELUXE_PRICE_CENTS` in `wrangler.jsonc` (499).
-- **Storage:** Cloudflare KV `GREETINGS` (paid greetings `g:<id>`, free short links, reports `r:`, take-downs `h:`). Each paid greeting is also copied into its Stripe PaymentIntent metadata, and `/api/greeting` rebuilds a missing record from Stripe. Marketing "showcase" greetings are Deluxe records in code (`worker/showcase.js`).
+- **What deploys:** `wrangler.jsonc`'s build command (`node tools/deploy-stage.mjs`) copies every top-level `*.html`, `robots.txt`, `sitemap.xml`, the favicons, `site.webmanifest`, `icons/`, `_headers`, `src/` and `vendor/` into `.deploy/`, which becomes the static assets. **A new top-level file that isn't a page, or a new top-level folder, must be added to that command** or it won't go live. `worker/index.js` runs first for `/api/*`, `/`, `/autoshow` and the pages (it fills in the current price).
+- **Secrets** live only in the Cloudflare dashboard (Workers → techdemo → Settings → Variables and Secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY` (not set yet: `/api/config` reports `"email": false`). **Never** put `sk_` or `whsec_` keys in chat, files or commits, and never ask the owner to paste a secret. Prices live in `worker/pricing.js` ($4.99; the launch offer $1.99). The launch offer runs 30 days from `DELUXE_LAUNCH_START_UTC` in `wrangler.jsonc` (`2026-10-10T03:57:00Z`, so it ends `2026-11-09T03:57:00Z` by itself); never change or reset that start.
+- **Storage:** Cloudflare KV `GREETINGS` (paid greetings `g:<id>`, free short links, reports `r:`, take-downs `h:`). Each paid greeting is also copied into its Stripe PaymentIntent metadata, and `/api/greeting` rebuilds a missing record from Stripe. Marketing "showcase" greetings are Deluxe records in code (`worker/showcase.js`). Rate limits, report votes and take-down status live in SQLite Durable Objects (`GUARDS`, class `GreetingGuard` in `worker/guard.js`), which are free on Cloudflare's Workers Free plan (100,000 requests and 100,000 row writes a day).
 
 ### State at handoff (October 10, 2026)
 
-- **Live** (`ccr-09268299-owgtnw` at `2a781a7`, merged by the owner on October 10): everything, including the Deluxe upgrades, the Showpieces and waterfall, free strobes/double breaks/mines/fans, the new crackle, the glow fixes, **no more whistles** (launches thump, whirlwinds whirr), the **interface rework** (Looks-first Customize with 18 looks and eight new palettes, More options folded away, sound and lock icons on screen, the builder's "+ Add a second line"), **Save video's 5-second minimum** with "Record again", and this document plus `AGENTS.md`.
+- **Merged on October 10 at 2026-10-10T03:57:00Z:** Astra/Codex's `codex/engine-takeover` (see the update at the top), plus two fixes on top: `_headers` no longer caches `src/` for five minutes (a phone paired the new page's round icons with the old "Lock view" text and no sound button), and the frozen lake's near right island moved from 64, -158 to 84, -104 because its pines hid the right side barge. The $1.99 launch offer started at the merge.
+- **Before that** (`2a781a7`): everything, including the Deluxe upgrades, the Showpieces and waterfall, free strobes/double breaks/mines/fans, the new crackle, the glow fixes, **no more whistles** (launches thump, whirlwinds whirr), the **interface rework** (Looks-first Customize with 18 looks and eight new palettes, More options folded away, sound and lock icons on screen, the builder's "+ Add a second line"), **Save video's 5-second minimum** with "Record again", and this document plus `AGENTS.md`.
 - **Nothing is waiting on the work branch.** See §10 for what was and wasn't verified.
+- **Not done at release:** the optional legacy-tally sweep in `worker/MAINTENANCE.md` (it needs a `MAINTENANCE_TOKEN` secret the owner would set in the dashboard; old report tallies are imported anyway whenever a greeting is opened).
 
 ---
 

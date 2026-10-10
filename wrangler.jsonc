@@ -17,8 +17,9 @@
   "durable_objects": { "bindings": [{ "name": "GUARDS", "class_name": "GreetingGuard" }] },
   // This LOCAL migration definition runs only when an approved deployment is made.
   "migrations": [{ "tag": "greeting-guards-v1", "new_sqlite_classes": ["GreetingGuard"] }],
-  // Normal price remains $4.99. DELUXE_LAUNCH_START_UTC is deliberately absent:
-  // configure one immutable UTC start at the approved release to activate 30 days at $1.99.
+  // Normal price remains $4.99. The launch offer ($1.99 for exactly 30 days) started when the
+  // owner merged this release; it ends 2026-11-09T03:57:00Z by itself. Never change or reset this start.
+  "vars": { "DELUXE_LAUNCH_START_UTC": "2026-10-10T03:57:00Z" },
   // Variables added in the dashboard survive deploys (secrets always do).
   "keep_vars": true,
   "observability": { "enabled": true }
