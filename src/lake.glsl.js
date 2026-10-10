@@ -15,7 +15,10 @@ export const LAKE = { x: 0, z: -301, halfWidth: 1000, halfDepth: 279 };
 
 // Small snowy islands with pines, out on the ice: x, z, radius and height in metres. They give the
 // view layers (something between you and the far shore) and something for the ice to reflect.
-export const ISLANDS = [[-52, -66, 22, 4.6], [64, -158, 28, 5.2], [-132, -246, 36, 7], [150, -300, 24, 4.2]];
+// Keep them out of the line from the shore to the barges (x 0 and ±108 at z -380): their pines
+// stand 11-24 m tall and hide a barge's whole show. The near right one sat at 64, -158 and covered
+// the right side barge, so it moved out to frame the view like the near left one.
+export const ISLANDS = [[-52, -66, 22, 4.6], [84, -104, 26, 5], [-132, -246, 36, 7], [150, -300, 24, 4.2]];
 
 const wobble = (x, z) => 14 * Math.sin(x * 0.0045 + 1) + 9 * Math.sin(x * 0.013 + z * 0.011 + 2) + 5 * Math.sin(z * 0.03 - x * 0.009);
 
