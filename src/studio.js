@@ -137,6 +137,7 @@ export function create(ctx) {
   // (builder.js); while a greeting is being made its words are what go up, so the box steps aside.
   const wordsRow = el('div', 'send-field builder-loud studio-words');
   const wordsNote = el('span', 'studio-words-note');
+  const wordsTimers = [0, 0]; // each line spells itself once a moment after typing stops
   const lines = ['text', 'text2'].map((key, n) => {
     const input = el('input');
     input.maxLength = MESSAGE_LIMIT;
@@ -144,9 +145,8 @@ export function create(ctx) {
     input.autocomplete = 'off';
     input.enterKeyHint = 'done';
     input.setAttribute('aria-label', n ? 'Second line in the sky' : 'Words in the sky');
-    let timer = 0;
     input.addEventListener('input', () => {
-      clearTimeout(timer);
+      clearTimeout(wordsTimers[n]);
       const words = cleanText(input.value, MESSAGE_LIMIT).toUpperCase();
       if (words && (isBlocked(words) || isBlocked(n ? `${config.look.text} ${words}` : `${words} ${config.look.text2}`))) {
         wordsNote.textContent = 'Those words can’t go in the sky.';
@@ -156,7 +156,7 @@ export function create(ctx) {
       config.look[key] = words;
       if (words && !(config.look.mix.text > 0)) config.look.mix.text = 0.5;
       // A moment after they stop typing, the sky spells it once, so they see it.
-      timer = setTimeout(() => { if (words && ctx.fireworks) ctx.fireworks.launch('text', words, config.look.text2.trim() ? n + 1 : 0); }, 900);
+      wordsTimers[n] = setTimeout(() => { if (words && ctx.fireworks) ctx.fireworks.launch('text', words, config.look.text2.trim() ? n + 1 : 0); }, 900);
     }, { signal });
     input.addEventListener('change', () => remember(config), { signal });
     input.addEventListener('keydown', (event) => { if (event.key === 'Enter') input.blur(); }, { signal });
@@ -254,7 +254,7 @@ export function create(ctx) {
   return {
     update() {},
     dispose() {
-      clearTimeout(wordsTimer);
+      for (const timer of wordsTimers) clearTimeout(timer);
       unregister();
       open.remove();
       sheet.remove();
