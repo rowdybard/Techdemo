@@ -48,9 +48,10 @@ const vel = [0, 0, 0];
 function carryAt(y) {
   return Math.min(1.8, Math.max(0.75, Math.pow(Math.max(y, 2) / 10, 0.16)));
 }
-// Colour of smoke lit only by the sky: dusk-grey at dusk, near black at night.
-const DUSK = new THREE.Color(0.15, 0.125, 0.14);
-const NIGHT = new THREE.Color(0.012, 0.014, 0.022);
+// Colour of smoke lit only by the sky and the shore: dusk-grey at dusk, a dim moonlit grey at night
+// (near black, it vanished against the night sky between bursts; real show smoke glows faintly).
+const DUSK = new THREE.Color(0.2, 0.17, 0.18);
+const NIGHT = new THREE.Color(0.075, 0.08, 0.1);
 
 export function create(ctx) {
   const { scene, config, phone } = ctx;
@@ -310,10 +311,10 @@ export function create(ctx) {
         ly = spot[1];
         lz = spot[2];
         const fly = Math.hypot(vel[0], vel[1], vel[2]) || 1;
-        const radius = reach * (0.032 + Math.random() * 0.018) * (0.75 + (0.5 * (j + 1)) / along);
-        puff(spot[0], spot[1], spot[2], born + t, radius, 0.7 + Math.random() * 0.6,
+        const radius = reach * (0.05 + Math.random() * 0.03) * (0.75 + (0.5 * (j + 1)) / along);
+        puff(spot[0], spot[1], spot[2], born + t, radius, 1.2 + Math.random() * 0.8,
           life * (0.5 + Math.random() * 0.45), 1, hanging ? 0.5 : 0.65 + Math.random() * 0.25, 0, 0, 1, hanging ? 1 : 1.15, false,
-          vel[0] / fly, vel[1] / fly, vel[2] / fly, Math.min(5, Math.max(1.5, step / (2 * radius))));
+          vel[0] / fly, vel[1] / fly, vel[2] / fly, Math.min(2.6, Math.max(1.2, step / (2 * radius))));
       }
       followed++;
     }
@@ -420,7 +421,7 @@ export function create(ctx) {
       mesh.visible = settings.enabled && settings.amount > 0;
       uniforms.uTime.value = time;
       if (ctx.wind) uniforms.uWindOffset.value.copy(ctx.wind.offset);
-      uniforms.uAmount.value = settings.amount * 0.32;
+      uniforms.uAmount.value = settings.amount * 1.1;
       uniforms.uAmbient.value.copy(DUSK).lerp(NIGHT, config.sky.timeOfDay);
       uniforms.uSceneLight.value = config.look.sceneLight;
       // Fewer noise layers on the low quality tier (auto quality steps down on slow GPUs).
