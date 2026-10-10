@@ -182,9 +182,8 @@ export const fireworksFragment = /* glsl */ `
       color = mix(vec3(1.0, 0.95, 0.85), color, 0.3);
     } else if (vKind > 4.5 && vKind < 5.5) { // fish: a shimmer as they swim
       brightness *= 0.75 + 0.5 * step(0.5, hash(vSeed * 53.0 + floor(vSeconds * 18.0)));
-    } else if (vKind > 5.5 && vKind < 6.5) { // whirl: a hot, bright head
-      color = mix(color, vec3(1.0, 0.92, 0.8), core * 0.35);
-      brightness *= 1.25;
+    } else if (vKind > 5.5 && vKind < 6.5) { // whirl: a warm head
+      color = mix(color, vec3(1.0, 0.85, 0.6), core * 0.2);
     } else if (vKind > 6.5) {                // leaf: glints each time it turns to face you
       brightness *= 0.5 + 1.6 * pow(abs(sin(vSeconds * (3.5 + 2.5 * vSeed) + vSeed * 6.2832)), 8.0);
     }

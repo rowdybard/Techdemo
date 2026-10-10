@@ -9,7 +9,7 @@ import { positionAt } from './particles.js';
 const GOLDEN_ANGLE = 2.399963;
 const CROWN_GOLD = [0.85, 0.48, 0.14];
 const DRIP_GOLD = [0.8, 0.42, 0.12];
-const SILVER = [0.95, 0.95, 1];
+const SILVER = [0.6, 0.6, 0.66]; // dimmer than it looks: near-white sparks bloom into halos
 const WHITE = [1, 0.96, 0.9];
 const AUTUMN = [[1, 0.62, 0.2], [1, 0.45, 0.12], [0.95, 0.75, 0.35]];
 
@@ -159,7 +159,7 @@ function saturn(pool, shell, config, palette, born, at, velocity, out) {
 function fish(pool, shell, config, palette, born, at, velocity, out) {
   const { look, physics } = config;
   const drag = 0.8 * physics.drag;
-  const count = Math.round(shell.count * 0.6);
+  const count = Math.round(shell.count * 0.5);
   const tint = pick(palette);
   const spin = Math.random() * Math.PI * 2;
   let i = pool.begin(count);
@@ -168,7 +168,7 @@ function fish(pool, shell, config, palette, born, at, velocity, out) {
     const s = shell.size * drag * (0.4 + Math.random() * 0.6);
     const c = k % 5 === 0 ? tint : k % 2 ? CROWN_GOLD : SILVER;
     pool.set(i++, at[0], at[1], at[2], born, dir[0] * s, dir[1] * s, dir[2] * s, drag,
-      c[0], c[1], c[2], c[0], c[1], c[2], 99, look.lifetime * (1 + Math.random() * 0.6), 0.38 * look.sparkSize, 0.3, KIND.swim);
+      c[0], c[1], c[2], c[0], c[1], c[2], 99, look.lifetime * (1 + Math.random() * 0.6), 0.3 * look.sparkSize, 0.12, KIND.swim);
   }
   pool.end();
   fillLight(out, born, at, CROWN_GOLD, shell.size * 0.8);
@@ -188,7 +188,7 @@ function whirl(pool, shell, config, palette, born, at, velocity, out) {
     const s = shell.size * 1.0 * drag * jitter(0.2);
     const c = k % 3 === 0 ? tint : k % 2 ? CROWN_GOLD : SILVER;
     pool.set(i++, at[0], at[1], at[2], born, dir[0] * s, (dir[1] * 0.7 + 0.3) * s, dir[2] * s, drag,
-      c[0], c[1], c[2], c[0], c[1], c[2], 99, look.lifetime * 1.4 * jitter(0.1), 0.65 * look.sparkSize, 0.3, KIND.whirl);
+      c[0], c[1], c[2], c[0], c[1], c[2], 99, look.lifetime * 1.4 * jitter(0.1), 0.5 * look.sparkSize, 0.25, KIND.whirl);
   }
   pool.end();
   fillLight(out, born, at, tint, shell.size * 0.8);

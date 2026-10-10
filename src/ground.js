@@ -150,7 +150,7 @@ export function waterfall(pool, config, phone, start, tubes, y, z, palette, ligh
   const width = tubes[tubes.length - 1] + spacing / 2 - left;
   // Strands, like real falls hung from a line, so it reads as falling streams and not a sheet.
   const strands = phone ? 28 : 44;
-  const perSecond = phone ? 170 : 320;
+  const perSecond = Math.round(width * (phone ? 1.6 : 2.9)); // by the metre, so a short curtain isn't a solid slab
   const count = Math.round(perSecond * duration);
   let i = pool.begin(count);
   for (let k = 0; k < count; k++) {
@@ -163,6 +163,6 @@ export function waterfall(pool, config, phone, start, tubes, y, z, palette, ligh
       0.34, 0.27, 0.17, 0.34, 0.15, 0.04, fall * 0.55, fall, 0.22 * look.sparkSize, 0.45, KIND.glitter);
   }
   pool.end();
-  const glow = [0.72, 0.6, 0.4];
-  for (let t = 0; t < tubes.length; t++) light(lights[t], start, duration, tubes[t], (top + y) / 2, z, glow, 20, 0.5, 'hiss');
+  const glow = [0.4, 0.28, 0.1]; // as dim as a fountain's: a whole barge of them lights the shore
+  for (let t = 0; t < tubes.length; t++) light(lights[t], start, duration, tubes[t], (top + y) / 2, z, glow, 14, 0.5, 'hiss');
 }
