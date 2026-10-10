@@ -104,6 +104,7 @@ function chrysanthemum(pool, shell, config, palette, born, at, velocity, out) {
       pool.set(i++, p[0], p[1], p[2], born + delay, 0, -1, 0, 3, 1, 0.95, 0.85, 1, 0.95, 0.85, 99, 0.2, 0.7 * look.sparkSize, 0, KIND.pop);
     }
     pool.end();
+    out.crackle = life * 0.72;
   }
   fillLight(out, born, at, a, shell.size);
 }

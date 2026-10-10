@@ -43,7 +43,8 @@ export function create(ctx) {
   // One reusable plan and a ring of burst records (time, place, colour) for the lights.
   const plan = { launch: 0 };
   const bursts = [];
-  for (let i = 0; i < SHELLS; i++) bursts.push({ time: -1e9, launch: -1e9, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, end: -1e9, type: '' });
+  // crackle: seconds after the break when its stars' tips crackle (audio.js), 0 for none.
+  for (let i = 0; i < SHELLS; i++) bursts.push({ time: -1e9, launch: -1e9, x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, size: 0, end: -1e9, type: '', crackle: 0 });
   ctx.fireworks = { bursts };
   let next = 0;
   let nextLaunch = 0;

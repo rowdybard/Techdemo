@@ -1,14 +1,15 @@
-// The noise behind every sound (audio.js): deep brown noise, white noise, sparse crackle
-// and the echo off the water. Made ahead of time, one piece per idle moment, at the rate
+// The noise behind every sound (audio.js): deep brown noise, white noise, sparse crackle,
+// a crackle shell's swarm of pops, and the echo off the water. Made ahead of time, one piece per idle moment, at the rate
 // most phones play at. Made in the first tap instead (the tap that starts the sound),
 // its 650,000-odd samples held that tap's answer up by a few hundred ms on a phone.
 const RATE = 48000;
-let noise = null; // { brown, white, crackle, room: [left, right] } as Float32Arrays, once made
+let noise = null; // { brown, white, crackle, swarm, room: [left, right] } as Float32Arrays, once made
 const made = { room: [] }; // the pieces finished so far
 const NOISE_STEPS = [
   () => { made.brown = brownNoise(RATE * 4); },
   () => { made.white = whiteNoise(RATE * 2); },
   () => { made.crackle = crackleNoise(RATE * 2); },
+  () => { made.swarm = swarmNoise(RATE * 1.6); },
   () => { made.room.push(roomTail(RATE * 2.8, RATE * 0.12)); }, // the echo, left
   () => { made.room.push(roomTail(RATE * 2.8, RATE * 0.12)); }, // and right
 ];
@@ -65,6 +66,31 @@ function crackleNoise(length) {
       for (let k = 0; k < pop && i + k < length; k++) data[i + k] += (Math.random() * 2 - 1) * (1 - k / pop);
     }
   }
+  return data;
+}
+
+// A crackle shell's swarm ("dragon eggs"): about 90 sharp snaps a second, scattered evenly. Each
+// starts at full strength and dies in a millisecond or two; a few are loud and most are quiet,
+// and some ring a little (a snap with a pitch to it), so it pops instead of fizzing.
+function swarmNoise(length) {
+  const data = new Float32Array(length);
+  const pops = Math.round((length / RATE) * 90);
+  for (let n = 0; n < pops; n++) {
+    const at = Math.floor(Math.random() * (length - 800));
+    const loud = 0.12 + 0.88 * Math.pow(Math.random(), 2.6);
+    const decay = (0.0005 + Math.random() * 0.0016) * RATE; // samples
+    const ring = Math.random() < 0.4 ? (2 * Math.PI * (1600 + Math.random() * 2600)) / RATE : 0;
+    const span = Math.min(800, Math.ceil(decay * 6));
+    for (let k = 0; k < span; k++) {
+      const fade = Math.exp(-k / decay);
+      const snap = (Math.random() * 2 - 1) * fade;
+      data[at + k] += (ring ? snap * 0.5 + Math.sin(ring * k) * fade * 0.8 : snap) * loud;
+    }
+  }
+  let top = 0;
+  for (let i = 0; i < length; i++) top = Math.max(top, Math.abs(data[i]));
+  const scale = 0.9 / (top || 1);
+  for (let i = 0; i < length; i++) data[i] *= scale;
   return data;
 }
 

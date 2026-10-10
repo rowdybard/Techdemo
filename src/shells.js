@@ -100,6 +100,7 @@ export function fireShell(pool, shell, config, palette, out) {
   // The burst, at the top of the climb.
   positionAt(at, shell.x, shell.y, shell.z, shell.vx, shell.vy, shell.vz, ROCKET_DRAG, fuse, g, wx, wz);
   velocityAt(velocity, shell.vx, shell.vy, shell.vz, ROCKET_DRAG, fuse, g, wx, wz);
+  out.crackle = 0; // a burst that crackles late says so (a chrysanthemum's tips)
   burst(pool, shell, config, palette, launch + fuse, at, velocity, out);
   out.type = shell.type;
   return out;
