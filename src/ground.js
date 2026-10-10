@@ -3,7 +3,7 @@
 //   candles   roman candles: coloured balls pumped up one after another
 //   mines     sprays of comets bursting up from the deck in sequence across the barge
 //   fans      paired tubes firing outward at alternate angles, drawing Vs
-//   waterfall a curtain of silver-gold sparks spilling from the barge's deck into the water (Deluxe)
+//   waterfall a curtain of gold sparks thrown up from the deck edge, arching over into the water (Deluxe)
 // Each writes all of its particles at once, with later birth times, placed with the same
 // closed-form motion the shader uses (see particles.js), and lights its tubes while it runs.
 import { KIND } from './fireworks.glsl.js';
@@ -138,49 +138,70 @@ export function fans(pool, config, phone, start, tubes, y, z, palette, lights) {
   pool.end();
 }
 
-// A low curtain spilling over the front deck edge, end to end. It must originate
-// on the barge even when other ground effects have their height turned up.
+// A curtain poured from the barge, end to end: a row of jets along the front deck edge throws
+// sparks up and out toward the water, and they arch over and fall as a sheet of gold into the
+// water in front of the hull. A curtain hung from a line above the deck read as coming out of
+// the sky (nothing holds it up), and one only spilled over the deck edge was too short to see
+// across the water. The jets light one after another along the deck, like a running fuse.
 export function waterfall(pool, config, phone, start, tubes, y, z, palette, lights) {
   const { look } = config;
   const duration = 8;
-  // Hung from a line well above the deck, as real falls hang from a cable: a curtain a couple of
-  // metres tall, poured from the deck edge, was too small to see across the water. A fuse races
-  // along the line first and each strand pours once it's lit, which shows where the curtain hangs.
-  const top = y + config.fountains.height; // where it hung before the deck-edge version
-  const edge = z + 8.1; // the main hull is 16 m wide; hang just in front of it, clear of the hull
+  const rise = config.fountains.height * 0.4; // the top of the arch, above the deck
+  const edge = z + 8.1; // the main hull is 16 m wide; the jets stand on its front edge
   const gravity = 9.81 * config.physics.gravity;
-  const drag = 0.9;
-  const fuse = 0.7; // seconds for the fuse to run the length of the line
+  const drag = 1.2; // heavy glitter: a quick bright climb, then a slow fall in long streaks
+  const speed = riseSpeed(rise, gravity, drag);
+  const fuse = 0.7; // seconds for the jets to light the length of the deck
   const spacing = tubes.length > 1 ? tubes[1] - tubes[0] : 10;
   const left = tubes[0] - spacing / 2;
   const width = tubes[tubes.length - 1] + spacing / 2 - left;
-  // Separate strands keep the curtain legible without increasing its density.
+  // Separate jets keep the curtain legible without increasing its density.
   const strands = phone ? 28 : 44;
   const perSecond = Math.round(width * (phone ? 1.6 : 2.9)); // by the metre, so a short curtain isn't a solid slab
   const count = Math.round(perSecond * duration);
-  const sparks = strands * 2; // the running fuse
+  const sparks = strands * 2; // the fuse running along the deck edge
   let i = pool.begin(count + sparks);
   for (let k = 0; k < sparks; k++) {
     const share = (k + Math.random()) / sparks;
-    pool.set(i++, left + share * width, top, edge, start + share * fuse,
-      (Math.random() - 0.5) * 3, Math.random() * 2, 0.2 + Math.random() * 0.4, 2.5,
+    pool.set(i++, left + share * width, y, edge, start + share * fuse,
+      (Math.random() - 0.5) * 3, 0.5 + Math.random() * 2, 0.2 + Math.random() * 0.4, 2.5,
       1, 0.9, 0.7, 1, 0.6, 0.25, 0.15, 0.3 + Math.random() * 0.15, 0.3 * look.sparkSize, 0.1, KIND.spark);
   }
+  const top = Math.log(1 + (drag * speed) / gravity) / drag; // seconds to the top of the arch
   for (let k = 0; k < count; k++) {
     const strand = k % strands;
     const lit = start + ((strand + 0.5) / strands) * fuse;
     const born = lit + ((k / count) * (duration - fuse)) + Math.random() / perSecond;
-    const vy = -0.4 - Math.random() * 1.1; // spilling over the line, not thrown
-    const from = top + (Math.random() - 0.5) * 0.4;
-    const fall = waterTime(from, vy, gravity, drag);
-    const x = left + (strand + 0.5 + (Math.random() - 0.5) * 0.25) * (width / strands);
-    pool.set(i++, x, from, edge + Math.random() * 0.3, born,
-      (Math.random() - 0.5) * 0.3, vy, 0.3 + Math.random() * 0.5, drag,
-      0.34, 0.27, 0.17, 0.34, 0.15, 0.04, fall * 0.55, fall, 0.22 * look.sparkSize, 0.45, KIND.glitter);
+    const vy = speed * (0.82 + Math.random() * 0.22); // a soft top edge, not a ruled line
+    const fall = waterTime(y, vy, gravity, drag);
+    const x = left + (strand + 0.5 + (Math.random() - 0.5) * 0.2) * (width / strands);
+    // Out toward the water and a little to either side, so neighbouring jets' falls join into one
+    // sheet. Faint on the climb and bright gold once it turns over: lit the other way round, the
+    // jets outshone the fall and the barge read as a row of fountains.
+    pool.set(i++, x, y, edge + Math.random() * 0.2, born,
+      (Math.random() - 0.5) * 3.6, vy, 5 + Math.random() * 2.5, drag,
+      0.16, 0.12, 0.07, 0.5, 0.36, 0.13, top * 0.7, fall, 0.22 * look.sparkSize, 0.45, KIND.glitter);
   }
   pool.end();
   const glow = [0.4, 0.28, 0.1]; // as dim as a fountain's: a whole barge of them lights the shore
-  for (let t = 0; t < tubes.length; t++) light(lights[t], start, duration, tubes[t], (top + y) / 2, edge, glow, 14, 0.5, 'hiss');
+  for (let t = 0; t < tubes.length; t++) light(lights[t], start, duration, tubes[t], y + rise / 2, edge + 3, glow, 14, 0.5, 'hiss');
+}
+
+// The launch speed that carries a spark `height` metres up against gravity and linear drag
+// (the shader's motion): the climb is v/drag - gravity/drag^2 * ln(1 + drag * v / gravity).
+function riseSpeed(height, gravity, drag) {
+  let low = 0, high = 10;
+  while (climb(high, gravity, drag) < height && high < 1e4) high *= 2;
+  for (let step = 0; step < 30; step++) {
+    const v = (low + high) / 2;
+    if (climb(v, gravity, drag) < height) low = v;
+    else high = v;
+  }
+  return (low + high) / 2;
+}
+
+function climb(v, gravity, drag) {
+  return v / drag - (gravity / (drag * drag)) * Math.log(1 + (drag * v) / gravity);
 }
 
 // Solve the same closed-form vertical motion as the spark shader. A deck-height

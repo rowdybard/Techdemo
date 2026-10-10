@@ -239,7 +239,7 @@ test('side-barge disable cancels delayed emissions after their lights already en
   assert.equal(p.mesh.geometry.attributes.aStart.array[delayed * 4 + 3], -1e6);
   module.dispose(); p.dispose();
 });
-test('waterfall hangs from a line above the deck, lit by a running fuse, and dies at water at every height', () => {
+test('waterfall pours from the deck edge, arches up and over, and dies at water at every height', () => {
   for (const height of [8, 50]) for (const gravity of [0.2, 1, 2]) {
     const ctx = fixture();
     ctx.config.fountains.height = height;
@@ -251,24 +251,31 @@ test('waterfall hangs from a line above the deck, lit by a running fuse, and die
     const birth = p.mesh.geometry.attributes.aStart.array;
     const motion = p.mesh.geometry.attributes.aMotion.array;
     const shape = p.mesh.geometry.attributes.aShape.array;
-    let count = 0, fuse = 0;
+    let count = 0, fuse = 0, highest = 0;
     const point = [0, 0, 0];
-    const top = 2.5 + height;
     for (let i = 0; i < p.size; i++) {
       const offset = i * 4;
       if (birth[offset + 3] < -100) continue;
-      assert.ok(Math.abs(birth[offset + 1] - top) <= 0.2, 'every spark starts on the line');
-      assert.ok(birth[offset + 2] > -372, 'sparks hang beyond the front hull edge');
-      assert.ok(motion[offset + 2] > 0, 'sparks spill outward toward the water');
-      if (shape[offset] < 0.5) { fuse++; continue; } // the fuse running along the line
+      assert.equal(birth[offset + 1], 2.5, 'every spark starts on the deck');
+      assert.ok(birth[offset + 2] >= -371.9, 'sparks start on the front hull edge');
+      assert.ok(motion[offset + 2] > 0, 'sparks are thrown out toward the water');
+      if (shape[offset] < 0.5) { fuse++; continue; } // the fuse running along the deck edge
       count++;
+      assert.ok(motion[offset + 1] > 0, 'the curtain is thrown up before it falls');
       positionAt(point, birth[offset], birth[offset + 1], birth[offset + 2],
         motion[offset], motion[offset + 1], motion[offset + 2], motion[offset + 3], shape[offset], 9.81 * gravity, 0, 0);
       assert.ok(Math.abs(point[1]) < 0.002, 'lifetime ends at water level');
+      assert.ok(point[2] > -371.9, 'it falls into the water in front of the hull');
+      for (let t = 0; t < shape[offset]; t += 0.05) {
+        positionAt(point, birth[offset], birth[offset + 1], birth[offset + 2],
+          motion[offset], motion[offset + 1], motion[offset + 2], motion[offset + 3], t, 9.81 * gravity, 0, 0);
+        highest = Math.max(highest, point[1]);
+      }
     }
+    assert.ok(highest > 2.5 + height * 0.35 && highest < 2.5 + height * 0.45, `the arch tops out near 0.4 of the fountain height (${highest})`);
     assert.equal(count, Math.round(125 * 2.9) * 8, 'existing per-metre particle density retained');
-    assert.equal(fuse, 88, 'a fuse runs the line first');
-    for (const light of lights) { assert.equal(light.y, (top + 2.5) / 2); assert.equal(light.z, -371.9); }
+    assert.equal(fuse, 88, 'a fuse runs along the deck first');
+    for (const light of lights) { assert.equal(light.y, 2.5 + height * 0.2); assert.equal(light.z, -368.9); }
     p.dispose();
   }
 });
