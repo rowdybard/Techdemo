@@ -8,11 +8,17 @@
 // MP4 where the browser can make it (Safari, recent Chrome), WebM otherwise. Saving opens
 // the share sheet on phones (Save Video, TikTok, Instagram) or downloads elsewhere; it
 // waits for a tap, because browsers only allow sharing from one.
+//
+// A recording can't be stopped in its first MIN_SECONDS (the owner: a clip stopped after a
+// second or two wouldn't download or share, but the buttons offered it anyway). One that still
+// comes out too short (the tab hidden, the recorder failing) says so and offers to record again,
+// instead of Download and Share buttons that don't work.
 
 const TYPES = ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
 const FPS = 30;
 const LONGEST_SIDE = 1280;
 const MAX_SECONDS = 45;
+const MIN_SECONDS = 5;
 
 export function create(ctx) {
   const { renderer, container, signal } = ctx;
@@ -45,14 +51,22 @@ export function create(ctx) {
   save.type = 'button';
   const done = el('button', 'send-close', 'Done');
   done.type = 'button';
+  const again = el('button', 'send-primary', 'Record again');
+  again.type = 'button';
+  again.hidden = true;
   const row = el('div', 'send-row');
-  row.append(save, share);
+  row.append(save, share, again);
   ready.append(readyTitle, preview, readyNote, row, done);
+  let last = null; // the last capture's settings, to record it again
   container.append(pill, ready);
 
   let file = null;
-  pill.addEventListener('click', () => stop(), { signal });
+  pill.addEventListener('click', () => stop(true), { signal });
   done.addEventListener('click', () => finish(), { signal });
+  again.addEventListener('click', () => {
+    finish();
+    if (last) capture(last);
+  }, { signal });
   save.addEventListener('click', () => download(), { signal });
   share.addEventListener('click', async () => {
     if (!file) return;
@@ -86,8 +100,10 @@ export function create(ctx) {
    * Plays an ending and records it. `play()` starts it and returns its length in
    * seconds; recording stops a moment after. Returns false if this browser can't record.
    */
-  function capture({ play, watermark, name }) {
+  function capture(options) {
+    const { play, watermark, name } = options;
     if (!type || job) return false;
+    last = options;
     const scale = Math.min(1, LONGEST_SIDE / Math.max(source.width, source.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(2, Math.round((source.width * scale) / 2) * 2);
@@ -103,10 +119,25 @@ export function create(ctx) {
       canvas.height = 0;
       const kind = type.split(';')[0];
       file = new File(chunks, `${name}.${kind === 'video/mp4' ? 'mp4' : 'webm'}`, { type: kind });
-      if (file.size < 2000) readyTitle.textContent = 'The recording came out empty. Please try again.';
-      else readyTitle.textContent = '🎬 Your video is ready';
+      const seconds = (performance.now() - job.started) / 1000;
       job = null;
       pill.hidden = true;
+      // Too short (or empty) to save: say so, and offer to record it again.
+      if (file.size < 2000 || seconds < MIN_SECONDS - 0.5) {
+        file = null;
+        readyTitle.textContent = 'That recording was too short to save';
+        readyNote.textContent = 'Videos need at least a few seconds. Record it again and let it play.';
+        preview.hidden = true;
+        save.hidden = true;
+        share.hidden = true;
+        again.hidden = false;
+        ready.hidden = false;
+        return;
+      }
+      readyTitle.textContent = '🎬 Your video is ready';
+      preview.hidden = false;
+      save.hidden = false;
+      again.hidden = true;
       readyNote.textContent = `${Math.max(1, Math.round(file.size / 1048576 * 10) / 10)} MB · ${kind === 'video/mp4' ? 'MP4' : 'WebM'}${watermark ? ' · free greetings carry a small SkyGreeting mark' : ''}`;
       share.hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
       save.className = share.hidden ? 'send-primary' : 'send-secondary';
@@ -120,7 +151,7 @@ export function create(ctx) {
     job = { canvas, g, recorder, stream, watermark, mark, font: `600 ${mark}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`, started: performance.now(), length: 0 };
     container.classList.add('recording');
     pill.hidden = false;
-    pill.textContent = '● Recording… tap to stop';
+    pill.textContent = `● Recording… stop from ${MIN_SECONDS}s`;
     pill.style.setProperty('--p', '0%');
     shownSecond = -1;
     recorder.start(1000);
@@ -148,14 +179,17 @@ export function create(ctx) {
     const whole = Math.floor(seconds);
     if (whole !== shownSecond) {
       shownSecond = whole;
-      pill.textContent = `● Recording… ${whole}s of ${Math.round(j.length)}s · tap to stop`;
+      pill.textContent = seconds < MIN_SECONDS ? `● Recording… ${whole}s · stop from ${MIN_SECONDS}s` : `● Recording… ${whole}s of ${Math.round(j.length)}s · tap to stop`;
+      pill.setAttribute('aria-disabled', String(seconds < MIN_SECONDS));
       pill.style.setProperty('--p', `${Math.min(100, Math.round((seconds / j.length) * 100))}%`);
     }
     if (seconds >= j.length) stop();
   }
 
-  function stop() {
+  // `early`: stopped by a tap, which waits for the shortest clip that saves.
+  function stop(early = false) {
     if (!job) return;
+    if (early && (performance.now() - job.started) / 1000 < MIN_SECONDS) return;
     ctx.afterRender = null;
     if (job.recorder.state !== 'inactive') job.recorder.stop();
   }

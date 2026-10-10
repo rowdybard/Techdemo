@@ -82,6 +82,14 @@ export function create(ctx) {
   ownReset.addEventListener('click', () => choose(state.occasion, true), { signal });
   const message = field('Message', MESSAGE_LIMIT, 'builder-loud');
   const message2 = field('Second line (optional)', MESSAGE_LIMIT, 'builder-loud');
+  message2.label.hidden = true;
+  const addLine = el('button', 'builder-add-line', '+ Add a second line');
+  addLine.type = 'button';
+  addLine.addEventListener('click', () => {
+    message2.label.hidden = false;
+    addLine.hidden = true;
+    message2.input.focus();
+  }, { signal });
   const to = field('Their name (optional)', NAME_LIMIT, 'builder-loud');
   const from = field('From (optional)', MESSAGE_LIMIT, '');
   // The words go up in the live show: the sky text follows the message, and a moment
@@ -137,7 +145,7 @@ export function create(ctx) {
   privacyLink.target = '_blank';
   privacyLink.rel = 'noopener';
   terms.append('By sending, you agree to SkyGreeting’s ', termsLink, '. ', privacyLink, '.');
-  sheet.append(head, chips, own, message.label, message2.label, to.label, from.label, customize, plans.cards, row, linkBox, status, terms);
+  sheet.append(head, chips, own, message.label, addLine, message2.label, to.label, from.label, customize, plans.cards, row, linkBox, status, terms);
 
   // While a preview plays: a slim bar instead of the sheet.
   const bar = el('div', 'builder-bar');
@@ -358,6 +366,9 @@ export function create(ctx) {
     choose(state.occasion);
     status.textContent = '';
     linkBox.hidden = true;
+    const hasLine = Boolean(message2.input.value.trim());
+    message2.label.hidden = !hasLine;
+    addLine.hidden = hasLine;
     show('sheet');
   }, { signal });
   close.addEventListener('click', () => show('closed'), { signal });

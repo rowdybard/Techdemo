@@ -25,10 +25,11 @@ import * as studio from './studio.js';
 import * as gift from './gift.js';
 import * as autoshow from './autoshow.js';
 import * as viewlock from './viewlock.js';
+import * as soundbutton from './soundbutton.js';
 
 // Update order. Modules are disposed in reverse. Each one exports
 // create(ctx) and returns { update(dt, time), dispose() }.
-const MODULES = [wind, sky, burstlights, countdown, environment, fireworks, fountains, smoke, snow, audio, post, debug, ui, director, crane, video, builder, studio, viewlock, gift, autoshow];
+const MODULES = [wind, sky, burstlights, countdown, environment, fireworks, fountains, smoke, snow, audio, post, debug, ui, director, crane, video, builder, studio, viewlock, soundbutton, gift, autoshow];
 
 const DEG = Math.PI / 180;
 

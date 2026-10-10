@@ -231,12 +231,19 @@ async function swapPlaces({ page, overlay }) {
   return leaks;
 }
 
-// Waits until the draw counts stop changing (three looks in a row, two seconds apart).
+// Waits until the draw counts stop changing (three looks in a row, two seconds and at least eight
+// drawn frames apart). The frames matter on a slow machine: below a frame a second the overlay
+// doesn't refresh between looks, and its stale numbers (a cube capture mid-frame) read as settled.
 async function settled(page) {
   let last = '';
   let same = 0;
   for (let i = 0; i < 40 && same < 3; i++) {
     await page.waitForTimeout(2000);
+    await page.evaluate(() => new Promise((done) => {
+      let frames = 0;
+      const step = () => (++frames >= 8 ? done() : requestAnimationFrame(step));
+      requestAnimationFrame(step);
+    }));
     const o = await readOverlay(page);
     const now = [o.calls, o.geometries, o.programs].join('/');
     same = now === last ? same + 1 : 0;

@@ -34,7 +34,8 @@ export function create(ctx) {
     if (locked && ctx.walk) ctx.walk.stop();
     controls.enabled = !locked && !(ctx.walk && ctx.walk.active);
     button.setAttribute('aria-pressed', String(locked));
-    button.textContent = locked ? '🔒 View locked' : '🔓 Lock view';
+    button.textContent = locked ? '🔒' : '🔓';
+    button.setAttribute('aria-label', locked ? 'View locked' : 'Lock the view');
     button.title = locked ? 'Unlock the view, to drag and look around' : 'Hold the view still, so a tap only launches';
   }
 

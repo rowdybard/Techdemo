@@ -1,109 +1,114 @@
-// Customize: the friendly settings drawer. Big preset cards, colour swatches, chips for
-// the fireworks and ground show, and plain-language sliders (Pace, Size, Sky, Wind,
-// Smoke) that each move one or two real settings. A bottom sheet on phones, a card on
-// the right on larger screens. The full developer panel (ui.js) is behind "Advanced
-// settings". Every change writes the config the modules read each frame, so it's live.
+// Customize: the friendly settings drawer. It leads with the Looks (looks.js), each a whole show
+// in one tap, then the place, the colours, three plain-language sliders (Pace, Size, Sparkle) and
+// the words in the sky. Everything else (the fireworks one by one, the ground show, sky and
+// weather, extras, the lighthouse, the views) is folded under "More options" (studio-more.js). A
+// bottom sheet on phones, a card on the right on larger screens; the full developer panel (ui.js)
+// is behind "Advanced settings". Every change writes the config the modules read each frame, so
+// it's live.
 import { PRESETS, SCENE, applyPreset, applyPresetSections, defaultScene, putScene, remember, takeScene } from './presets.js';
-import { LABELS } from './occasions.js';
-import { LIGHT_COLORS } from './lighthouse.js';
+import { LOOKS } from './looks.js';
 import { PLACES } from './places.js';
 import { MESSAGE_LIMIT, cleanText } from './link.js';
 import { isBlocked } from './moderate.js';
+import { controls, el, gradient, section, strip } from './studio-kit.js';
+import { buildMore } from './studio-more.js';
 
-const PRESET_CARDS = [
-  ['Default', '🎆', 'Classic'], ['Halloween', '🎃', 'Halloween'], ['Fourth of July', '🇺🇸', 'Fourth of July'],
-  ['Gold Willows', '✨', 'Gold willows'], ['Lake Michigan', '🗼', 'Lake Michigan'], ['Neon', '💜', 'Neon'],
-  ['Calm', '🌙', 'Calm'], ['Finale', '💥', 'Big finale'],
-];
-const PALETTES = [['classic', 'Classic'], ['usa', 'Red, white & blue'], ['gold', 'Gold'], ['neon', 'Neon'], ['pastel', 'Pastel'], ['halloween', 'Halloween']];
-const SHELLS = {
-  Classic: ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star'],
-  Halloween: ['pumpkin', 'ghost', 'bat', 'skull', 'web', 'brew', 'eyes', 'wisp'],
-  Showpieces: ['kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'],
-};
-const GROUND = [['off', 'Off'], ['mixed', 'A bit of everything'], ['halloween', 'Halloween mix'], ['fountains', 'Fountains'], ['shooters', 'Shooters'],
-  ['candles', 'Roman candles'], ['mines', 'Mines'], ['fans', 'V fans'], ['waterfall', 'Waterfall'], ['cauldron', 'Cauldrons'], ['wisps', 'Wisps'], ['lightning', 'Lightning'], ['lanterns', 'Lanterns']];
-const CAMERAS = ['sand', 'drone', 'water']; // named by the place (places.js)
+const PALETTES = [['classic', 'Classic'], ['rainbow', 'Rainbow'], ['gold', 'Gold'], ['royal', 'Royal'], ['ocean', 'Ocean'], ['cosmic', 'Cosmic'],
+  ['rose', 'Rose'], ['sakura', 'Cherry blossom'], ['autumn', 'Autumn'], ['ice', 'Ice'], ['usa', 'Red, white & blue'], ['neon', 'Neon'],
+  ['pastel', 'Pastel'], ['halloween', 'Halloween']];
 
-// Sliders: what they show, and how they map to settings (value 0..1 both ways).
-const SLIDERS = [
+// The three sliders most people want (value 0..1 both ways); sky, wind, smoke and snow are under More options.
+const FEEL = [
   { name: 'Pace', low: 'Calm', high: 'Wild',
     get: (c) => (c.show.shellsPerMinute - 8) / 82,
     set: (c, v) => { c.show.shellsPerMinute = Math.round(8 + v * 82); c.show.maxShells = Math.round(3 + v * 11); } },
   { name: 'Size', low: 'Small', high: 'Huge', get: (c) => (c.look.burstSize - 30) / 70, set: (c, v) => { c.look.burstSize = Math.round(30 + v * 70); } },
   { name: 'Sparkle', low: 'Soft', high: 'Dazzling', get: (c) => (c.look.brightness - 0.8) / 2.2, set: (c, v) => { c.look.brightness = 0.8 + v * 2.2; } },
-  { name: 'Sky', low: 'Sunset', high: 'Midnight', get: (c) => c.sky.timeOfDay, set: (c, v) => { c.sky.timeOfDay = v; } },
-  { name: 'Wind', low: 'Still', high: 'Gusty', get: (c) => c.physics.windSpeed / 10, set: (c, v) => { c.physics.windSpeed = v * 10; } },
-  { name: 'Smoke', low: 'None', high: 'Lots', get: (c) => (c.smoke.enabled ? c.smoke.amount / 2 : 0),
-    set: (c, v) => { c.smoke.amount = v * 2; c.smoke.enabled = v > 0.01; } },
-  { name: 'Snow', low: 'None', high: 'Blizzard', get: (c) => c.snow.amount, set: (c, v) => { c.snow.amount = v; } },
 ];
-// The lighthouse's light, shown while the pier is on.
-const LIGHTHOUSE = [
-  { name: 'Light', low: 'Off', high: 'Bright', get: (c) => c.landmarks.light / 2, set: (c, v) => { c.landmarks.light = v * 2; } },
-  { name: 'Beam', low: 'Still', high: 'Fast', get: (c) => c.landmarks.sweep / 20, set: (c, v) => { c.landmarks.sweep = v * 20; } },
-];
-const LIGHT_NAMES = { warm: 'Warm', white: 'White', red: 'Red', green: 'Green' };
 
 export function create(ctx) {
   const { config, container, signal } = ctx;
   const refreshers = [];
+  const kit = controls({ config, signal, refreshers, changed, sync, remember });
+  const { button, slider } = kit;
 
-  const open = el('button', 'studio-open', '🎨 Customize');
-  open.type = 'button';
+  const open = button('studio-open', '🎨 Customize', () => show(true));
   const sheet = el('section', 'studio');
   sheet.hidden = true;
   sheet.setAttribute('aria-label', 'Customize the show');
 
   const head = el('div', 'studio-head');
-  const done = el('button', 'studio-done', 'Done');
-  done.type = 'button';
-  head.append(el('h2', '', 'Customize'), done);
+  const finale = button('studio-finale', '💥 Finale', () => ctx.fireworks && ctx.fireworks.finale());
+  finale.title = 'A few seconds of everything at once';
+  const done = button('studio-done', 'Done', () => show(false));
+  head.append(el('h2', '', 'Customize'), finale, done);
   // While making a greeting: what it is and what sending it costs, and the ✦ key.
   const making = el('p', 'studio-making');
   refreshers.push(() => {
     const summary = ctx.builder ? ctx.builder.summary : '';
-    // Making a greeting: what it is and costs. Playing first: what ✦ means, so no surprise.
     making.hidden = !ctx.builder;
     making.textContent = summary ? `${summary}. ✦ effects make it a Deluxe send.`
       : ctx.builder ? `✦ marks Deluxe effects. Using any makes the send ${ctx.builder.price}; everything else sends free.` : '';
   });
 
-  // Big moments.
-  const actions = el('div', 'studio-actions');
-  actions.append(
-    button('studio-action', '💥 Finale!', () => ctx.fireworks && ctx.fireworks.finale()),
-    button('studio-action', '🚀 Launch one', () => ctx.fireworks && ctx.fireworks.launch()),
-  );
-
-  // Presets.
-  const presets = el('div', 'studio-cards');
+  // The Looks: a whole show in one tap, with its colours along the bottom of the card.
+  const looks = el('div', 'studio-looks');
   let currentPreset = 'Default';
-  for (const [name, icon, label] of PRESET_CARDS) {
-    if (!PRESETS[name]) continue;
-    const card = button('studio-card', '', () => {
-      currentPreset = name;
-      // Away from the beach a style changes the fireworks, not the place: the frozen lake keeps
-      // its own midnight sky and snow (Place picks those).
-      const scene = config.place.environment !== 'beach' ? takeScene(config) : null;
-      applyPreset(config, name);
-      if (scene) putScene(config, scene);
-      changed();
-      // Show it at once (on the lake nothing else changes): a few of its shells break within a
-      // second or so and its ground show starts, rather than whenever the next ones happen to.
-      if (!(ctx.director && ctx.director.active)) {
-        if (ctx.fireworks) ctx.fireworks.sample();
-        if (config.fountains.enabled && ctx.fountains) ctx.fountains.start();
-      }
-    });
-    card.append(el('span', 'studio-card-icon', icon), el('span', '', label));
-    refreshers.push(() => card.setAttribute('aria-pressed', String(currentPreset === name)));
-    presets.append(card);
+  for (const look of LOOKS) {
+    if (!PRESETS[look.preset]) continue;
+    const card = button('studio-card', '', () => pickLook(look.preset));
+    const palette = config.palettes[(PRESETS[look.preset].look || {}).palette || 'classic'];
+    const colours = el('span', 'studio-card-strip');
+    colours.style.background = strip(palette);
+    card.append(el('span', 'studio-card-icon', look.icon), el('span', 'studio-card-name', look.label), el('span', 'studio-card-line', look.line), colours);
+    refreshers.push(() => card.setAttribute('aria-pressed', String(currentPreset === look.preset)));
+    looks.append(card);
+  }
+  function pickLook(name) {
+    currentPreset = name;
+    // Away from the beach a look changes the fireworks, not the place: the frozen lake keeps its
+    // own midnight sky and snow (Place picks those).
+    const scene = config.place.environment !== 'beach' ? takeScene(config) : null;
+    applyPreset(config, name);
+    if (scene) putScene(config, scene);
+    changed();
+    // Show it at once: a few of its shells break within a second or so and its ground show
+    // starts, rather than whenever the next ones happen to.
+    if (!(ctx.director && ctx.director.active)) {
+      if (ctx.fireworks) ctx.fireworks.sample();
+      if (config.fountains.enabled && ctx.fountains) ctx.fountains.start();
+    }
   }
 
-  // Colours.
+  // Where the show is set. A place with a look of its own (the frozen lake: midnight, falling
+  // snow) brings it, and going back to the beach gives back the sky and snow it had (or the
+  // beach's own, if the page opened on the lake).
+  let beachScene = null;
+  function choosePlace(name) {
+    if (config.place.environment === name) return;
+    const look = PLACES[name].look;
+    if (look) {
+      if (config.place.environment === 'beach') beachScene = takeScene(config);
+      applyPresetSections(config, look, SCENE);
+    } else {
+      putScene(config, beachScene || defaultScene());
+      beachScene = null;
+    }
+    config.place.environment = name;
+  }
+  const places = el('div', 'studio-segments');
+  for (const name in PLACES) {
+    const segment = button('studio-segment', `${PLACES[name].icon} ${PLACES[name].label}`, () => {
+      choosePlace(name);
+      changed();
+    });
+    refreshers.push(() => segment.setAttribute('aria-pressed', String(config.place.environment === name)));
+    places.append(segment);
+  }
+
   const swatches = el('div', 'studio-swatches');
   for (const [name, label] of PALETTES) {
+    if (!config.palettes[name]) continue;
     const swatch = button('studio-swatch', '', () => {
       config.look.palette = name;
       changed();
@@ -115,34 +120,8 @@ export function create(ctx) {
     swatches.append(swatch);
   }
 
-  // Which fireworks.
-  const shellGroups = el('div', 'studio-groups');
-  const kept = {}; // weights from before a type was switched off
-  for (const group in SHELLS) {
-    const chips = el('div', 'studio-chips');
-    for (const type of SHELLS[group]) {
-      const chip = button('studio-chip', LABELS[type] || type, () => {
-        const mix = config.look.mix;
-        if (mix[type] > 0) {
-          let on = 0;
-          for (const key in mix) if (mix[key] > 0 && key !== 'text') on++;
-          if (on <= 1) return; // keep at least one
-          kept[type] = mix[type];
-          mix[type] = 0;
-        } else {
-          mix[type] = kept[type] || 1;
-        }
-        if (ctx.builder) ctx.builder.picked(type, mix[type] > 0); // a Deluxe shell switched on makes the send Deluxe
-        changed();
-      });
-      refreshers.push(() => {
-        chip.setAttribute('aria-pressed', String(config.look.mix[type] > 0));
-        chip.classList.toggle('is-deluxe', deluxeItem(type));
-      });
-      chips.append(chip);
-    }
-    shellGroups.append(el('p', 'studio-sub', group), chips);
-  }
+  const feel = el('div', 'studio-sliders');
+  for (const def of FEEL) feel.append(slider(def));
 
   // Words in the sky: spelled now and then, like any other shell. Empty is none. While a
   // greeting is being made its message is what goes up, so the box steps aside then.
@@ -174,102 +153,12 @@ export function create(ctx) {
     if (document.activeElement !== wordsInput) wordsInput.value = config.look.text;
     wordsRow.hidden = Boolean(ctx.builder && ctx.builder.summary);
   });
-  shellGroups.append(wordsRow);
 
-  // Ground show.
-  const ground = el('div', 'studio-chips');
-  for (const [style, label] of GROUND) {
-    const chip = button('studio-chip', label, () => {
-      config.fountains.enabled = style !== 'off';
-      if (style !== 'off') config.fountains.style = style;
-      changed();
-      if (style !== 'off' && ctx.fountains) ctx.fountains.start();
-    });
-    refreshers.push(() => {
-      chip.setAttribute('aria-pressed', String(style === 'off' ? !config.fountains.enabled : config.fountains.enabled && config.fountains.style === style));
-      // The Halloween mix holds paid effects, so it's marked too ("A bit of everything" is the
-      // free default: a free send uses only its free effects).
-      chip.classList.toggle('is-deluxe', deluxeItem(style) || (style === 'halloween' && Boolean(ctx.builder)));
-    });
-    ground.append(chip);
-  }
-
-  // Sliders.
-  const sliders = el('div', 'studio-sliders');
-  for (const def of SLIDERS) sliders.append(slider(def));
-  const lighthouse = el('div', 'studio-sliders');
-  for (const def of LIGHTHOUSE) lighthouse.append(slider(def));
-  const lightColors = el('div', 'studio-chips');
-  for (const name in LIGHT_COLORS) {
-    const chip = button('studio-chip', LIGHT_NAMES[name], () => {
-      config.landmarks.lightColor = name;
-      changed();
-    });
-    refreshers.push(() => chip.setAttribute('aria-pressed', String(config.landmarks.lightColor === name)));
-    lightColors.append(chip);
-  }
-  lighthouse.append(lightColors);
-
-  // Switches.
-  const switches = el('div', 'studio-switches');
-  const beachOnly = [toggle('Pier & lighthouse', () => config.landmarks.pier, (on) => { config.landmarks.pier = on; }),
-    toggle('Dune grass', () => config.landmarks.grass, (on) => { config.landmarks.grass = on; })];
-  switches.append(
-    toggle('Sound', () => config.sound.enabled && config.sound.volume > 0, (on) => { config.sound.enabled = true; config.sound.volume = on ? 0.6 : 0; }),
-    toggle('Side barges', () => config.fountains.sideBarges, (on) => { config.fountains.sideBarges = on; }),
-    ...beachOnly,
-  );
-
-  // Where the show is set, and the camera views, which the place names. A place with a look of
-  // its own (the frozen lake: midnight, falling snow) brings it, and going back to the beach gives
-  // back the sky and snow it had (or the beach's own, if the page opened on the lake).
-  let beachScene = null;
-  function choosePlace(name) {
-    if (config.place.environment === name) return;
-    const look = PLACES[name].look;
-    if (look) {
-      if (config.place.environment === 'beach') beachScene = takeScene(config);
-      applyPresetSections(config, look, SCENE);
-    } else {
-      putScene(config, beachScene || defaultScene());
-      beachScene = null;
-    }
-    config.place.environment = name;
-  }
-  const places = el('div', 'studio-segments');
-  for (const name in PLACES) {
-    const segment = button('studio-segment', `${PLACES[name].icon} ${PLACES[name].label}`, () => {
-      choosePlace(name);
-      changed();
-    });
-    refreshers.push(() => segment.setAttribute('aria-pressed', String(config.place.environment === name)));
-    places.append(segment);
-  }
-  const cameras = el('div', 'studio-segments');
-  for (const name of CAMERAS) {
-    const segment = button('studio-segment', '', () => {
-      ctx.setCameraPreset(name);
-      changed();
-    });
-    refreshers.push(() => {
-      segment.textContent = (PLACES[config.place.environment] || PLACES.beach).views[name];
-      segment.setAttribute('aria-pressed', String(config.camera.preset === name));
-    });
-    cameras.append(segment);
-  }
-
-  const lighthouseSection = section('Lighthouse', lighthouse);
-  refreshers.push(() => {
-    const beach = config.place.environment === 'beach';
-    lighthouseSection.hidden = !beach || !config.landmarks.pier;
-    for (const row of beachOnly) row.hidden = !beach;
+  const more = buildMore(ctx, {
+    kit, refreshers, changed, deluxeItem,
+    startOver: () => { currentPreset = 'Default'; config.look.text = ''; applyPreset(config, 'Default'); changed(); },
+    advanced: () => { onDone = null; show(false); if (ctx.advanced) ctx.advanced.open(); },
   });
-
-  const footer = el('div', 'studio-footer');
-  footer.append(
-    button('studio-link', 'Start over', () => { currentPreset = 'Default'; config.look.text = ''; applyPreset(config, 'Default'); changed(); }),
-    button('studio-link', 'Advanced settings', () => { onDone = null; show(false); if (ctx.advanced) ctx.advanced.open(); }),
-  );
 
   // Opened on its own (not from the builder): a way to send the show as it is now.
   const sendBar = el('div', 'studio-sendbar');
@@ -281,9 +170,8 @@ export function create(ctx) {
   sendShow.append(el('small', '', 'Add your words and send it. It plays just like this.'));
   sendBar.append(sendShow);
 
-  sheet.append(head, making, actions,
-    section('Style', presets), section('Place', places), section('Colours', swatches), section('Fireworks', shellGroups),
-    section('Ground show', ground), section('Feel', sliders), section('Extras', switches), lighthouseSection, section('View', cameras), footer, sendBar);
+  sheet.append(head, making, section('Looks', looks, 'studio-looks-section'), section('Place', places), section('Colours', swatches),
+    section('Feel', feel), wordsRow, more, sendBar);
   container.append(open, sheet);
 
   // Opened from the greeting builder, Done goes back to it.
@@ -304,8 +192,6 @@ export function create(ctx) {
     const deluxe = ctx.builder && ctx.builder.deluxe;
     return Boolean(deluxe && deluxe.includes(item));
   }
-  open.addEventListener('click', () => show(true), { signal });
-  done.addEventListener('click', () => show(false), { signal });
   sheet.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') show(false);
   }, { signal });
@@ -324,46 +210,12 @@ export function create(ctx) {
     for (let i = 0; i < refreshers.length; i++) refreshers[i]();
   }
 
-  function slider(def) {
-    const row = el('label', 'studio-slider');
-    const input = el('input');
-    input.type = 'range';
-    input.min = '0';
-    input.max = '1';
-    input.step = '0.01';
-    const ends = el('span', 'studio-ends');
-    ends.append(el('span', '', def.low), el('span', '', def.high));
-    row.append(el('span', 'studio-slider-name', def.name), input, ends);
-    input.addEventListener('input', () => { def.set(config, Number(input.value)); sync(); }, { signal });
-    input.addEventListener('change', () => remember(config), { signal });
-    refreshers.push(() => { input.value = String(Math.min(1, Math.max(0, def.get(config)))); });
-    return row;
-  }
-
-  function toggle(label, get, set) {
-    const row = el('label', 'studio-switch');
-    const input = el('input');
-    input.type = 'checkbox';
-    input.setAttribute('role', 'switch');
-    input.addEventListener('change', () => { set(input.checked); changed(); }, { signal });
-    refreshers.push(() => { input.checked = get(); });
-    row.append(el('span', '', label), input);
-    return row;
-  }
-
-  function button(className, text, onClick) {
-    const node = el('button', className, text);
-    node.type = 'button';
-    node.addEventListener('click', onClick, { signal });
-    return node;
-  }
-
   ctx.studio = {
     open(then = null) {
       onDone = then;
       show(true);
     },
-    /** Marks a Style card as the one in use (the builder applies an occasion's look without a tap here). */
+    /** Marks a Look as the one in use (the builder applies an occasion's look without a tap here). */
     get style() { return currentPreset; },
     setStyle(name) {
       currentPreset = name;
@@ -375,29 +227,11 @@ export function create(ctx) {
   return {
     update() {},
     dispose() {
+      clearTimeout(wordsTimer);
       open.remove();
       sheet.remove();
       container.classList.remove('customizing');
       ctx.studio = null;
     },
   };
-}
-
-function section(title, body) {
-  const node = el('div', 'studio-section');
-  node.append(el('h3', '', title), body);
-  return node;
-}
-
-// A swatch: the palette's colours around a circle (linear RGB shown as sRGB).
-function gradient(colors) {
-  const css = colors.map((c) => `rgb(${c.map((v) => Math.round(255 * Math.min(1, v) ** (1 / 2.2))).join(' ')})`);
-  return `conic-gradient(${css.concat(css[0]).join(', ')})`;
-}
-
-function el(tag, className = '', text = '') {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
 }
