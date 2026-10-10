@@ -4,9 +4,8 @@
 //             and duller (air soaks up the highs), and each is panned to where it burst
 //   by type   crackle crackles (a wide swarm of sharp pops, sfx.js), glitter and willows hiss
 //             as they fall, double breaks boom twice, crossettes pop as they split, whirlwinds
-//             whistle, shapes and words are softer, eyes silent
-//   launches  a mortar thump from the barge, and now and then a whistle on the way up (a buzzy,
-//             breathy whistle that rises as it burns, sfx.js)
+//             whirr, shapes and words are softer, eyes silent
+//   launches  a mortar thump from the barge (no whistles: synthesised, they sounded fake)
 //   ground    fountains hiss while they burn, mines thump, candles pop, shooters whoosh,
 //             cauldrons bubble, lightning cracks and rolls
 //   the sea   waves washing in under everything
@@ -20,7 +19,7 @@
 // during the show; a voice cap bounds it, and every voice disconnects itself when done.
 
 import { makeNoiseSoon, noiseNow } from './noise.js';
-import { makeWhistleWave, swarm, whistle } from './sfx.js';
+import { swarm, whirr } from './sfx.js';
 
 const SPEED_OF_SOUND = 343;
 const MAX_VOICES = 32;
@@ -45,7 +44,6 @@ function fillBuffers(page) {
   page.white = buffer([n.white]);
   page.crackle = buffer([n.crackle]);
   page.swarm = buffer([n.swarm]);
-  page.whistleWave = makeWhistleWave(audio);
   page.room = buffer(n.room);
 }
 
@@ -54,7 +52,7 @@ function sharedAudio() {
   const Context = window.AudioContext || window.webkitAudioContext;
   if (!Context) return null;
   const audio = new Context();
-  shared = { audio, brown: null, white: null, crackle: null, swarm: null, whistleWave: null, room: null }; // filled by fillBuffers
+  shared = { audio, brown: null, white: null, crackle: null, swarm: null, room: null }; // filled by fillBuffers
   addEventListener('pagehide', () => audio.close(), { once: true });
   // A page that isn't on screen makes no sound: a tab left open in the background, a
   // phone locked or switched to another app. Without this the sea kept playing under
@@ -230,7 +228,7 @@ export function create(ctx) {
     });
   }
 
-  // A pitched tone that slides (thumps, whistles).
+  // A pitched tone that slides (thumps, ticks, the bell).
   function tone(when, { from, to, peak, attack = 0.004, decay, pan = 0, type = 'sine' }) {
     voice(when, attack + decay, pan, (add) => {
       const source = add(audio.createOscillator());
@@ -264,12 +262,11 @@ export function create(ctx) {
     } else if (HISSERS.has(type)) {
       noise(page.white, when + 0.15, { peak: 0.06 * loud, attack: 0.4, decay: 2.6, type: 'bandpass', from: 5200 * air + 800, q: 0.6, pan });
     } else if (type === 'whirl') {
-      // Whirlwinds whistle as they spin: a few whistles that rise and waver hard, spread across.
-      for (let k = 0; k < 4; k++) {
-        const from = 1300 + Math.random() * 700;
-        const at = when + 0.1 + k * 0.14;
-        voice(at, 1.3 + Math.random() * 0.6, pan + (k - 1.5) * 0.12, (add) => whistle(audio, add, page, at,
-          { from, to: from * (1.5 + Math.random() * 0.5), length: 1.3 + Math.random() * 0.5, peak: 0.04 * loud, air, waver: 0.035, flutter: 0.4 }));
+      // Whirlwinds whirr as they spin: two soft fizzes, panned apart.
+      for (const side of [-0.2, 0.2]) {
+        const at = when + 0.1 + Math.random() * 0.1;
+        const length = 1.8 + Math.random() * 0.5;
+        voice(at, length, pan + side, (add) => whirr(audio, add, page, at, { peak: 0.08 * loud, length, air }));
       }
     } else if (type === 'multibreak') {
       boom(when + 0.9, loud * 0.7, air, pan, 0.8);
@@ -320,13 +317,6 @@ export function create(ctx) {
   function launchSound(b, loud, air, pan, when) {
     tone(when, { from: 120, to: 55, peak: 0.35 * loud, decay: 0.35, pan });
     noise(page.white, when, { peak: 0.18 * loud * air, decay: 0.22, from: 900, to: 300, pan });
-    // About one shell in six whistles on the way up, burning out just before it breaks.
-    if (fract(Math.sin(b.time * 91.7) * 4371.3) < 0.17) {
-      const climb = Math.max(0.8, (b.time - b.launch) * 0.85);
-      const from = 850 + Math.random() * 450;
-      voice(when + 0.05, climb, pan, (add) => whistle(audio, add, page, when + 0.05,
-        { from, to: from * (2.6 + Math.random() * 0.9), length: climb, peak: 0.06 * loud, air }));
-    }
   }
 
   function groundSound(g, when, loud, air, pan) {
@@ -463,6 +453,3 @@ function latest(records, key, before) {
   return newest;
 }
 
-function fract(x) {
-  return x - Math.floor(x);
-}
