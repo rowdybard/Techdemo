@@ -311,7 +311,13 @@ function watch(page) {
     if (message.type() === 'error' || message.type() === 'warning') problems.push(`${message.type()}: ${message.text()}`);
   });
   page.on('pageerror', (error) => problems.push(`uncaught: ${error.message}`));
-  page.on('requestfailed', (request) => problems.push(`request failed: ${request.url()} (${request.failure()?.errorText})`));
+  page.on('requestfailed', (request) => {
+    const error = request.failure()?.errorText;
+    // The builder's price fetch is cancelled on purpose when a rebuild disposes it (its signal);
+    // on a slow machine a Shift+R can land while it's in flight. That's teardown, not a failure.
+    if (error === 'net::ERR_ABORTED' && new URL(request.url()).pathname === '/api/config') return;
+    problems.push(`request failed: ${request.url()} (${error})`);
+  });
   page.on('response', (response) => {
     if (response.status() >= 400) problems.push(`HTTP ${response.status()}: ${response.url()}`);
   });
