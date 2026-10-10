@@ -9,7 +9,8 @@
 - **Frozen lake:** village window edges are blurred by a pixel's width and merge into a glow under about two pixels (frame-to-frame light while turning, phone settings: 2.5% → 0.9%); the reeds are gone; the near right island moved earlier the same day.
 - **Performance:** spark pool lowest-first + draw-to-high (software-GL phone frame 621 → 315 ms, the pool drawing about 480 slots instead of 20,000 in a quiet moment); ice big cracks baked to a distance field (ice about 35% cheaper). Measured with `perfphone.mjs`-style scripts: noise is about ±20 ms a frame.
 - **Smoke:** every burst smokes (the ring used to run out at about a burst a second), laid along a sample of the burst's real stars (16 desktop, 7 phone, 3/2 puffs each), fresh trails thin streaks that swell (`smoke.glsl.js`). Owner: "looks really fake and doesn't come from all fireworks in their shape". Not yet seen by the owner.
-- **Looks:** cards say "Free" (and "✦ best with Deluxe" when 40% or more of the mix is paid shells); one line above: "Every look is free to send. ✦ Deluxe adds showpiece shells, side barges and a grand finale · $1.99 launch price". Free versions swap paid shells for free stand-ins.
+- **Looks:** cards say "Free" (and "✦ best with Deluxe" when half or more of the mix is paid shells); one line above: "Every look is free to send. ✦ Deluxe adds showpiece shells, side barges and a grand finale · $1.99 launch price". Free versions swap paid shells for free stand-ins.
+- **Words in the sky first in Customize** (owner: "it's the sell"), in a gold-edged box, and they carry into the send screen's Message line when it opens (the newest Customize words win; an edit made on the send screen stands until they change). The send screen keeps its other three lines (second line, their name, from).
 
 ## What it is
 

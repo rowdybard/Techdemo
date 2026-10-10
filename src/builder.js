@@ -16,6 +16,7 @@ export function create(ctx) {
   const draft = createDraft(config);
   const state = { occasion: DEFAULT_OCCASION, typed: false, paying: false, opened: false, view: 'closed', borrowed: null };
   let spellTimer = 0, playback = false, previewComplete = false, ready = false, ownWords = null;
+  let carried = ''; // the Customize words last carried into the message
   const offer = createOffer(signal, () => { if (ready) { refresh(); ctx.studio?.refresh(); } });
   const button = (className, text, action) => {
     const node = el('button', className, text); node.type = 'button';
@@ -124,6 +125,10 @@ export function create(ctx) {
   function openBuilder() {
     stopPlayback();
     if (!ownWords) ownWords = [config.look.text, config.look.mix.text];
+    // Words written in Customize are the greeting's message: the newest carry over, and an edit
+    // made here stands until they change again.
+    const sky = cleanText(ownWords[0] || '', MESSAGE_LIMIT).toUpperCase();
+    if (sky && sky !== carried && !isBlocked(sky)) { carried = sky; message.input.value = sky; state.typed = true; }
     if (!state.opened) {
       state.opened = true;
       if (!state.typed && !ctx.link.make) {

@@ -1,6 +1,6 @@
-// Customize: the friendly settings drawer. It leads with the Looks (looks.js), each a whole show
-// in one tap, then the place, the colours, three plain-language sliders (Pace, Size, Sparkle) and
-// the words in the sky. Everything else (the fireworks one by one, the ground show, sky and
+// Customize: the friendly settings drawer. It leads with the words in the sky (what people come
+// for), then the Looks (looks.js), each a whole show in one tap, the place, the colours and three
+// plain-language sliders (Pace, Size, Sparkle). Everything else (the fireworks one by one, the ground show, sky and
 // weather, extras, the lighthouse, the views) is folded under "More options" (studio-more.js). A
 // bottom sheet on phones, a card on the right on larger screens; the full developer panel (ui.js)
 // is behind "Advanced settings". Every change writes the config the modules read each frame, so
@@ -71,7 +71,7 @@ export function create(ctx) {
     colours.style.background = strip(palette);
     // Free to send, every one; a look that leans on paid shells says it's best with Deluxe.
     const tier = el('span', 'studio-card-tier', 'Free');
-    if (paidShare((PRESETS[look.preset].look || {}).mix) >= 0.4) tier.append(el('span', 'studio-card-plus', ' · ✦ best with Deluxe'));
+    if (paidShare((PRESETS[look.preset].look || {}).mix) >= 0.5) tier.append(el('span', 'studio-card-plus', ' · ✦ best with Deluxe'));
     card.append(el('span', 'studio-card-icon', look.icon), el('span', 'studio-card-name', look.label), el('span', 'studio-card-line', look.line), tier, colours);
     refreshers.push(() => { card.setAttribute('aria-pressed', String(currentPreset === look.preset)); });
     looks.append(card);
@@ -132,16 +132,16 @@ export function create(ctx) {
   const feel = el('div', 'studio-sliders');
   for (const def of FEEL) feel.append(slider(def));
 
-  // Words in the sky: spelled now and then, like any other shell. Empty is none. While a
-  // greeting is being made its message is what goes up, so the box steps aside then.
+  // Words in the sky, first in the drawer: spelled now and then, like any other shell. Empty is
+  // none. While a greeting is being made its message is what goes up, so the box steps aside then.
   const wordsRow = el('label', 'send-field builder-loud studio-words');
   const wordsInput = el('input');
   wordsInput.maxLength = MESSAGE_LIMIT;
-  wordsInput.placeholder = 'Empty: no words';
+  wordsInput.placeholder = 'Type a name or a message';
   wordsInput.autocomplete = 'off';
   wordsInput.enterKeyHint = 'done';
   const wordsNote = el('span', 'studio-words-note');
-  wordsRow.append(el('span', '', 'Words in the sky'), wordsInput, wordsNote);
+  wordsRow.append(el('span', 'studio-words-title', '✨ Words in the sky'), el('span', 'studio-words-hint', 'Spelled out in fireworks, and your greeting’s message when you send it.'), wordsInput, wordsNote);
   let wordsTimer = 0;
   wordsInput.addEventListener('input', () => {
     clearTimeout(wordsTimer);
@@ -190,8 +190,8 @@ export function create(ctx) {
     sendBar.hidden = candidate.hidden && sendShow.hidden;
   });
 
-  sheet.append(head, making, section('Looks', looks, 'studio-looks-section'), section('Place', places), lakeSection, section('Show width', width), section('Colours', swatches),
-    section('Feel', feel), wordsRow, more, sendBar);
+  sheet.append(head, wordsRow, making, section('Looks', looks, 'studio-looks-section'), section('Place', places), lakeSection, section('Show width', width), section('Colours', swatches),
+    section('Feel', feel), more, sendBar);
   container.append(open, sheet);
 
   // Opened from the greeting builder, Done goes back to it.

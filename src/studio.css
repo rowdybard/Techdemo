@@ -89,10 +89,13 @@
 .studio-send { width: 100%; padding: 14px; border: 0; border-radius: 999px; background: var(--spark); color: #1a1006; font: 700 16px var(--sans); cursor: pointer; box-shadow: 0 6px 22px rgb(255 180 92 / 0.3); }
 .studio-send small { display: block; margin-top: 1px; font: 500 11px var(--sans); opacity: 0.75; }
 .studio-send:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-/* Words in the sky (under the fireworks chips). */
-.studio-words { margin-top: 12px; }
+/* Words in the sky: first in the drawer, since they're what people come for. */
+.studio-words { margin: 4px 0 8px; padding: 12px; border: 1px solid rgb(255 180 92 / 0.45); border-radius: 12px; background: rgb(255 180 92 / 0.08); }
+.studio-words-title { color: var(--ink); font: 600 15px var(--sans); text-transform: none; }
+.studio-words-hint { margin-top: -2px; color: var(--muted); font-size: 12px; text-transform: none; }
 .studio-words[hidden] { display: none; }
-.studio-words-note { min-height: 1em; color: var(--muted); font-size: 12px; text-transform: none; }
+.studio-words-note { color: var(--muted); font-size: 12px; text-transform: none; }
+.studio-words-note:empty { display: none; }
 
 /* Panel visibility is explicit; hidden controls are absent from keyboard and layout. */
 #app :is(.studio, .builder, .builder-bar, .panel) [hidden],
