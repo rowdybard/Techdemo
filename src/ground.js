@@ -146,7 +146,7 @@ export function waterfall(pool, config, phone, start, tubes, y, z, palette, ligh
   // Hung from a line well above the deck, as real falls hang from a cable: a curtain a couple of
   // metres tall, poured from the deck edge, was too small to see across the water. A fuse races
   // along the line first and each strand pours once it's lit, which shows where the curtain hangs.
-  const top = y + config.fountains.height * 0.8;
+  const top = y + config.fountains.height; // where it hung before the deck-edge version
   const edge = z + 8.1; // the main hull is 16 m wide; hang just in front of it, clear of the hull
   const gravity = 9.81 * config.physics.gravity;
   const drag = 0.9;

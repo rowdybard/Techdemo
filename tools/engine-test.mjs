@@ -253,7 +253,7 @@ test('waterfall hangs from a line above the deck, lit by a running fuse, and die
     const shape = p.mesh.geometry.attributes.aShape.array;
     let count = 0, fuse = 0;
     const point = [0, 0, 0];
-    const top = 2.5 + height * 0.8;
+    const top = 2.5 + height;
     for (let i = 0; i < p.size; i++) {
       const offset = i * 4;
       if (birth[offset + 3] < -100) continue;
