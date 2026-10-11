@@ -7,6 +7,36 @@ import { load, restore } from './storage.js';
 
 const EMOJI = { halloween: '🎃', birthday: '🎂', love: '❤️', congrats: '🎉', thanks: '🙏', newyear: '🎆' };
 const setMeta = (value) => ({ element(element) { element.setAttribute('content', value); } });
+const PUBLIC_PAGES = new Set(['about', 'ideas', 'birthday-fireworks', 'love-you-fireworks', 'congratulations-fireworks',
+  'thank-you-fireworks', 'halloween-fireworks-ecard', 'new-years-eve-virtual-fireworks', 'name-in-fireworks',
+  'silent-fireworks', 'gift-for-someone-who-has-everything', 'find', 'terms', 'privacy']);
+
+// Only known page aliases redirect: an unknown .html path must keep its asset 404.
+export function canonicalPageRedirect(url) {
+  let path = url.pathname;
+  if (path === '/index.html') path = '/';
+  else if (path === '/autoshow/') path = '/autoshow';
+  else {
+    const slug = path.slice(1).replace(/(?:\.html|\/)$/, '');
+    if (PUBLIC_PAGES.has(slug)) path = `/${slug}`;
+  }
+  if (path === url.pathname) return null;
+  const target = new URL(url);
+  target.pathname = path; // preserve the complete query, including greeting and checkout parameters
+  const headers = new Headers({ location: target.href });
+  if (path === '/' && (url.searchParams.has('g') || url.searchParams.has('msg'))) {
+    headers.set('x-robots-tag', 'noindex, nofollow');
+    headers.set('cache-control', 'no-store');
+  }
+  return new Response(null, { status: 301, headers });
+}
+
+/** HEAD has the page's GET status and headers, with no response body. */
+export async function pageHead(response, request) {
+  if (request.method !== 'HEAD') return response;
+  await response.body?.cancel();
+  return new Response(null, response);
+}
 
 // Conditional asset requests must not return an old 304 body containing an expired offer.
 export function pageRequest(request, url = request.url) {

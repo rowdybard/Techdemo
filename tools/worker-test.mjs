@@ -19,6 +19,88 @@ const create = async (ip, look = paidLook) => {
   const session = [...app.state.sessions.values()].at(-1);
   return { payload, session, id: session.client_reference_id };
 };
+const page = (path, method = 'GET') => app.mf.dispatchFetch(`https://skygreeting.com${path}`, { method, redirect: 'manual' });
+
+test('known HTML and slash aliases redirect to one canonical URL without losing query parameters', async () => {
+  const slugs = ['about', 'ideas', 'birthday-fireworks', 'love-you-fireworks', 'congratulations-fireworks',
+    'thank-you-fireworks', 'halloween-fireworks-ecard', 'new-years-eve-virtual-fireworks', 'name-in-fireworks',
+    'silent-fireworks', 'gift-for-someone-who-has-everything', 'find', 'terms', 'privacy'];
+  const aliases = [['/index.html', '/'], ['/autoshow/', '/autoshow'],
+    ...slugs.flatMap((slug) => [[`/${slug}.html`, `/${slug}`], [`/${slug}/`, `/${slug}`]])];
+  const query = '?make=birthday&text=FOR%20YOU&keep=a+b&keep=c%2Bd';
+  const calls = app.state.assetCalls.length;
+  for (const method of ['GET', 'HEAD']) for (const [alias, canonical] of aliases) {
+    const response = await page(alias + query, method);
+    assert.equal(response.status, 301, `${method} ${alias}`);
+    assert.equal(response.headers.get('location'), `https://skygreeting.com${canonical}${query}`);
+    assert.equal(await response.text(), '');
+  }
+  assert.equal(app.state.assetCalls.length, calls, 'aliases do not fetch or rewrite the wrong asset');
+  for (const slug of slugs) assert.equal((await page(`/${slug}`)).status, 200);
+});
+
+test('private greeting aliases and GET/HEAD responses keep noindex, no-store and the saved preview', async () => {
+  await app.kv.put('g:SeoPriv1', JSON.stringify({ ...words, look: paidLook, deluxe: true, status: 'paid' }));
+  const query = '?g=SeoPriv1&sent=1&return=a%2Bb';
+  for (const method of ['GET', 'HEAD']) {
+    const redirect = await page(`/index.html${query}`, method);
+    assert.equal(redirect.status, 301);
+    assert.equal(redirect.headers.get('location'), `https://skygreeting.com/${query}`);
+    assert.equal(redirect.headers.get('x-robots-tag'), 'noindex, nofollow');
+    assert.equal(redirect.headers.get('cache-control'), 'no-store');
+    for (const suffix of [query, '?msg=HAPPY%20BIRTHDAY&from=Alex', '?g=invalid', '?g=']) {
+      const response = await page(`/${suffix}`, method);
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow');
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      const html = await response.text();
+      if (method === 'HEAD') assert.equal(html, '');
+      else if (suffix === query) {
+        assert.match(html, /Alex made you a SkyGreeting/);
+        assert.match(html, /name="sg-place" content="lake"/);
+      }
+    }
+  }
+  const searches = app.state.searchCalls;
+  await page('/?g=invalid', 'HEAD');
+  await page('/index.html?g=invalid');
+  assert.equal(app.state.searchCalls, searches, 'invalid IDs and redirects never search Stripe');
+});
+
+test('HEAD matches public page GET headers and dynamic autoshow status without a body', async () => {
+  app.state.assetResponses.set('/autoshow', { status: 404, body: 'Not a static asset' });
+  try {
+    for (const path of ['/', '/about', '/birthday-fireworks', '/autoshow']) {
+      const get = await page(path);
+      const head = await page(path, 'HEAD');
+      assert.equal(get.status, 200); assert.equal(head.status, get.status);
+      for (const header of ['content-type', 'cache-control', 'cdn-cache-control', 'x-robots-tag', 'etag']) {
+        assert.equal(head.headers.get(header), get.headers.get(header), `${path} ${header}`);
+      }
+      assert.equal(await head.text(), '');
+      const html = await get.text();
+      if (path === '/autoshow') {
+        assert.match(html, /<title>SkyGreeting Autoshow:/);
+        assert.match(html, /rel="canonical" href="https:\/\/skygreeting.com\/autoshow"/);
+      }
+    }
+  } finally { app.state.assetResponses.delete('/autoshow'); }
+});
+
+test('unknown paths keep asset 404s and are not redirected to invented pages', async () => {
+  const paths = ['/missing-seo-page', '/missing-seo-page.html', '/missing-seo-page/', '/src/missing.js', '/autoshow.html'];
+  for (const path of paths) app.state.assetResponses.set(path, {
+    status: 404, body: 'Asset not found', headers: { 'content-type': 'text/plain', 'cache-control': 'no-cache' },
+  });
+  try {
+    for (const method of ['GET', 'HEAD']) for (const path of paths) {
+      const response = await page(path, method);
+      assert.equal(response.status, 404); assert.equal(response.headers.get('location'), null);
+      assert.equal(response.headers.get('cache-control'), 'no-cache');
+      assert.equal(await response.text(), method === 'HEAD' ? '' : 'Asset not found');
+    }
+  } finally { for (const path of paths) app.state.assetResponses.delete(path); }
+});
 
 test('launch offer is inactive without a valid UTC start and has an exact half-open 30-day interval', () => {
   const start = Date.parse('2026-10-09T00:00:00Z');
@@ -183,12 +265,12 @@ test('HTML price markers and JSON-LD share the offer; conditional cached prices 
 test('active and expired launch HTML never retain an expired schema price or launch label', async () => {
   const launch = await runtime({ DELUXE_LAUNCH_START_UTC: new Date(Date.now() - 86400000).toISOString() });
   try {
-    let html = await (await launch.call('/birthday-fireworks/')).text();
+    let html = await (await launch.call('/birthday-fireworks')).text();
     assert.match(html, /data-sg-price>\$1\.99/); assert.match(html, /Launch offer ends/);
     assert.match(html, /"price":"1.99"/); assert.match(html, /"priceValidUntil":/);
     await launch.mf.setOptions(convertV4MiniflareOptions({ ...launch.options,
       bindings: { ...launch.options.bindings, DELUXE_LAUNCH_START_UTC: new Date(Date.now() - LAUNCH_DURATION_MS).toISOString() } }));
-    html = await (await launch.call('/birthday-fireworks/')).text();
+    html = await (await launch.call('/birthday-fireworks')).text();
     assert.match(html, /data-sg-price>\$4\.99/); assert.ok(!html.includes('Launch offer ends'));
     assert.ok(!html.includes('"price":"1.99"')); assert.ok(!html.includes('priceValidUntil'));
   } finally { await launch.mf.dispose(); }

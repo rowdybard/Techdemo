@@ -7,7 +7,7 @@ footer, and writes <slug>.html at the repo root (the build command copies *.html
 wrangler.jsonc). Edit the fragments, never the generated pages. Then run `npm run check`, which
 verifies every page (titles, descriptions, links, pictures, sitemap).
 
-Keys: title (the <title>, about 60 characters), description (about 150), h1, lead, image (a file in
+Keys: title (a clear, descriptive <title>), description (a useful summary), h1, lead, image (a file in
 src/og/), alt, crumb (the breadcrumb's last step), occasion (what the button opens the builder on),
 text (optional words it starts with), cta (the button), card + blurb (how other pages list it).
 The hub (ideas) lists the pages in ORDER and has `type: hub` and a {{cards}} marker in its body.
@@ -25,12 +25,23 @@ from urllib.parse import quote
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE = os.path.join(ROOT, 'tools', 'ideas')
 SITE = 'https://skygreeting.com'
-# The order pages are listed in, on the hub and under "More ideas".
+# The hub lists every page; landing pages suggest just a few relevant next steps.
 ORDER = [
     'birthday-fireworks', 'love-you-fireworks', 'congratulations-fireworks', 'thank-you-fireworks',
     'halloween-fireworks-ecard', 'new-years-eve-virtual-fireworks', 'name-in-fireworks',
     'silent-fireworks', 'gift-for-someone-who-has-everything',
 ]
+RELATED = {
+    'birthday-fireworks': ['name-in-fireworks', 'gift-for-someone-who-has-everything', 'love-you-fireworks'],
+    'love-you-fireworks': ['name-in-fireworks', 'birthday-fireworks', 'gift-for-someone-who-has-everything'],
+    'congratulations-fireworks': ['name-in-fireworks', 'thank-you-fireworks', 'birthday-fireworks'],
+    'thank-you-fireworks': ['name-in-fireworks', 'congratulations-fireworks'],
+    'halloween-fireworks-ecard': ['name-in-fireworks', 'birthday-fireworks'],
+    'new-years-eve-virtual-fireworks': ['name-in-fireworks', 'love-you-fireworks', 'silent-fireworks'],
+    'name-in-fireworks': ['birthday-fireworks', 'love-you-fireworks', 'congratulations-fireworks'],
+    'silent-fireworks': ['love-you-fireworks', 'new-years-eve-virtual-fireworks'],
+    'gift-for-someone-who-has-everything': ['birthday-fireworks', 'love-you-fireworks', 'name-in-fireworks'],
+}
 REQUIRED = ['title', 'description', 'h1', 'lead', 'image', 'alt', 'crumb', 'occasion', 'cta', 'card', 'blurb']
 
 
@@ -44,7 +55,7 @@ def read(slug):
         if line.strip():
             key, _, value = line.partition(':')
             meta[key.strip()] = value.strip()
-    missing = [key for key in REQUIRED if key not in meta]
+    missing = [key for key in REQUIRED if not meta.get(key)]
     if missing:
         sys.exit(f'{slug}: missing {", ".join(missing)}')
     meta['slug'] = slug
@@ -70,7 +81,7 @@ def cards(pages):
     return f'<ul class="cards">{items}</ul>'
 
 
-def page_html(page, pages, hub):
+def page_html(page, pages):
     url = f'{SITE}/{page["slug"]}'
     image = f'{SITE}/src/og/{page["image"]}'
     is_hub = page.get('type') == 'hub'
@@ -84,13 +95,14 @@ def page_html(page, pages, hub):
         '@type': 'BreadcrumbList',
         'itemListElement': [{'@type': 'ListItem', 'position': i + 1, 'name': name, 'item': item} for i, (name, item, _) in enumerate(crumbs)],
     }
-    trail = ' › '.join(f'<a href="{href}">{esc(name)}</a>' if href else esc(name) for name, _, href in crumbs)
-    others = [p for p in pages if p['slug'] != page['slug'] and p.get('type') != 'hub']
-    body = page['body'].replace('{{cards}}', cards(others if is_hub else pages_without_hub(pages)))
+    trail = ' › '.join(f'<a href="{href}">{esc(name)}</a>' if href else f'<span aria-current="page">{esc(name)}</span>' for name, _, href in crumbs)
+    body = page['body'].replace('{{cards}}', cards(pages))
     more = ''
     if not is_hub:
-        more = f'<h2>More fireworks ideas</h2>{cards(others)}<p><a href="/ideas">All the ideas →</a></p>'
-    cta = f'<p class="actions"><a class="cta" href="{esc(make_link(page))}">{esc(page["cta"])}</a><a class="ghost" href="/autoshow">Watch a live show</a></p>'
+        by_slug = {p['slug']: p for p in pages}
+        related = [by_slug[slug] for slug in RELATED[page['slug']]]
+        more = f'<section class="related" aria-labelledby="related-title"><h2 id="related-title">More greeting ideas</h2>{cards(related)}<p><a href="/ideas">All the ideas →</a></p></section>'
+    cta = f'<p class="actions"><a class="cta" data-sg-make href="{esc(make_link(page))}">{esc(page["cta"])}</a></p>'
     return f'''<!doctype html>
 <html lang="en">
 <head>
@@ -118,6 +130,8 @@ def page_html(page, pages, hub):
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#161e38">
 <link rel="stylesheet" href="/src/pages.css">
+<link rel="modulepreload" href="/src/analytics.js">
+<script type="module" src="/src/analytics.js"></script>
 <script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>
 </head>
 <body>
@@ -125,8 +139,9 @@ def page_html(page, pages, hub):
 <nav class="crumbs" aria-label="Breadcrumb">{trail}</nav>
 <h1>{esc(page["h1"])}</h1>
 <p class="lead">{esc(page["lead"])}</p>
-<figure class="hero"><img src="/src/og/{page["image"]}" width="1200" height="630" alt="{esc(page["alt"])}" fetchpriority="high"></figure>
 {cta}
+<p class="offer">Free greeting, or Deluxe for <span data-sg-price>$4.99</span> once per greeting. <a href="/about#pricing">What’s included</a></p>
+<figure class="hero"><img src="/src/og/{page["image"]}" width="1200" height="630" alt="{esc(page["alt"])}" fetchpriority="high"></figure>
 {body}
 {cta if not is_hub else ""}
 {more}
@@ -140,10 +155,6 @@ def page_html(page, pages, hub):
 '''
 
 
-def pages_without_hub(pages):
-    return [p for p in pages if p.get('type') != 'hub']
-
-
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else ROOT
     pages = [read(slug) for slug in ORDER]
@@ -151,7 +162,7 @@ def main():
     everything = pages + [hub]
     for page in everything:
         out = os.path.join(target, page['slug'] + '.html')
-        content = page_html(page, pages, hub)
+        content = page_html(page, pages)
         with open(out, 'w', encoding='utf-8', newline='\n') as handle:
             handle.write(content)
         print(f'wrote {page["slug"]}.html  ({len(content):,} bytes)')

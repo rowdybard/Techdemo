@@ -1,13 +1,14 @@
 // The ideas pages (made by tools/make-ideas.py from tools/ideas/): checks everything that could
-// quietly rot. Pages match their fragments, titles and descriptions are the right length and
-// unique, every internal link and picture exists, every "make" button names a real occasion,
-// the sky examples fit the real limits and say how many characters they are correctly, any price
+// quietly rot. Pages match their fragments, titles and descriptions are useful and unique,
+// breadcrumbs describe the real hierarchy, links and pictures exist, and each main CTA opens
+// the intended occasion. Length and word-count quotas cannot establish a page's usefulness.
+// The sky examples fit the real limits and say how many characters they are correctly, any price
 // matches the product's, and every page is in the sitemap and linked from the hub.
 // Prints counts only. Run by `npm run check`; on its own: node tools/pages-test.mjs
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -15,12 +16,22 @@ const SITE = 'https://skygreeting.com';
 const problems = [];
 const fail = (page, message) => problems.push(`${page}: ${message}`);
 const read = (path) => readFileSync(join(ROOT, path), 'utf8');
+const decode = (text) => text.replace(/&#(x[0-9a-f]+|\d+);/gi, (_, code) => String.fromCodePoint(code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code)))
+  .replace(/&quot;/g, '"').replace(/&apos;|&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const plain = (html) => decode(html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+const key = (text) => text.replace(/\s+/g, ' ').trim().toLowerCase();
+const meaningful = (text) => /[\p{L}\p{N}]/u.test(text.replace(/SkyGreeting/gi, ''));
+const attr = (attributes, name) => new RegExp(`(?:^|\\s)${name}(?:="([^"]*)")?(?=\\s|$)`).exec(attributes)?.[1];
+const anchors = (html) => [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)].map(([, attributes, label]) => ({
+  href: decode(attr(attributes, 'href') || ''), label: plain(label), attributes,
+}));
 
 // What the product itself says: limits, price, occasions, the filter.
 const link = read('src/link.js');
 const MESSAGE_LIMIT = Number(/MESSAGE_LIMIT = (\d+)/.exec(link)[1]);
 const NAME_LIMIT = Number(/NAME_LIMIT = (\d+)/.exec(link)[1]);
-const PRICE = /PRICE = '(\$[\d.]+)'/.exec(read('src/occasions.js'))[1];
+const { REGULAR_PRICE_CENTS } = await import(pathToFileURL(join(ROOT, 'worker/pricing.js')));
+const PRICE = `$${(REGULAR_PRICE_CENTS / 100).toFixed(2)}`;
 const OCCASIONS = new Set([...read('src/occasions.js').matchAll(/^  (\w+): \{$/gm)].map((m) => m[1]));
 const { isBlocked } = await import(pathToFileURL(join(ROOT, 'src/moderate.js')));
 
@@ -30,7 +41,9 @@ const made = spawnSync(process.env.PYTHON || 'python3', [join(ROOT, 'tools/make-
 if (made.status !== 0) fail('make-ideas.py', made.stderr || made.stdout || `${made.error?.message}. Set PYTHON to your Python executable.`);
 
 const pages = readdirSync(ROOT).filter((f) => f.endsWith('.html') && read(f).includes('Made by tools/make-ideas.py'));
-if (pages.length < 10) fail('pages', `expected at least 10 generated pages, found ${pages.length}`);
+const fragments = readdirSync(join(ROOT, 'tools/ideas')).filter((file) => file.endsWith('.html'));
+for (const file of fragments) if (!pages.includes(file)) fail(file, 'has a fragment but no generated page');
+for (const file of pages) if (!fragments.includes(file)) fail(file, 'has a generated page but no source fragment');
 const slugs = new Set(pages.map((f) => f.replace(/\.html$/, '')));
 const sitemap = read('sitemap.xml');
 const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
@@ -45,53 +58,96 @@ for (const file of pages) {
   const slug = file.replace(/\.html$/, '');
   const source = read(file);
   const tag = (re) => (re.exec(source) || [])[1];
-  const decode = (text) => text.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  const fragment = fragments.includes(file) ? read(`tools/ideas/${file}`) : '';
+  const metadata = Object.fromEntries((/^\s*<!--([\s\S]*?)-->/.exec(fragment)?.[1] || '').split(/\r?\n/)
+    .map((line) => /^([^:]+):\s*(.*)$/.exec(line)).filter(Boolean).map(([, name, value]) => [name.trim(), value.trim()]));
 
-  if (existsSync(join(fresh, file)) && readFileSync(join(fresh, file), 'utf8').replace(/\r\n/g, '\n') !== source.replace(/\r\n/g, '\n')) fail(file, 'is out of date; run python3 tools/make-ideas.py and commit the result');
+  if (!existsSync(join(fresh, file))) fail(file, 'was not produced by the page generator');
+  else if (readFileSync(join(fresh, file), 'utf8').replace(/\r\n/g, '\n') !== source.replace(/\r\n/g, '\n')) fail(file, 'is out of date; run python3 tools/make-ideas.py and commit the result');
 
   // Head.
   const title = decode(tag(/<title>([^<]*)<\/title>/) || '');
   const description = decode(tag(/<meta name="description" content="([^"]*)"/) || '');
-  if (title.length < 25 || title.length > 62) fail(file, `title is ${title.length} characters (want 25 to 62)`);
-  if (description.length < 100 || description.length > 165) fail(file, `description is ${description.length} characters (want 100 to 165)`);
-  if (titles.has(title)) fail(file, `same title as ${titles.get(title)}`);
-  if (descriptions.has(description)) fail(file, `same description as ${descriptions.get(description)}`);
-  titles.set(title, file);
-  descriptions.set(description, file);
+  if (!meaningful(title)) fail(file, 'needs a descriptive page title');
+  if (!meaningful(description)) fail(file, 'needs a useful page description');
+  if (titles.has(key(title))) fail(file, `same title as ${titles.get(key(title))}`);
+  if (descriptions.has(key(description))) fail(file, `same description as ${descriptions.get(key(description))}`);
+  titles.set(key(title), file);
+  descriptions.set(key(description), file);
   for (const [name, expected] of [['canonical', `${SITE}/${slug}`], ['og:url', `${SITE}/${slug}`]]) {
-    const found = name === 'canonical' ? tag(/<link rel="canonical" href="([^"]*)"/) : tag(/<meta property="og:url" content="([^"]*)"/);
-    if (found !== expected) fail(file, `${name} is ${found}, want ${expected}`);
+    const matches = [...source.matchAll(name === 'canonical' ? /<link rel="canonical" href="([^"]*)"/g : /<meta property="og:url" content="([^"]*)"/g)];
+    if (matches.length !== 1 || matches[0][1] !== expected) fail(file, `needs one ${name} pointing to ${expected}`);
   }
   if (/noindex/i.test(source)) fail(file, 'is marked noindex');
   if ((source.match(/<h1[ >]/g) || []).length !== 1) fail(file, 'needs exactly one <h1>');
+  const expectedCrumbs = [{ name: 'SkyGreeting', item: `${SITE}/` }, { name: 'Ideas', item: `${SITE}/ideas` }];
+  if (slug !== 'ideas') expectedCrumbs.push({ name: metadata.crumb, item: `${SITE}/${slug}` });
   try {
-    JSON.parse(tag(/<script type="application\/ld\+json">([^<]*)<\/script>/));
+    const breadcrumb = JSON.parse(tag(/<script type="application\/ld\+json">([^<]*)<\/script>/));
+    const expected = expectedCrumbs.map((crumb, i) => ({ '@type': 'ListItem', position: i + 1, ...crumb }));
+    const items = breadcrumb.itemListElement;
+    if (breadcrumb['@context'] !== 'https://schema.org' || breadcrumb['@type'] !== 'BreadcrumbList' ||
+      !Array.isArray(items) || items.length !== expected.length || expected.some((crumb, i) =>
+        Object.keys(crumb).some((name) => items[i]?.[name] !== crumb[name]))) fail(file, 'breadcrumb structured data does not describe its real page hierarchy');
   } catch {
     fail(file, 'its structured data (JSON-LD) does not parse');
   }
+  const trail = tag(/<nav class="crumbs" aria-label="Breadcrumb">([\s\S]*?)<\/nav>/) || '';
+  const visibleCrumbs = anchors(trail);
+  const parents = expectedCrumbs.slice(0, -1);
+  if (visibleCrumbs.length !== parents.length || parents.some((crumb, i) =>
+    visibleCrumbs[i]?.href !== new URL(crumb.item).pathname || visibleCrumbs[i]?.label !== crumb.name)) fail(file, 'visible breadcrumb links differ from the structured hierarchy');
+  const current = /<span aria-current="page">([^<]*)<\/span>/.exec(trail)?.[1];
+  if (decode(current || '') !== expectedCrumbs.at(-1).name) fail(file, 'breadcrumb must mark the current page by its own name');
+
+  // One clear action per row, pointing at this page's intended greeting rather than a competing show.
+  const actions = [...source.matchAll(/<p class="actions">([\s\S]*?)<\/p>/g)];
+  if (!actions.length) fail(file, 'has no main greeting action');
+  for (const [, row] of actions) {
+    const buttons = anchors(row);
+    if (buttons.length !== 1) { fail(file, 'each action row needs one main greeting link'); continue; }
+    const button = buttons[0];
+    let url;
+    try { url = new URL(button.href, SITE); } catch { fail(file, 'main CTA has an invalid URL'); continue; }
+    if (url.origin !== SITE || url.pathname !== '/' || url.searchParams.get('make') !== metadata.occasion ||
+      (url.searchParams.get('text') || '') !== (metadata.text || '') || !OCCASIONS.has(metadata.occasion)) fail(file, 'main CTA does not open its intended greeting and message');
+    if (button.label !== metadata.cta || !button.label) fail(file, 'main CTA has no matching descriptive label');
+    if (!/\bdata-sg-make(?:\s|$)/.test(button.attributes)) fail(file, 'main CTA lacks the public conversion-event marker');
+  }
+  if (!source.includes('<link rel="modulepreload" href="/src/analytics.js">') ||
+    !source.includes('<script type="module" src="/src/analytics.js"></script>')) fail(file, 'must load the shared privacy-conscious page analytics');
+
+  const cardSection = slug === 'ideas' ? source : tag(/<section class="related"[^>]*>([\s\S]*?)<\/section>/) || '';
+  const cardLists = [...cardSection.matchAll(/<ul class="cards">([\s\S]*?)<\/ul>/g)];
+  const related = cardLists.flatMap(([, list]) => anchors(list).map((a) => a.href));
+  const expectedPages = [...slugs].filter((item) => item !== 'ideas');
+  if (slug === 'ideas') {
+    if (related.length !== expectedPages.length || expectedPages.some((item) => !related.includes(`/${item}`))) fail(file, 'hub cards must list each landing page exactly once');
+  } else if (related.length < 2 || related.length > 3 || new Set(related).size !== related.length ||
+    related.some((href) => href === `/${slug}` || !expectedPages.some((item) => href === `/${item}`))) fail(file, 'needs two or three distinct related landing pages, excluding itself');
 
   // Picture: exists, sized (no layout shift), described.
   const image = /<img src="([^"]*)" width="(\d+)" height="(\d+)" alt="([^"]*)"/.exec(source);
   if (!image) fail(file, 'the picture needs src, width, height and alt');
   else {
     if (!existsSync(join(ROOT, image[1].slice(1)))) fail(file, `picture ${image[1]} is missing`);
-    if (image[4].length < 15) fail(file, 'the picture\'s alt text is too short');
+    if (!meaningful(decode(image[4]))) fail(file, 'the picture needs descriptive alt text');
   }
   const ogImage = tag(/<meta property="og:image" content="([^"]*)"/);
   if (!ogImage || !existsSync(join(ROOT, ogImage.replace(SITE + '/', '')))) fail(file, `og:image ${ogImage} is missing`);
 
-  // Enough words to be worth a page.
+  // Content quality is reviewed by a person; detect placeholders, not an arbitrary word quota.
   const text = decode(source.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<[^>]+>/g, ' '));
-  const words = text.split(/\s+/).filter(Boolean).length;
-  const wanted = slug === 'ideas' ? 250 : 420;
-  if (words < wanted) fail(file, `only ${words} words (want ${wanted}+)`);
   if (/TODO|lorem|undefined|\{\{/i.test(text)) fail(file, 'has placeholder text');
 
   // Links.
-  for (const [, href] of source.matchAll(/(?:href|src)="([^"]*)"/g)) {
-    if (/^(https?:|mailto:|#)/.test(href)) continue;
+  for (const [, encoded] of source.matchAll(/(?:href|src)="([^"]*)"/g)) {
+    const href = decode(encoded);
+    if (/^(mailto:|#)/.test(href)) continue;
+    let url;
+    try { url = new URL(href, SITE); } catch { fail(file, `invalid URL ${href}`); continue; }
+    if (url.origin !== SITE) continue;
     links++;
-    const url = new URL(href, SITE);
     const path = url.pathname;
     if (path === '/' && url.searchParams.has('make')) {
       const make = url.searchParams.get('make');
@@ -108,7 +164,11 @@ for (const file of pages) {
   if (slug !== 'ideas' && !source.includes('href="/ideas"')) fail(file, 'does not link to the hub');
 
   // Anything with a price in it must be the product's price; limits must be the product's too.
-  for (const [, price] of text.matchAll(/(\$\d+(?:\.\d\d)?)/g)) if (price !== PRICE) fail(file, `mentions ${price}, but the price is ${PRICE}`);
+  const prices = [...text.matchAll(/(\$\d+(?:\.\d\d)?)/g)].map((match) => match[1]).filter((price) => Number(price.slice(1)) !== 0);
+  for (const price of prices) if (price !== PRICE) fail(file, `mentions ${price}, but the regular price is ${PRICE}`);
+  const livePrices = [...source.matchAll(/<span\b[^>]*\bdata-sg-(?:price|regular-price)\b[^>]*>\s*(\$\d+(?:\.\d\d)?)\s*<\/span>/g)];
+  if (livePrices.length !== prices.length) fail(file, 'paid prices must keep the live offer markers');
+  if (prices.length && !/\bdata-sg-promotion\b/.test(source)) fail(file, 'paid pricing needs the live promotion explanation marker');
   for (const [, count] of text.matchAll(/\b(\d+) characters/g)) if (![MESSAGE_LIMIT, NAME_LIMIT].includes(Number(count))) fail(file, `says "${count} characters", but the limits are ${MESSAGE_LIMIT} and ${NAME_LIMIT}`);
 
   // The words shown in the sky: fit, and "Seventeen characters" means seventeen.
@@ -137,6 +197,9 @@ for (const slug of slugs) if (slug !== 'ideas' && !hub.includes(`href="/${slug}"
 if (!read('index.html').includes('href="/ideas"')) fail('index.html', 'has no link to /ideas');
 if (!read('about.html').includes('href="/ideas"')) fail('about.html', 'has no link to /ideas');
 if (!read('wrangler.jsonc').includes('*.html')) fail('wrangler.jsonc', 'the build command must copy *.html, or new pages never go live');
+
+// This path was created above; only remove our own immediate child of the temporary directory.
+if (dirname(resolve(fresh)) === resolve(tmpdir()) && basename(fresh).startsWith('ideas-')) rmSync(fresh, { recursive: true, force: true });
 
 if (problems.length) {
   console.error(`FAIL: ${problems.length} problem(s) with the ideas pages:\n  ${problems.join('\n  ')}`);

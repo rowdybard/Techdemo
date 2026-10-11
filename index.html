@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SkyGreeting: send a fireworks show with their name in the sky</title>
-<meta name="description" content="Make a fireworks show with your own words in the sky and send it to someone as a link. Birthdays, love, congratulations, thank-yous and Halloween. Free to make and send.">
+<title>Personalized Fireworks Greetings | SkyGreeting</title>
+<meta name="description" content="Put their name and your message in a fireworks show. Make a birthday card, say thank you or send your love. Preview it free, then share a greeting link.">
 <link rel="canonical" href="https://skygreeting.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SkyGreeting">
-<meta property="og:title" content="SkyGreeting">
-<meta property="og:description" content="Make a fireworks show with your own words in the sky and send it to someone as a link. Birthdays, love, congratulations, thank-yous and Halloween. Free to make and send.">
+<meta property="og:title" content="Personalized Fireworks Greetings | SkyGreeting">
+<meta property="og:description" content="Put their name and your message in a fireworks show. Make a birthday card, say thank you or send your love. Preview it free, then share a greeting link.">
 <meta property="og:image" content="https://skygreeting.com/src/og/birthday.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://skygreeting.com/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="SkyGreeting">
-<meta name="twitter:description" content="Make a fireworks show with your own words in the sky and send it to someone as a link. Birthdays, love, congratulations, thank-yous and Halloween. Free to make and send.">
+<meta name="twitter:title" content="Personalized Fireworks Greetings | SkyGreeting">
+<meta name="twitter:description" content="Put their name and your message in a fireworks show. Make a birthday card, say thank you or send your love. Preview it free, then share a greeting link.">
 <meta name="twitter:image" content="https://skygreeting.com/src/og/birthday.jpg">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -41,42 +41,8 @@
   ]
 }
 </script>
-<script>
-  // Google Analytics (GA4): how many people visit and how they found the site. It's told
-  // the page and what kind of visit it is, never the link's words, names or private id.
-  // Not on a client's embed (their visitors, their site). No ads or Google signals. In the
-  // EU, UK, EEA and Switzerland it runs without cookies. Its script loads after the first
-  // frame, so it never slows the show down.
-  window.dataLayer = window.dataLayer || [];
-  function gtag() { dataLayer.push(arguments); }
-  (function () {
-    var query = new URLSearchParams(location.search);
-    if (query.get('embed') === '1') return;
-    gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted' });
-    gtag('consent', 'default', { analytics_storage: 'denied', region: ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'] });
-    var view = query.get('g') || query.get('msg') ? 'greeting' : query.get('hero') === '1' ? 'hero' : '';
-    gtag('js', new Date());
-    gtag('config', 'G-BTBT8MCNPJ', {
-      page_referrer: document.referrer ? new URL(document.referrer).origin + new URL(document.referrer).pathname : '',
-      page_location: location.origin + location.pathname + (view ? '?view=' + view : ''),
-      // The worker puts the sender's name in a greeting's title, so Analytics gets a plain one.
-      page_title: view === 'greeting' ? 'SkyGreeting greeting' : document.title,
-      allow_google_signals: false,
-      allow_ad_personalization_signals: false,
-    });
-    var loaded = false;
-    function load() {
-      if (loaded) return;
-      loaded = true;
-      var script = document.createElement('script');
-      script.async = true;
-      script.src = 'https://www.googletagmanager.com/gtag/js?id=G-BTBT8MCNPJ';
-      document.head.appendChild(script);
-    }
-    addEventListener('scene-ready', load, { once: true });
-    setTimeout(load, 6000); // a slow device still counts
-  })();
-</script>
+<link rel="modulepreload" href="./src/analytics.js">
+<script type="module" src="./src/analytics.js"></script>
 <style>
   /* One full-bleed dusk scene. The page keeps this dark look whatever the viewer's theme. */
   :root {
@@ -269,7 +235,7 @@
     .loader-sky .spark { opacity: 0.8; transform: rotate(var(--a)) translateY(-34px); }
   }
   .site-links[hidden] { display: none; }
-  .site-links { position: absolute; z-index: 1; top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); display: flex; gap: 10px; font: 12px var(--sans); }
+  .site-links { position: absolute; z-index: 1; top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); display: flex; flex-wrap: wrap; gap: 8px 10px; max-width: calc(100% - 28px); font: 12px var(--sans); }
   .site-links a { color: var(--ink); opacity: 0.6; text-decoration: none; text-shadow: 0 1px 6px rgb(0 0 0 / 0.6); }
   .site-links a:hover, .site-links a:focus-visible { opacity: 1; text-decoration: underline; }
   #app:is(.gift-mode, .building, .customizing, .hero-mode, .embed-mode, .recording) ~ .site-links { display: none; }
@@ -399,7 +365,6 @@
 </head>
 <body>
 <h1 class="sr-only">SkyGreeting: send a fireworks show with their name in the sky</h1>
-<p class="sr-only">Sky Greeting lets you design a fireworks show over a beach at night or a frozen lake at midnight, write your own words to spell out in the sky, and send it to someone as a link that plays in their browser. The Free version costs $0. A full Deluxe show costs <span data-sg-price>$4.99</span> <span data-sg-promotion></span> and includes Deluxe effects, side-barge fountains, a grand finale, a gift-wrapped opening, your name signed in the sky and your initials in a heart. Contact: hello@skygreeting.com.</p>
 <div id="app"></div>
 <nav class="site-links" aria-label="About SkyGreeting"><a href="/about">About &amp; pricing</a><a href="/ideas">Ideas</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/find">Lost a link?</a></nav>
 <div class="loader" id="loader" role="status" aria-live="polite">

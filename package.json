@@ -6,7 +6,7 @@
   "scripts": {
     "check": "node tools/filter-test.mjs && node tools/pages-test.mjs && npm run check:contracts && node tools/worker-test.mjs && node tools/ui-flow-test.mjs && node tools/check.mjs",
     "deploy": "npx --yes wrangler@4 deploy",
-    "check:contracts": "node tools/design-test.mjs && node tools/ui-state-test.mjs && node tools/engine-test.mjs && node tools/engine-audio-test.mjs && node tools/engine-video-test.mjs",
+    "check:contracts": "node tools/design-test.mjs && node tools/analytics-test.mjs && node tools/ui-state-test.mjs && node tools/engine-test.mjs && node tools/engine-audio-test.mjs && node tools/engine-video-test.mjs",
     "check:ui": "node tools/ui-flow-test.mjs"
   },
   "devDependencies": {

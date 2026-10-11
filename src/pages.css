@@ -1,5 +1,5 @@
 /* The ideas pages (made by tools/make-ideas.py): plain, fast, readable pages that each answer
-   one search. The same dusk look as About and Terms. No script, no web font. */
+   one greeting need. The same dusk look as About and Terms. No web font. */
 :root {
   --night: #0b1020;
   --ink: #e9edf5;
@@ -22,6 +22,7 @@ h3 { margin: 22px 0 4px; font-size: 17px; }
 .hero { margin: 0 0 18px; }
 .hero img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 12px; background: #161e38; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 8px; }
+.offer { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
 .cta, .ghost { display: inline-block; padding: 12px 20px; border-radius: 999px; font: 700 15px/1.2 var(--sans); text-decoration: none; }
 .cta { background: var(--spark); color: #1a1006; }
 .ghost { border: 1px solid rgb(255 180 92 / 0.55); color: var(--ink); }

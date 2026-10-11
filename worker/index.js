@@ -2,7 +2,7 @@
 // normalized greeting records and strongly consistent moderation/rate limits.
 import { HttpError, json } from './common.js';
 import { checkout, greeting, share, webhook } from './greetings.js';
-import { autoshowPage, pageRequest, preview, withOffer } from './pages.js';
+import { autoshowPage, canonicalPageRedirect, pageHead, pageRequest, preview, withOffer } from './pages.js';
 import { offer } from './pricing.js';
 import { report, takenDown } from './reports.js';
 import { resend } from './resend.js';
@@ -24,11 +24,15 @@ export default {
       if (url.pathname === '/api/taken-down' && request.method === 'GET') return await takenDown(env, url.searchParams);
       if (url.pathname === '/api/maintenance' && request.method === 'POST') return await maintenance(request, env);
       if (url.pathname.startsWith('/api/')) return json({ error: 'Not found' }, 404);
-      if (url.pathname === '/autoshow/') return Response.redirect(`${url.origin}/autoshow${url.search}`, 301);
-      if (url.pathname === '/autoshow' && request.method === 'GET') return await autoshowPage(request, env, url);
-      if (url.pathname === '/' && request.method === 'GET' && (url.searchParams.has('g') || url.searchParams.has('msg'))) return await preview(request, env, url);
+      const readPage = request.method === 'GET' || request.method === 'HEAD';
+      if (readPage) {
+        const redirect = canonicalPageRedirect(url);
+        if (redirect) return redirect;
+        if (url.pathname === '/autoshow') return await pageHead(await autoshowPage(request, env, url), request);
+        if (url.pathname === '/' && (url.searchParams.has('g') || url.searchParams.has('msg'))) return await pageHead(await preview(request, env, url), request);
+      }
       const page = await env.ASSETS.fetch(pageRequest(request));
-      return withOffer(page, offer(env));
+      return await pageHead(withOffer(page, offer(env)), request);
     } catch (error) {
       // Never log greeting ids, words, inboxes, provider responses or credentials.
       const status = error instanceof HttpError ? error.status : 500;

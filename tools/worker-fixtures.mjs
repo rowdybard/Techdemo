@@ -17,15 +17,19 @@ const reply = (value, status = 200) => new Response(JSON.stringify(value), { sta
 export async function runtime(bindings = {}) {
   const built = await build({ absWorkingDir: root, entryPoints: ['worker/index.js'], bundle: true, write: false,
     format: 'esm', platform: 'neutral', external: ['cloudflare:workers'] });
-  const state = { stripeCalls: 0, mailCalls: 0, assetCalls: [], sessions: new Map(), intents: new Map(),
+  const state = { stripeCalls: 0, mailCalls: 0, assetCalls: [], assetResponses: new Map(), sessions: new Map(), intents: new Map(),
     mailStatus: 200, stripeStatus: 200, listPages: [], pageCalls: [], searchCalls: 0 };
   const options = { modules: true, script: built.outputFiles[0].text, compatibilityDate: '2026-09-30', telemetry: { enabled: false },
     kvNamespaces: ['GREETINGS'], durableObjects: { GUARDS: { className: 'GreetingGuard', useSQLite: true } },
     bindings: { STRIPE_SECRET_KEY: 'fixture-payment-token', STRIPE_WEBHOOK_SECRET: 'fixture-signature-token',
       RESEND_API_KEY: 'fixture-email-token', ...bindings },
     serviceBindings: { ASSETS: (request) => {
-      state.assetCalls.push({ url: request.url, conditional: request.headers.has('if-none-match') });
-      return new Response(fixtureHTML, { headers: { 'content-type': 'text/html', etag: 'old', 'cache-control': 'public,max-age=3600' } });
+      state.assetCalls.push({ url: request.url, method: request.method, conditional: request.headers.has('if-none-match') });
+      const asset = state.assetResponses.get(new URL(request.url).pathname);
+      return new Response(request.method === 'HEAD' ? null : asset?.body ?? fixtureHTML, {
+        status: asset?.status ?? 200,
+        headers: asset?.headers ?? { 'content-type': 'text/html', etag: 'old', 'cache-control': 'public,max-age=3600' },
+      });
     } },
     outboundService: async (request) => {
       const url = new URL(request.url);

@@ -1,5 +1,78 @@
 # SkyGreeting: master handoff
 
+## Search work — October 10, 2026 (review branch)
+
+Implementation is on `codex/search-intent`, based on live `09b4e47`. This work is not deployed.
+The separate smoke/waterfall work is saved in a Git stash associated with
+`codex/autoshow-smoke-waterfall`; do not drop or apply it on this branch.
+
+- The existing Ideas hub explains virtual greeting cards made with fireworks. Birthday describes
+  a personalized virtual birthday card; Gift addresses someone who has everything. Name in
+  Fireworks remains a specific product entry. Last-minute and long-distance delivery are answered
+  on Birthday rather than creating duplicate keyword pages. Search demand and profitability remain
+  unproven; do not infer them from an AI search answer or a tiny number of impressions.
+- The ten ideas pages now explain the real creation and sharing flow in fewer words. They have
+  one main action, Free/Deluxe pricing near it, and two or three relevant related pages. Birthday
+  shows the existing screenshot with a name in fireworks. About correctly describes copying the
+  link after checkout; automatic purchase emails are not an implemented benefit.
+- Keep the homepage focused on the scene. The proposed visible introduction and extra occasion
+  links were removed after owner review. The existing screen-reader heading remains; the old
+  hidden marketing paragraph is removed. Do not add SEO copy over the show.
+- `src/analytics.js` replaces the home-only bootstrap and measures the public ideas pages too.
+  `landing_cta` contains only a known public page slug and occasion. Private queries, fragments,
+  greeting titles and detailed external referrers are excluded. Existing consent defaults remain;
+  embeds and local previews do not initialize analytics. Existing verified purchase events remain
+  the measure of revenue; checkout starts are not purchases.
+- Known page aliases redirect to their canonical URL. GET and HEAD agree for document routes;
+  private greeting aliases also return noindex/no-store. Unknown files remain 404. New public pages
+  must be added to the generator, sitemap, Worker route/alias list and analytics public-page list.
+- Page tests check actual hierarchy, valid actions, pricing markers and content freshness, not
+  a preferred word count. Run the generator after changing `tools/ideas/*.html`.
+- Search Console was inspected directly: the sitemap succeeds and contains all 15 URLs. The
+  overview's indexing count is stale; inspect important URLs individually. Name in Fireworks was
+  already indexed. Birthday was discovered but not crawled; its live test passed and one indexing
+  request was accepted. Do not repeatedly resubmit it. A request is not proof of indexing or rank.
+- After an approved merge, verify live routing/prices and the shared analytics, then compare
+  non-brand Search Console impressions/clicks and GA4 organic landing-page purchases over time.
+  Prioritize revenue per organic session as data accumulates, not raw traffic or average position.
+
+### Search baseline observed October 10
+
+Authenticated Search Console for `sc-domain:skygreeting.com`, with the three-month filter,
+reported 1 click, 3 impressions, 33.3% CTR and average position 3.3. The visible chart covered
+September 30–October 6 and the Queries table had no rows. These totals do not identify a
+profitable query or establish a non-brand ranking. The sitemap was last read October 9 and
+successfully discovered 15 pages. The October 3 indexing overview predates the ideas pages;
+the individual URL checks above are more relevant.
+
+Authenticated GA4 for the SkyGreeting property, September 12–October 9, reported 386 sessions,
+229 engaged sessions, 2,059 events, zero recorded key events and $0 recorded revenue. Organic
+Search contributed one session; Organic Social contributed 230 and Direct 154. Recorded GA4
+revenue is not a reconciliation of Stripe sales, and the range excludes October 10.
+
+The owner explicitly wants to target "virtual greeting card" and "gift for someone who has
+everything", in addition to specific occasion searches. After the explanation, the owner
+authorized choosing the best approach. The existing Ideas hub now has a clearer category
+title/lead; About defines the product and links directly to Gift. Birthday's description/lead
+uses virtual birthday card language. Gift keeps its existing title and explains sending it
+alone or with another present. No new page or homepage overlay was added. Answer last-minute
+and long-distance questions within the relevant
+existing pages. Evaluate query relevance, organic landing-page engagement, greeting creation
+and confirmed purchases together. None of these targets has verified search volume, CPC or
+conversion superiority in the evidence collected so far.
+
+`/llms.txt` returned 404 on October 10 and no source file exists. It remains an optional agent
+reference, not a Google ranking requirement. Do not add one as a claimed SEO fix. The empty AMP
+report is expected for this site and is not an indexing error.
+
+Validation: the final `npm run check` printed PASS with a clean console on October 10,
+including 22 Worker tests, desktop/phone/recipient flows, 20 beach rebuilds, six lake rebuilds
+and three place round trips. The final category-copy regeneration also passed the page check
+(10 pages, 245 links, 48 message examples). Wrangler 4.149.0 `deploy --dry-run` passed and staged
+15 HTML pages plus public assets; nothing was uploaded. The local preview and test processes
+were stopped. After deployment, verify actual analytics requests and organic attribution on the
+live domain; the privacy tests do not prove real production delivery to GA4.
+
 ## Current takeover update — October 9, 2026
 
 This update takes precedence over the older baseline below. The audited source and production
