@@ -18,6 +18,7 @@
 // is touched. No words ever go up.
 import { LOOKS } from './looks.js';
 import { PRESETS } from './presets.js';
+import { DEFAULT_SMOKE_AMOUNT } from './config.js';
 
 const CLASSIC = ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star',
   'kamuro', 'dahlia', 'saturn', 'fish', 'whirl', 'leaves'];
@@ -320,7 +321,7 @@ export function create(ctx) {
     target('cloudCoverage', rand(0, 0.6));
     target('windSpeed', rand(0.5, 6));
     target('windDirection', rand(0, 360));
-    target('amount', lake ? rand(0.05, 0.12) : rand(0.05, 0.18), smoke); // since the smoke was made visible, 0.18 is a thick haze
+    target('amount', DEFAULT_SMOKE_AMOUNT * rand(0.5, lake ? 0.8 : 1), smoke); // always a very light haze
     target('amount', lake ? rand(0.15, 0.7) : 0, snow);
     if (lake) config.lake.open = rand(0.3, 0.8);
     else snow.amount = 0;

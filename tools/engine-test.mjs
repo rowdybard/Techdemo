@@ -239,15 +239,15 @@ test('side-barge disable cancels delayed emissions after their lights already en
   assert.equal(p.mesh.geometry.attributes.aStart.array[delayed * 4 + 3], -1e6);
   module.dispose(); p.dispose();
 });
-test('waterfall pours from the deck edge, arches up and over, and dies at water at every height', () => {
-  for (const height of [8, 50]) for (const gravity of [0.2, 1, 2]) {
+test('waterfall has twice the arch height, keeps its density, and dies at water on desktop and phone', () => {
+  for (const phone of [false, true]) for (const height of [8, 50]) for (const gravity of [0.2, 1, 2]) {
     const ctx = fixture();
     ctx.config.fountains.height = height;
     ctx.config.physics.gravity = gravity;
     const p = pool(6000);
     const tubes = [-50, -25, 0, 25, 50];
     const lights = tubes.map(() => ({}));
-    waterfall(p, ctx.config, false, 0, tubes, 2.5, -380, [], lights);
+    waterfall(p, ctx.config, phone, 0, tubes, 2.5, -380, [], lights);
     const birth = p.mesh.geometry.attributes.aStart.array;
     const motion = p.mesh.geometry.attributes.aMotion.array;
     const shape = p.mesh.geometry.attributes.aShape.array;
@@ -266,17 +266,53 @@ test('waterfall pours from the deck edge, arches up and over, and dies at water 
         motion[offset], motion[offset + 1], motion[offset + 2], motion[offset + 3], shape[offset], 9.81 * gravity, 0, 0);
       assert.ok(Math.abs(point[1]) < 0.002, 'lifetime ends at water level');
       assert.ok(point[2] > -371.9, 'it falls into the water in front of the hull');
-      for (let t = 0; t < shape[offset]; t += 0.05) {
-        positionAt(point, birth[offset], birth[offset + 1], birth[offset + 2],
-          motion[offset], motion[offset + 1], motion[offset + 2], motion[offset + 3], t, 9.81 * gravity, 0, 0);
-        highest = Math.max(highest, point[1]);
-      }
+      const drag = motion[offset + 3];
+      const peakTime = Math.log1p(drag * motion[offset + 1] / (9.81 * gravity)) / drag;
+      assert.ok(peakTime < shape[offset], 'sparks survive their climb and rain down');
+      positionAt(point, birth[offset], birth[offset + 1], birth[offset + 2],
+        motion[offset], motion[offset + 1], motion[offset + 2], drag, peakTime, 9.81 * gravity, 0, 0);
+      highest = Math.max(highest, point[1]);
     }
-    assert.ok(highest > 2.5 + height * 0.35 && highest < 2.5 + height * 0.45, `the arch tops out near 0.4 of the fountain height (${highest})`);
-    assert.equal(count, Math.round(125 * 2.9) * 8, 'existing per-metre particle density retained');
-    assert.equal(fuse, 88, 'a fuse runs along the deck first');
-    for (const light of lights) { assert.equal(light.y, 2.5 + height * 0.2); assert.equal(light.z, -368.9); }
+    assert.ok(highest > 2.5 + height * 0.7 && highest < 2.5 + height * 0.9, `the arch is about twice its former 0.4-height peak (${highest})`);
+    assert.equal(count, Math.round(125 * (phone ? 1.6 : 2.9)) * 8, 'existing per-metre particle density retained');
+    assert.equal(fuse, phone ? 56 : 88, 'a fuse runs along the deck first');
+    for (const light of lights) { assert.equal(light.y, 2.5 + height * 0.4); assert.equal(light.z, -368.9); }
     p.dispose();
+  }
+});
+test('waterfall uses the actual main and side hull edges and every curtain reaches the water', () => {
+  for (const phone of [false, true]) {
+    const ctx = fixture();
+    ctx.phone = phone;
+    Object.assign(ctx.config.fountains, { style: 'waterfall', sideBarges: true, enabled: true, firstAt: 0, height: 50 });
+    ctx.config.physics.gravity = 0.2;
+    const p = pool(20000);
+    ctx.fireworks = { pool: p };
+    const module = fountains.create(ctx);
+    module.update(0, 0);
+    module.update(0.1, 0.1); // main startup replaces the sides; their matching show begins next frame
+    const birth = p.mesh.geometry.attributes.aStart.array;
+    const motion = p.mesh.geometry.attributes.aMotion.array;
+    const shape = p.mesh.geometry.attributes.aShape.array;
+    const counts = [0, 0, 0];
+    const point = [0, 0, 0];
+    const [bx, by, bz] = ctx.config.show.bargePosition;
+    for (let i = 0; i < p.size; i++) {
+      const o = i * 4;
+      if (birth[o + 3] < -100) continue;
+      const barge = birth[o] < bx - 80 ? 1 : birth[o] > bx + 80 ? 2 : 0;
+      counts[barge]++;
+      const edge = bz + (barge ? 4.5 : 8) + 0.1;
+      assert.ok(Math.abs(birth[o + 1] - (by + (barge ? 1.8 : 2.5))) < 0.0001, 'sparks start at their own deck height');
+      assert.ok(birth[o + 2] >= edge - 0.0001 && birth[o + 2] <= edge + 0.2001, 'sparks originate at their own hull edge');
+      if (shape[o] < 0.5) continue;
+      positionAt(point, birth[o], birth[o + 1], birth[o + 2], motion[o], motion[o + 1], motion[o + 2], motion[o + 3], shape[o], 9.81 * 0.2, 0, 0);
+      assert.ok(Math.abs(point[1]) < 0.002, 'even the tallest, slowest fall ends at water');
+      assert.ok(point[2] > edge, 'the curtain lands outside its hull');
+    }
+    for (const count of counts) assert.ok(count > 100, 'each of the three barges emits a curtain');
+    assert.equal(ctx.config.fountains.height, 50, 'temporary main/side scaling restores the authored height');
+    module.dispose(); p.dispose(); ctx.abort.abort();
   }
 });
 test('lake mask and reflection targets are regenerated after context restoration', () => {

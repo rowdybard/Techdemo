@@ -1,12 +1,39 @@
 # SkyGreeting: master handoff
 
+## Smoke and waterfall release — October 10, 2026
+
+The owner authorized merging all outstanding Codex branches. `codex/engine-takeover` and
+`codex/search-intent` were already included in live `a885204`. The saved smoke/waterfall work
+is restored on `codex/autoshow-smoke-waterfall`, fast-forwarded to that live base, and verified
+for the approved merge. The original stash is retained as a backup; do not reapply it.
+
+- Smoke is a simple On/Off switch in Customize and Advanced. The shared default is `0.1`, about
+  5% of the former slider, matching the owner's very-low reference. All Looks use that default;
+  Autoshow varies gently below it. Existing explicit saved/greeting densities remain readable.
+  Toggling preserves a positive authored density; enabling old zero-density settings restores the
+  default. Choosing a Look preserves Off. Advanced still exposes linger time.
+- Waterfall targets twice its previous arch height above deck (`0.8 × fountain height`), with the
+  same particle count. Side curtains now start at their own 9-metre hull's front edge, instead of
+  the central 16-metre hull offset. Sparks still end at water level.
+- Autoshow product recommendations remain proposals: persistent unattended sound,
+  pause/fullscreen/theme controls, and a greeting CTA that carries the current design.
+  Current sound still idles after five minutes; pinned Looks can recolour; Make your own goes to `/`.
+  Recovery email and physical-phone purchase/video checks also remain separate unfinished work.
+
+Validation on October 10: `npm run check` printed PASS with a clean console, including 22 Worker
+tests, the smoke persistence/menu checks, waterfall trajectory/hull checks, desktop/phone/recipient
+flows, 20 beach rebuilds, six lake rebuilds and three place round trips without detected leaks.
+The separate `node tools/ui-flow-test.mjs --waterfall-only` completed; both beach and lake
+screenshots were visually inspected. Local logs: `.check/merge-smoke-waterfall-check.log` and
+`.check/merge-waterfall-visual.log`. The test servers and browser processes finished and closed.
+
 ## Search work — October 10, 2026 (live)
 
 The owner approved merge and deployment. SEO commit `0f4b71b` was fast-forwarded from
 `codex/search-intent` to live `ccr-09268299-owgtnw`; Cloudflare completed its production build
 at 2026-10-11T01:01:50Z (October 10 locally), serving the matching Worker version at 100%.
-The separate smoke/waterfall work is saved in a Git stash associated with
-`codex/autoshow-smoke-waterfall`; do not drop or apply it on this branch.
+The About analytics follow-up `a885204` subsequently deployed at 2026-10-11T01:21:28Z.
+The separate smoke/waterfall release is described above; do not reapply its backup stash.
 
 - The existing Ideas hub explains virtual greeting cards made with fireworks. Birthday describes
   a personalized virtual birthday card; Gift addresses someone who has everything. Name in
@@ -33,9 +60,10 @@ The separate smoke/waterfall work is saved in a Git stash associated with
 - Page tests check actual hierarchy, valid actions, pricing markers and content freshness, not
   a preferred word count. Run the generator after changing `tools/ideas/*.html`.
 - Search Console was inspected directly: the sitemap succeeds and contains all 15 URLs. The
-  overview's indexing count is stale; inspect important URLs individually. Name in Fireworks was
-  already indexed. Birthday was discovered but not crawled; its live test passed and one indexing
-  request was accepted. Do not repeatedly resubmit it. A request is not proof of indexing or rank.
+  overview's indexing count is stale; inspect important URLs individually. Name in Fireworks,
+  Ideas, Gift and Birthday are confirmed indexed. Birthday was initially discovered but not
+  crawled; after one accepted indexing request, a later inspection confirmed it is on Google.
+  Its reported crawl precedes the SEO deployment, so indexing does not prove a recrawl or rank.
 - After an approved merge, verify live routing/prices and the shared analytics, then compare
   non-brand Search Console impressions/clicks and GA4 organic landing-page purchases over time.
   Prioritize revenue per organic session as data accumulates, not raw traffic or average position.
@@ -79,12 +107,13 @@ launch price ($4.99 regular). Alias/private-link checks passed and the served an
 matched its source hash. The live Ideas button opened the birthday builder with no console
 errors. The local preview and test processes were stopped.
 
-GA4 delivery remains unverified: the realtime report did not yet show the test landing click,
-then analytics.google.com became unavailable in Chrome with a DNS error. Subsequent host DNS
-and public HTTPS checks passed, but the authenticated Chrome connection was no longer available
-when the scene tests finished. The owner was asked to reopen that profile. Do not describe this
-as either a confirmed lost event or successful collection. Search Console still displayed a
-51.5-hour-old report with the baseline above; a fresh Gift URL inspection did not return a result.
+After Chrome was reopened, authenticated GA4 realtime confirmed the Ideas, builder and About
+pageviews and one `landing_cta` with `content_type=birthday`. These were verification visits,
+not organic demand or purchases. Gift and Ideas URL inspections confirmed indexing; Birthday
+later became indexed too, with Google selecting its canonical URL. Search Console's 24-hour
+report still covered October 7–8, before deployment: zero clicks, seven property impressions,
+no query rows. The page breakdown showed home (seven impressions) and Terms (one); page-level
+counts are separate from the property total. Profitable non-brand rankings remain unproven.
 The next useful evidence is real indexing/query data and organic landing-page purchases, not
 additional keyword pages. Current public links, robots, sitemap and canonical checks found no
 discovery blocker; competing offers confirm product fit, not search volume or profitability.
@@ -93,9 +122,9 @@ Measurement limits: GA4's landing-page report can pair session source/medium wit
 but this app records a purchase only when the buyer returns and its confirmed payment can be
 matched to this browser's checkout. Non-returning buyers, blocked analytics or lost storage
 can be missed, and refunds are not sent to GA4. Reconcile sales with Stripe before calling an
-intent profitable. Check GA4's unwanted-referral settings for the payment processor when its
-dashboard is reachable; the code alone cannot establish those account settings. Do not invent
-purchases or spend money merely to validate tracking.
+intent profitable. GA4's unwanted-referral rule was saved and confirmed for the exact domain
+`checkout.stripe.com`; existing consent settings were preserved. Actual purchase delivery remains
+unverified. Do not invent purchases or spend money merely to validate tracking.
 
 The About/pricing follow-up passed the complete `npm run check` on October 10, with a clean
 console, 22 Worker tests, desktop/phone/recipient flows, 20 beach rebuilds, six lake rebuilds

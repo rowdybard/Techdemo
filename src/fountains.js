@@ -179,7 +179,8 @@ export function create(ctx) {
         // The effects size themselves from the fountain height: lowered for the call.
         const height = settings.height;
         settings.height = height * SIDE_SCALE;
-        EFFECTS[style](pool, config, phone, start, sideTubes[s], by + 1.8, bz, config.palettes[config.look.palette], sideLights[s]);
+        // The waterfall needs this hull's front edge; other effects stay at their tubes.
+        EFFECTS[style](pool, config, phone, start, sideTubes[s], by + 1.8, bz, config.palettes[config.look.palette], sideLights[s], 4.5);
         settings.height = height;
       } else {
         for (let i = 0; i < SIDE_TUBES; i++) {

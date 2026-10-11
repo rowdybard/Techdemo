@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { config as defaults } from '../src/config.js';
+import { config as defaults, DEFAULT_SMOKE_AMOUNT, setSmokeEnabled } from '../src/config.js';
 import { takeDesign, putDesign, normalizeLook, MAX_LOOK_BYTES } from '../src/design.js';
 import { lookOf, applyLook, keepFree } from '../src/look.js';
 import { PRESETS, applyPreset, settingsJSON, loadSettings } from '../src/presets.js';
@@ -21,6 +21,15 @@ await test('every shipped Look preserves its complete authored settings in a v2 
   const received=fresh();applyLook(received,JSON.parse(JSON.stringify(envelope)));
   assert.deepEqual(takeDesign(received),takeDesign(c),name);
  }
+});
+await test('Smoke switch preserves authored density, restores a zero-density On state and stays off across Looks',()=>{
+ const c=fresh();c.smoke.amount=.37;
+ setSmokeEnabled(c,false);assert.equal(c.smoke.amount,.37);
+ setSmokeEnabled(c,true);assert.equal(c.smoke.amount,.37);assert.equal(c.smoke.enabled,true);
+ c.smoke.amount=0;setSmokeEnabled(c,true);assert.equal(c.smoke.amount,DEFAULT_SMOKE_AMOUNT);
+ for(const name in PRESETS){setSmokeEnabled(c,false);applyPreset(c,name);assert.equal(c.smoke.enabled,false,name);assert.equal(c.smoke.amount,DEFAULT_SMOKE_AMOUNT,name);}
+ const received=fresh();applyLook(received,lookOf(c));assert.equal(received.smoke.enabled,false);
+ const restored=fresh();assert.equal(loadSettings(restored,settingsJSON(c)),'');assert.equal(restored.smoke.enabled,false);
 });
 await test('a Free version swaps each paid shell for its nearest free one',()=>{
  const free=freeDesign({look:{mix:{peony:1,saturn:2,skull:1,kamuro:0.5}},fountains:{enabled:true,style:'mixed',sideBarges:true}});

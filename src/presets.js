@@ -58,7 +58,6 @@ export const PRESETS = {
     show: { shellsPerMinute: 30, maxShells: 7 },
     fountains: { style: 'halloween', every: 20, duration: 9 },
     sky: { timeOfDay: 0.9, cloudCoverage: 0.6 },
-    smoke: { amount: 0.2 },
     physics: { windSpeed: 3 },
     bloom: { strength: 0.7 },
   },
@@ -70,7 +69,6 @@ export const PRESETS = {
     show: { shellsPerMinute: 26, maxShells: 6 },
     fountains: { color: 'gold', every: 22 },
     sky: { timeOfDay: 0.9, cloudCoverage: 0.2, starBrightness: 0.5 },
-    smoke: { amount: 0.08 },
     physics: { windSpeed: 1.6 },
     snow: { amount: 0.5 },
   },
@@ -84,7 +82,6 @@ export const PRESETS = {
     show: { shellsPerMinute: 12, maxShells: 3 },
     fountains: { every: 40, color: 'silver', height: 20, sideBarges: false },
     physics: { windSpeed: 1 },
-    smoke: { amount: 0.06 },
     ocean: { waveHeight: 0.6, surf: 0.45 },
     sky: { timeOfDay: 0.12 },
   },
@@ -123,7 +120,6 @@ export const PRESETS = {
     look: { palette: 'sakura', mix: mixOf({ peony: 2.5, chrysanthemum: 1.5, ring: 1, multibreak: 1, star: 0.6, heart: 0.5 }) },
     show: { shellsPerMinute: 20, maxShells: 5 },
     fountains: { color: 'silver', every: 34 },
-    smoke: { amount: 0.06 },
     sky: { timeOfDay: 0.15 },
   },
   Autumn: {
@@ -143,7 +139,6 @@ export const PRESETS = {
     look: { palette: 'ice', mix: mixOf({ crackle: 2.5, strobe: 2, chrysanthemum: 1.5, multibreak: 1.2, peony: 1 }) },
     show: { shellsPerMinute: 60, maxShells: 12 },
     fountains: { style: 'mines', every: 12 },
-    smoke: { amount: 0.22 },
     bloom: { strength: 0.75 },
     sky: { timeOfDay: 0.95, cloudCoverage: 0.75 },
   },
@@ -157,7 +152,6 @@ export const PRESETS = {
     look: { particles: 520, mix: mixOf({ peony: 2, chrysanthemum: 2, willow: 1, palm: 1, ring: 1, crossette: 1.5, strobe: 1, crackle: 1.5, multibreak: 2, text: 0.6, kamuro: 1.5, dahlia: 1.5, whirl: 1, fish: 1 }) },
     show: { shellsPerMinute: 95, maxShells: 16 },
     fountains: { every: 14, nozzles: 12 },
-    smoke: { amount: 0.18 },
     bloom: { strength: 0.75 },
   },
 };
@@ -165,6 +159,7 @@ export const PRESETS = {
 export function applyPreset(config, name) {
   const header = { ...config.hero }; // a client's header text survives a change of preset
   const sound = { ...config.sound };
+  const smokeEnabled = config.smoke.enabled && config.smoke.amount > 0;
   // And so do the words in the sky: they're the person's, not the style's. A look with words of its
   // own (Green & White's chant) brings them only when the person hasn't written any.
   const words = config.look.text, words2 = config.look.text2;
@@ -172,6 +167,7 @@ export function applyPreset(config, name) {
   merge(config, PRESETS[name] || {});
   Object.assign(config.hero, header);
   Object.assign(config.sound, sound);
+  config.smoke.enabled = smokeEnabled; // choosing a Look never turns smoke back on after Off
   const theirs = words.trim() !== '' && !LOOK_WORDS.has(words);
   if (theirs || !PRESETS[name]?.look?.text) {
     config.look.text = theirs ? words : '';

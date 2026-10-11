@@ -8,6 +8,7 @@ import { createHero } from './hero.js';
 import { isTyping } from './debug.js';
 import { PLACES } from './places.js';
 import { isDeluxe, groundStyles } from './catalog.js';
+import { setSmokeEnabled } from './config.js';
 
 const TYPE_LABELS = {
   peony: 'Peony',
@@ -157,8 +158,11 @@ export function create(ctx) {
   lakeControls.push(scene.add(config.snow, 'amount', 0, 1, 0.01).name('Snowfall'));
   lakeControls.push(scene.add(config.lake, 'open', 0, 1, 0.01).name('Ice → open water'));
   scene.add(config.look, 'sceneLight', 0, 3, 0.05).name('Firework light');
-  scene.add(config.smoke, 'enabled').name('Smoke');
-  scene.add(config.smoke, 'amount', 0, 2, 0.05).name('Smoke amount');
+  const smokeChoice = {
+    get enabled() { return config.smoke.enabled && config.smoke.amount > 0; },
+    set enabled(on) { setSmokeEnabled(config, on); },
+  };
+  scene.add(smokeChoice, 'enabled').name('Smoke');
   scene.add(config.smoke, 'linger', 8, 60, 1).name('Smoke lingers (s)');
   const cameraChoice = scene.add(config.camera, 'preset', { 'On the sand': 'sand', 'From above': 'drone', 'In the water': 'water' }).name('View')
     .onChange((name) => ctx.setCameraPreset(name));

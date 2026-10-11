@@ -62,9 +62,27 @@ try {
     await page.getByLabel('Ice & water').waitFor();
     await page.getByText('More options', { exact: true }).click();
     assert.equal(await page.getByText('Beach details', { exact: true }).isVisible(), false);
+    // Smoke is one on/off preference in both menus; switching it never changes the amount.
+    const smoke = page.getByRole('switch', { name: 'Smoke', exact: true });
+    const smokeAmount = await page.evaluate(() => window.__ctx.config.smoke.amount);
+    assert.equal(await page.getByRole('slider', { name: 'Smoke', exact: true }).count(), 0);
+    await smoke.uncheck();
+    assert.deepEqual(await page.evaluate(() => [window.__ctx.config.smoke.enabled, window.__ctx.config.smoke.amount]), [false, smokeAmount]);
     await page.getByRole('button', { name: 'Advanced settings', exact: true }).click();
     assert.equal(await page.locator('.panel').isVisible(), true);
+    await page.locator('.panel .lil-title').filter({ hasText: /^Scene$/ }).click();
+    const advancedSmoke = page.getByRole('checkbox', { name: 'Smoke', exact: true });
+    assert.equal(await advancedSmoke.isChecked(), false);
+    assert.equal(await page.getByLabel('Smoke amount', { exact: true }).count(), 0);
+    await advancedSmoke.check();
+    assert.deepEqual(await page.evaluate(() => [window.__ctx.config.smoke.enabled, window.__ctx.config.smoke.amount]), [true, smokeAmount]);
     await page.getByRole('button', { name: '← Back to Customize', exact: true }).click();
+    assert.equal(await smoke.isChecked(), true);
+    await smoke.uncheck();
+    await smoke.check();
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('beach-fireworks-settings')).smoke.amount), smokeAmount);
+    await smoke.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(out, `ui-${name}-smoke-toggle.png`) });
     await page.getByRole('button', { name: 'Done', exact: true }).click();
     console.log(`${name}: lake and Advanced navigation passed`);
     await page.locator('.send-open').click();
@@ -166,22 +184,33 @@ try {
     console.log('PASS gift: Free sent=1 cannot imply payment, report Escape returns, new greeting clears old words, leaving clears private URL, quiet opening, late takedown');
   }
   if (process.argv.includes('--waterfall-only')) {
+    for (const place of ['beach', 'lake']) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
     await context.route(/googletagmanager\.com|google-analytics\.com/, (route) => route.fulfill({ status: 204, body: '' }));
     const page = await context.newPage();
     await page.goto(url, { timeout: 90000 });
     await page.waitForFunction(() => window.__ctx?.fountains);
+    await page.evaluate((place) => {
+      const ctx = window.__ctx;
+      ctx.config.loop.maxDt = 0.5;
+      ctx.config.place.environment = place;
+      ctx.config.sky.timeOfDay = 1;
+      ctx.config.show.autoLaunch = false;
+      ctx.config.smoke.enabled = false;
+    }, place);
+    await page.waitForFunction((place) => window.__ctx.place === place, place);
     const start = await page.evaluate(() => {
       const ctx = window.__ctx;
-      ctx.config.show.autoLaunch = false; ctx.config.fountains.sideBarges = false;
+      ctx.config.fountains.sideBarges = true;
       ctx.config.fountains.style = 'waterfall'; ctx.config.fountains.duration = 20;
       ctx.fountains.play('waterfall');
       return ctx.fireworks.pool.mesh.material.uniforms.uTime.value;
     });
-    await page.waitForFunction((start) => window.__ctx.fireworks.pool.mesh.material.uniforms.uTime.value >= start + 2, start, { timeout: 90000 });
+    await page.waitForFunction((start) => window.__ctx.fireworks.pool.mesh.material.uniforms.uTime.value >= start + 6, start, { timeout: 90000 });
     await page.evaluate(() => { window.__ctx.config.loop.timeScale = 0; });
-    await page.screenshot({ path: join(out, 'ui-waterfall-grounded.png') });
+    await page.screenshot({ path: join(out, `ui-waterfall-${place}.png`) });
     await context.close();
-    console.log('Waterfall grounded visual saved: .check/ui-waterfall-grounded.png');
+    console.log(`Waterfall visual saved: .check/ui-waterfall-${place}.png`);
+    }
   }
 } finally { await browser.close(); await new Promise((done) => server.close(done)); }

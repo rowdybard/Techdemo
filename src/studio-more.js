@@ -6,6 +6,7 @@ import { LIGHT_COLORS } from './lighthouse.js';
 import { PLACES } from './places.js';
 import { el, section } from './studio-kit.js';
 import { groundStyles, isDeluxe } from './catalog.js';
+import { setSmokeEnabled } from './config.js';
 
 const SHELLS = {
   Classic: ['peony', 'chrysanthemum', 'willow', 'palm', 'ring', 'crossette', 'strobe', 'crackle', 'multibreak', 'heart', 'star', 'helmet'],
@@ -18,8 +19,6 @@ const CAMERAS = ['sand', 'drone', 'water']; // named by the place (places.js)
 const WEATHER = [
   { name: 'Sky', low: 'Sunset', high: 'Midnight', get: (c) => c.sky.timeOfDay, set: (c, v) => { c.sky.timeOfDay = v; } },
   { name: 'Wind', low: 'Still', high: 'Gusty', get: (c) => c.physics.windSpeed / 10, set: (c, v) => { c.physics.windSpeed = v * 10; } },
-  { name: 'Smoke', low: 'None', high: 'Lots', get: (c) => (c.smoke.enabled ? c.smoke.amount / 2 : 0),
-    set: (c, v) => { c.smoke.amount = v * 2; c.smoke.enabled = v > 0.01; } },
 ];
 // The lighthouse's light, shown while the pier is on.
 const LIGHTHOUSE = [
@@ -84,6 +83,7 @@ export function buildMore(ctx, { kit, refreshers, changed, deluxeItem, startOver
 
   const weather = el('div', 'studio-sliders');
   for (const def of WEATHER) weather.append(slider(def));
+  weather.append(toggle('Smoke', () => config.smoke.enabled && config.smoke.amount > 0, (on) => setSmokeEnabled(config, on)));
 
   const switches = el('div', 'studio-switches');
   const beachOnly = [toggle('Pier & lighthouse', () => config.landmarks.pier, (on) => { config.landmarks.pier = on; }),

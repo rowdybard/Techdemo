@@ -4,6 +4,14 @@
 // World layout: +Y is up, the water (sea or lake) lies toward -Z, and the waterline runs along
 // z = 0, so the shore rises toward +Z behind the default camera.
 
+export const DEFAULT_SMOKE_AMOUNT = 0.1; // about 5% of the former 0..2 Smoke slider
+
+// Keep authored density when toggling; old settings with zero density need a visible On state.
+export function setSmokeEnabled(config, enabled) {
+  config.smoke.enabled = Boolean(enabled);
+  if (enabled && !(config.smoke.amount > 0)) config.smoke.amount = DEFAULT_SMOKE_AMOUNT;
+}
+
 export const config = {
   renderer: {
     antialias: false, // the quality tier multisamples the post-processing target instead
@@ -109,7 +117,7 @@ export const config = {
   // Smoke left by the bursts and the ground show, lit by later bursts.
   smoke: {
     enabled: true,
-    amount: 0.12, // how thick: a light haze (Customize's Smoke slider at 6%)
+    amount: DEFAULT_SMOKE_AMOUNT, // density while the Smoke switch is on
     linger: 24, // seconds a puff takes to drift away and fade
   },
 

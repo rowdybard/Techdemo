@@ -143,11 +143,12 @@ export function fans(pool, config, phone, start, tubes, y, z, palette, lights) {
 // water in front of the hull. A curtain hung from a line above the deck read as coming out of
 // the sky (nothing holds it up), and one only spilled over the deck edge was too short to see
 // across the water. The jets light one after another along the deck, like a running fuse.
-export function waterfall(pool, config, phone, start, tubes, y, z, palette, lights) {
+export function waterfall(pool, config, phone, start, tubes, y, z, palette, lights, hullHalfDepth = 8) {
   const { look } = config;
   const duration = 8;
-  const rise = config.fountains.height * 0.4; // the top of the arch, above the deck
-  const edge = z + 8.1; // the main hull is 16 m wide; the jets stand on its front edge
+  // Twice the former arch height, solved against drag rather than doubling launch speed.
+  const rise = config.fountains.height * 0.8;
+  const edge = z + hullHalfDepth + 0.1; // main hull: 16 m deep; side hulls: 9 m
   const gravity = 9.81 * config.physics.gravity;
   const drag = 1.2; // heavy glitter: a quick bright climb, then a slow fall in long streaks
   const speed = riseSpeed(rise, gravity, drag);
