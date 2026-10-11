@@ -87,5 +87,6 @@ export async function greeting(env, id) {
   const payment = record.status === 'paid' && !record.showcase ? {
     paidAmountCents: record.paidAmountCents ?? null, currency: record.currency ?? null, transactionId: record.transactionId ?? null,
   } : {};
-  return json({ status: record.status, occasion, message, message2: message2 || '', to, from, deluxe: Boolean(deluxe), look: look || null, ...payment });
+  return json({ status: record.status, occasion, message, message2: message2 || '', to, from, deluxe: Boolean(deluxe), look: look || null,
+    ...(record.recipientFirst === true ? { recipientFirst: true } : {}), ...payment });
 }

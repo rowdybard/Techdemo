@@ -1,5 +1,21 @@
 # SkyGreeting: master handoff
 
+## Recipient words — October 10, 2026
+
+- Recipient greetings keep random text shells disabled after the authored ending. Fireworks
+  continue, while Watch again and Save as video still play both message lines and the name.
+  This applies to Free, Deluxe and older links; builder text previews remain unchanged.
+- A server-authored greeting may opt into `recipientFirst: true`. The greeting API forwards
+  only strict `true`; the director swaps copied recipient/message cue labels before adding
+  the second line. Default occasion sequences and other greetings are untouched. Replay and
+  video retain the individual greeting's order. Public creation and checkout do not set it.
+- Personal greeting records and verification artifacts belong in ignored `.check/`, never in
+  source or analytics. Keep the existing private URL when updating an owner-created greeting.
+- Validation: `npm run check` passed on October 10, including 21 engine tests, 23 Worker
+  tests, recipient phrase/replay/video regressions, desktop/phone flows, 20 beach rebuilds,
+  six lake rebuilds and three place round trips. Console clean; no detected resource leaks.
+  Log: `.check/recipient-word-playback-check.log`. Branch: `codex/recipient-word-playback`.
+
 ## Smoke and waterfall release — October 10, 2026
 
 The owner authorized merging all outstanding Codex branches. `codex/engine-takeover` and

@@ -76,7 +76,7 @@ export function create(ctx) {
     craneFrom: -Infinity,
     craneUntil: -Infinity,
     /** Plays `occasion`'s ending with these words; returns how long it lasts. */
-    play(nextOccasion, nextWords, withDeluxe, { legacy = false } = {}) {
+    play(nextOccasion, nextWords, withDeluxe, { legacy = false, recipientFirst = false } = {}) {
       director.stop();
       originalText = { text: config.look.text, width: config.look.textWidth };
       occasion = nextOccasion;
@@ -84,7 +84,7 @@ export function create(ctx) {
       allowed = allowedEffects(occasion, deluxe, legacy);
       words = { ...nextWords, year: String(newYear()), from: signature(nextWords.from),
         initials: [initial(nextWords.from), initial(nextWords.to)].filter(Boolean).join(' + ') };
-      cues = withWords(timed(occasion.ending.filter((cue) => deluxe || !cue.deluxe)), words);
+      cues = withWords(timed(occasion.ending.filter((cue) => deluxe || !cue.deluxe)), words, recipientFirst);
       next = 0;
       start = now + 0.3;
       director.craneFrom = -Infinity;
@@ -110,7 +110,15 @@ export function create(ctx) {
   ctx.director = director;
 
   // The occasion's cues plus the second line's (made once per play, not per frame).
-  function withWords(list, w) {
+  function withWords(list, w, recipientFirst) {
+    // An individual server-authored greeting can introduce its recipient first.
+    // Copy the two cues so the occasion's default order stays intact for everyone else.
+    if (recipientFirst === true && w.to?.trim()) {
+      const message = list.findIndex((cue) => cue.text === 'message');
+      const to = list.findIndex((cue) => cue.text === 'to');
+      if (message >= 0 && to > message) list = list.map((cue, index) =>
+        index === message ? { ...cue, text: 'to' } : index === to ? { ...cue, text: 'message' } : cue);
+    }
     if (!w.message2) return list;
     const extra = list.filter((cue) => cue.text === 'message').map((cue) => ({
       at: cue.at + SECOND_LINE, ...(cue.burst === undefined ? {} : { burst: cue.burst + SECOND_LINE }), text: 'message2',

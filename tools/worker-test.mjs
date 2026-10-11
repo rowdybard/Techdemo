@@ -160,6 +160,22 @@ test('checkout snapshots quote and backup; confirmation returns actual payment a
   assert.equal((await app.kv.get(`g:${id}`, { type: 'json' })).expiresAt, undefined);
 });
 
+test('recipient-first ordering is returned only for an explicit stored boolean, without fabricated payment data', async () => {
+  for (const [index, recipientFirst] of [true, false, 'true', 1, undefined].entries()) {
+    const id = `Order00${index}`;
+    const record = { ...words, look: paidLook, deluxe: true, status: 'paid', showcase: true,
+      ...(recipientFirst === undefined ? {} : { recipientFirst }) };
+    await app.kv.put(`g:${id}`, JSON.stringify(record));
+    const response = await app.call(`/api/greeting?id=${id}`);
+    assert.equal(response.status, 200);
+    const data = await response.json();
+    assert.equal(Object.hasOwn(data, 'recipientFirst'), recipientFirst === true);
+    if (recipientFirst === true) assert.equal(data.recipientFirst, true);
+    assert.equal(data.message, words.message); assert.deepEqual(data.look, paidLook);
+    for (const key of ['paidAmountCents', 'currency', 'transactionId']) assert.equal(Object.hasOwn(data, key), false);
+  }
+});
+
 test('existing launch-priced paid sessions are honored after the current offer returns to regular', async () => {
   const { session, id } = await create('198.51.100.5');
   session.amount_total = 199;

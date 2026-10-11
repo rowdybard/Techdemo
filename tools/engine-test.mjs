@@ -367,6 +367,29 @@ test('invalid launch rates cannot trap the render loop', () => {
   module.dispose(); ctx.abort.abort();
 });
 
+test('recipient-first playback is opt-in, keeps both message lines together and never changes shared cues', () => {
+  const ending = structuredClone(OCCASIONS.love.ending);
+  const normal = ['FIRST LINE', 'SECOND LINE', 'FRIEND'];
+  for (const [recipientFirst, to, expected, times] of [
+    [true, 'FRIEND', ['FRIEND', 'FIRST LINE', 'SECOND LINE'], [4.4, 7.4, 9]],
+    [undefined, 'FRIEND', normal, [4.4, 6, 7.4]], [false, 'FRIEND', normal, [4.4, 6, 7.4]],
+    ['true', 'FRIEND', normal, [4.4, 6, 7.4]], [1, 'FRIEND', normal, [4.4, 6, 7.4]],
+    [true, '', ['FIRST LINE', 'SECOND LINE'], [4.4, 6]],
+  ]) {
+    const ctx = fixture(), shown = [];
+    let now = 0;
+    ctx.countdown = { stop() {} };
+    ctx.fireworks = { launchAt(type) { if (type === 'text') shown.push({ text: ctx.config.look.text, time: now }); } };
+    const direction = director.create(ctx);
+    ctx.director.play(OCCASIONS.love, { message: 'FIRST LINE', message2: 'SECOND LINE', to, from: '' }, true, { recipientFirst });
+    for (const time of [4.4, 6, 7.4, 9]) { now = time; direction.update(0.1, time); }
+    assert.deepEqual(shown.map((cue) => cue.text), expected, `recipientFirst=${String(recipientFirst)}, recipient=${to || '(none)'}`);
+    assert.deepEqual(shown.map((cue) => cue.time), times, 'second line follows its message; absent recipient keeps the original timing');
+    assert.deepEqual(OCCASIONS.love.ending, ending, 'personal ordering must not alter another greeting');
+    direction.dispose(); ctx.abort.abort();
+  }
+});
+
 test('explicit director stop cancels unborn text, smoke and burst records without touching ambient shells', () => {
   installDOM();
   // Only text rasterization is stubbed; the real director, shell writer and particle pool run.

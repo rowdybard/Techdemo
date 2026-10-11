@@ -31,6 +31,7 @@ export function create(ctx) {
   let words = null;
   let deluxe = false;
   let legacy = true;
+  let recipientFirst = false;
   let active = true;
   let pollTimer = null;
   let wrapBox = null;
@@ -73,7 +74,7 @@ export function create(ctx) {
     ctx.video.capture({
       watermark: !deluxe,
       name: `skygreeting-${occasionName}`,
-      play: () => ctx.director.play(occasion, words, deluxe, { legacy }),
+      play: () => ctx.director.play(occasion, words, deluxe, { legacy, recipientFirst }),
       returnTo: () => { if (active) { busyUntil = -Infinity; card.classList.remove('gift-watching'); } },
     });
   }, { signal });
@@ -101,10 +102,12 @@ export function create(ctx) {
     film.hidden = !(ctx.video && ctx.video.supported);
     deluxe = isDeluxe;
     legacy = data.look?.ver !== 2;
+    recipientFirst = data.recipientFirst === true;
     occasion = applyOccasion(config, name, deluxe, { legacy });
     // The sender's design, then (for a free greeting) only free effects.
     applyLook(config, data.look);
     if (!deluxe) keepFree(config, occasion, { legacy });
+    config.look.mix.text = 0; // Greeting words belong to the directed sequence, never the ambient show.
     if (ctx.setCameraPreset) ctx.setCameraPreset(config.camera.preset);
     words = { message: data.message, message2: data.message2 || '', to: data.to, from: data.from || '' };
     config.look.text = data.message;
@@ -365,16 +368,12 @@ export function create(ctx) {
       if (playing !== watching) {
         watching = playing;
         card.classList.toggle('gift-watching', playing);
-        // After the ending, the show keeps spelling the message now and then (but not
-        // during a replay, where it would spoil the reveal).
-        config.look.mix.text = playing ? 0 : 0.5;
-        if (!playing && words) config.look.text = words.message;
         if (!playing && words && !completed) { completed = true; track('recipient_play_complete', { content_type: occasionName, method: deluxe ? 'deluxe' : 'free' }); }
       }
       if (!pending || !occasion || time < playAt) return;
       pending = false;
       completed = false;
-      if (ctx.director) ctx.director.play(occasion, words, deluxe, { legacy });
+      if (ctx.director) ctx.director.play(occasion, words, deluxe, { legacy, recipientFirst });
     },
 
     dispose() {
