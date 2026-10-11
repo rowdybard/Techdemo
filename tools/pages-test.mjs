@@ -114,9 +114,6 @@ for (const file of pages) {
     if (button.label !== metadata.cta || !button.label) fail(file, 'main CTA has no matching descriptive label');
     if (!/\bdata-sg-make(?:\s|$)/.test(button.attributes)) fail(file, 'main CTA lacks the public conversion-event marker');
   }
-  if (!source.includes('<link rel="modulepreload" href="/src/analytics.js">') ||
-    !source.includes('<script type="module" src="/src/analytics.js"></script>')) fail(file, 'must load the shared privacy-conscious page analytics');
-
   const cardSection = slug === 'ideas' ? source : tag(/<section class="related"[^>]*>([\s\S]*?)<\/section>/) || '';
   const cardLists = [...cardSection.matchAll(/<ul class="cards">([\s\S]*?)<\/ul>/g)];
   const related = cardLists.flatMap(([, list]) => anchors(list).map((a) => a.href));
@@ -197,6 +194,13 @@ for (const slug of slugs) if (slug !== 'ideas' && !hub.includes(`href="/${slug}"
 if (!read('index.html').includes('href="/ideas"')) fail('index.html', 'has no link to /ideas');
 if (!read('about.html').includes('href="/ideas"')) fail('about.html', 'has no link to /ideas');
 if (!read('wrangler.jsonc').includes('*.html')) fail('wrangler.jsonc', 'the build command must copy *.html, or new pages never go live');
+
+// About/pricing is also a search entry point, outside the generated ideas pages.
+for (const file of ['about.html', ...pages]) {
+  const source = read(file);
+  if (!source.includes('<link rel="modulepreload" href="/src/analytics.js">') ||
+    !source.includes('<script type="module" src="/src/analytics.js"></script>')) fail(file, 'must load the shared privacy-conscious page analytics');
+}
 
 // This path was created above; only remove our own immediate child of the temporary directory.
 if (dirname(resolve(fresh)) === resolve(tmpdir()) && basename(fresh).startsWith('ideas-')) rmSync(fresh, { recursive: true, force: true });

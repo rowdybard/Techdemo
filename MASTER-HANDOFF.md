@@ -1,8 +1,10 @@
 # SkyGreeting: master handoff
 
-## Search work — October 10, 2026 (review branch)
+## Search work — October 10, 2026 (live)
 
-Implementation is on `codex/search-intent`, based on live `09b4e47`. This work is not deployed.
+The owner approved merge and deployment. SEO commit `0f4b71b` was fast-forwarded from
+`codex/search-intent` to live `ccr-09268299-owgtnw`; Cloudflare completed its production build
+at 2026-10-11T01:01:50Z (October 10 locally), serving the matching Worker version at 100%.
 The separate smoke/waterfall work is saved in a Git stash associated with
 `codex/autoshow-smoke-waterfall`; do not drop or apply it on this branch.
 
@@ -19,6 +21,8 @@ The separate smoke/waterfall work is saved in a Git stash associated with
   links were removed after owner review. The existing screen-reader heading remains; the old
   hidden marketing paragraph is removed. Do not add SEO copy over the show.
 - `src/analytics.js` replaces the home-only bootstrap and measures the public ideas pages too.
+  The follow-up also initializes it on About/pricing, whose HTML previously omitted the script.
+  The shared page contract now covers this independent static page.
   `landing_cta` contains only a known public page slug and occasion. Private queries, fragments,
   greeting titles and detailed external referrers are excluded. Existing consent defaults remain;
   embeds and local previews do not initialize analytics. Existing verified purchase events remain
@@ -69,9 +73,34 @@ Validation: the final `npm run check` printed PASS with a clean console on Octob
 including 22 Worker tests, desktop/phone/recipient flows, 20 beach rebuilds, six lake rebuilds
 and three place round trips. The final category-copy regeneration also passed the page check
 (10 pages, 245 links, 48 message examples). Wrangler 4.149.0 `deploy --dry-run` passed and staged
-15 HTML pages plus public assets; nothing was uploaded. The local preview and test processes
-were stopped. After deployment, verify actual analytics requests and organic attribution on the
-live domain; the privacy tests do not prove real production delivery to GA4.
+15 HTML pages plus public assets. The later approved Git deployment succeeded. Live Ideas,
+Birthday, Gift and About returned correct new copy/canonicals, GET/HEAD behavior and the $1.99
+launch price ($4.99 regular). Alias/private-link checks passed and the served analytics module
+matched its source hash. The live Ideas button opened the birthday builder with no console
+errors. The local preview and test processes were stopped.
+
+GA4 delivery remains unverified: the realtime report did not yet show the test landing click,
+then analytics.google.com became unavailable in Chrome with a DNS error. Subsequent host DNS
+and public HTTPS checks passed, but the authenticated Chrome connection was no longer available
+when the scene tests finished. The owner was asked to reopen that profile. Do not describe this
+as either a confirmed lost event or successful collection. Search Console still displayed a
+51.5-hour-old report with the baseline above; a fresh Gift URL inspection did not return a result.
+The next useful evidence is real indexing/query data and organic landing-page purchases, not
+additional keyword pages. Current public links, robots, sitemap and canonical checks found no
+discovery blocker; competing offers confirm product fit, not search volume or profitability.
+
+Measurement limits: GA4's landing-page report can pair session source/medium with revenue,
+but this app records a purchase only when the buyer returns and its confirmed payment can be
+matched to this browser's checkout. Non-returning buyers, blocked analytics or lost storage
+can be missed, and refunds are not sent to GA4. Reconcile sales with Stripe before calling an
+intent profitable. Check GA4's unwanted-referral settings for the payment processor when its
+dashboard is reachable; the code alone cannot establish those account settings. Do not invent
+purchases or spend money merely to validate tracking.
+
+The About/pricing follow-up passed the complete `npm run check` on October 10, with a clean
+console, 22 Worker tests, desktop/phone/recipient flows, 20 beach rebuilds, six lake rebuilds
+and three place round trips. Its log is `.check/seo-about-check.log`. It changes only the
+analytics include, its static-page coverage contract and this handoff; no visible copy/layout.
 
 ## Current takeover update — October 9, 2026
 
